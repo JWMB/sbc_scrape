@@ -10,13 +10,14 @@ namespace Scrape.IO.Storage
 	public class FileSystemKVStore : IKeyValueStore
 	{
 		protected readonly string rootPath;
-		readonly string extension = ".json";
+		readonly string extension;
 
-		public FileSystemKVStore(string rootPath)
+		public FileSystemKVStore(string rootPath, string extension = ".json")
 		{
 			this.rootPath = PathExtensions.Parse(rootPath);
 			if (!Directory.Exists(rootPath))
 				Directory.CreateDirectory(rootPath);
+			this.extension = extension;
 		}
 
 		protected string KeyToPath(string key)

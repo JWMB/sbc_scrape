@@ -23,8 +23,7 @@ namespace SBCScan
 		private readonly IKeyValueStore store;
 		private readonly ILogger<Main> logger;
 
-		private readonly Fetcher fetcher;
-
+		private Fetcher fetcher;
 		private RemoteWebDriver driver;
 		private string downloadFolder;
 
@@ -33,14 +32,14 @@ namespace SBCScan
 			this.settings = settings.Value;
 			this.store = store;
 			this.logger = logger;
-
-			fetcher = new Fetcher(driver, new FileSystemKVStore(PathExtensions.Parse(this.settings.StorageFolderDownloadedFiles)));
 		}
 
 		public async Task Init()
 		{
 			driver = SetupDriver(downloadFolder);
 			logger.LogInformation($"driver.SessionId = {driver.SessionId}");
+
+			fetcher = new Fetcher(driver, new FileSystemKVStore(PathExtensions.Parse(settings.StorageFolderDownloadedFiles), extension: ""));
 
 			var sbc = new SBC(driver);
 			await sbc.Login(settings.LoginPage_BankId, settings.UserLoginId_BankId);
@@ -58,6 +57,19 @@ namespace SBCScan
 		{
 			//TODO: can we get the x-user-context header from existing requests? E.g. puppeteers Network.responseReceived
 			return new InvoiceScraper(fetcher, settings.MediusFlowRoot, settings.MediusRequestHeader_XUserContext);
+		}
+
+		public async Task<Dictionary<InvoiceFull, List<string>>> DownloadImages(DateTime from) //IEnumerable<long> invoiceIds)
+		{
+			var invoices = await LoadInvoices(ff => ff.InvoiceDate >= from);
+			var api = CreateApi();
+			var result = new Dictionary<InvoiceFull, List<string>>();
+			foreach (var invoice in invoices)
+			{
+				var images = await api.GetTaskImages(api.GetTaskImagesInfo(invoice.FirstTask?.Task), true);
+				result.Add(invoice, images.Keys.Select(k => k.ToString()).ToList());
+			}
+			return result;
 		}
 
 		public async Task<List<InvoiceSummary>> Scrape(DateTime? minDate = null, DateTime? maxDate = null, bool saveToDisk = true, bool goBackwards = false)
@@ -157,7 +169,12 @@ namespace SBCScan
 			return result;
 		}
 
-		public async Task<List<T>> LoadAndTransformInvoices<T>(Func<InvoiceFull.FilenameFormat, bool> quickFilter = null, Func<InvoiceFull, T> selector = null)
+		public async Task<List<InvoiceFull>> LoadInvoices(Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
+		{
+			return await LoadAndTransformInvoices(o => o, quickFilter);
+		}
+
+		public async Task<List<T>> LoadAndTransformInvoices<T>(Func<InvoiceFull, T> selector, Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
 		{
 			var files = (await store.GetAllKeys()).ToList();
 			var result = new List<T>();

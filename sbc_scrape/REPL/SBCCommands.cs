@@ -26,6 +26,7 @@ namespace SBCScan.REPL
 				.Concat(new Command[] {
 						new GetInvoiceCmd(main.CreateScraper()),
 						new GetTaskCmd(main.CreateApi()),
+						new GetImagesCmd(main),
 						new ScrapeCmd(main),
 					});
 			return currentCommandList.Concat(new Command[] { new ListCmd(currentCommandList) });
@@ -130,6 +131,18 @@ namespace SBCScan.REPL
 		}
 	}
 
+	class GetImagesCmd : Command
+	{
+		private readonly Main main;
+
+		public GetImagesCmd(Main main) => this.main = main;
+		public override string Id => "getimages";
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			var result = await main.DownloadImages(new DateTime(2019,5,15));
+			return "done";
+		}
+	}
 
 	class GetInvoiceCmd : Command
 	{

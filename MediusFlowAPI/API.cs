@@ -26,14 +26,23 @@ namespace MediusFlowAPI
 			var task = await GetTask(taskId);
 			var history = await GetTaskHistoryForViewId(task.Document.ViewId);
 			var comments = await GetComments(task.Document.ViewId);
+			var images = await GetTaskImages(GetTaskImagesInfo(task), downloadImages);
+			return new InvoiceFull.TaskFull { Comments = comments, Images = images, History = history, Task = task };
+		}
+
+		public IEnumerable<Models.Task.HashFile> GetTaskImagesInfo(Models.Task.Response task)
+		{
+			return task?.Document?.HashFiles?.Where(hf => hf.HashFileType == "InvoiceImage");
+		}
+		public async Task<Dictionary<Guid, object>> GetTaskImages(IEnumerable<Models.Task.HashFile> imageInfos, bool downloadImages)
+		{
 			var images = new Dictionary<Guid, object>();
-			var imageInfos = task?.Document?.HashFiles?.Where(hf => hf.HashFileType == "InvoiceImage");
 			if (imageInfos != null)
 			{
 				foreach (var hf in imageInfos)
 					images.Add(hf.Hash, downloadImages ? await GetMedia(hf.Hash, hf.HashFileType) : ""); //Pretty slow
 			}
-			return new InvoiceFull.TaskFull { Comments = comments, Images = images, History = history, Task = task };
+			return images;
 		}
 
 		public async Task<Models.Task.Response> GetTask(long id)
