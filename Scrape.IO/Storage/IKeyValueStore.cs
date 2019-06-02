@@ -3,13 +3,9 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SBCScan.Storage
+namespace Scrape.IO.Storage
 {
-	public interface IDocument
-	{
-
-	}
-	public interface IDocumentStore
+	public interface IKeyValueStore
 	{
 		Task Post(string key, object obj);
 

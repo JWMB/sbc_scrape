@@ -9,6 +9,10 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MediusFlowAPI", "MediusFlow
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "REPL", "REPL\REPL.csproj", "{F9A86A48-3548-4277-A283-CAF56ABA452D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scrape.IO", "Scrape.IO\Scrape.IO.csproj", "{A98703C0-FA45-45DA-A8A7-4919E50F3A18}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scrape.IO.Selenium", "Scraper.IO.Selenium\Scrape.IO.Selenium.csproj", "{90B64E63-6248-4CFD-8BF7-F95DB0711C9B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +31,14 @@ Global
 		{F9A86A48-3548-4277-A283-CAF56ABA452D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F9A86A48-3548-4277-A283-CAF56ABA452D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F9A86A48-3548-4277-A283-CAF56ABA452D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A98703C0-FA45-45DA-A8A7-4919E50F3A18}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A98703C0-FA45-45DA-A8A7-4919E50F3A18}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A98703C0-FA45-45DA-A8A7-4919E50F3A18}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A98703C0-FA45-45DA-A8A7-4919E50F3A18}.Release|Any CPU.Build.0 = Release|Any CPU
+		{90B64E63-6248-4CFD-8BF7-F95DB0711C9B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90B64E63-6248-4CFD-8BF7-F95DB0711C9B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90B64E63-6248-4CFD-8BF7-F95DB0711C9B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90B64E63-6248-4CFD-8BF7-F95DB0711C9B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

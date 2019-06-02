@@ -1,12 +1,9 @@
-﻿using OpenQA.Selenium;
-using OpenQA.Selenium.Support.UI;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Text;
 using System.Text.RegularExpressions;
 
-namespace SBCScan
+namespace Scrape.IO
 {
 	public static class CollectionExtensions
 	{
@@ -47,8 +44,9 @@ namespace SBCScan
 			var other = Path.DirectorySeparatorChar == '\\' ? '/' : '\\';
 			path = path.Replace(other, Path.DirectorySeparatorChar);
 
-			if (path.StartsWith(Path.DirectorySeparatorChar))
-				path = Path.GetFullPath(path.Substring(1), Environment.CurrentDirectory); // Path.Combine(Environment.CurrentDirectory, path);
+			if (path.StartsWith(Path.DirectorySeparatorChar.ToString()))
+				path = Path.Combine(Environment.CurrentDirectory, path);
+			//path = Path.GetFullPath(path.Substring(1), Environment.CurrentDirectory);
 
 			string Substitute(string id)
 			{
@@ -63,32 +61,6 @@ namespace SBCScan
 				return id;
 			}
 			return rx.Replace(path, (m) => Substitute(m.Groups[1].Value));
-		}
-	}
-
-	public static class WebDriverExtensions
-	{
-		public static Func<IWebDriver, bool> ElementIsPresent(By by)
-		{
-			return driver =>
-			{
-				try { driver.FindElement(by); return true; }
-				catch { return false; }
-			};
-		}
-
-		public static Func<IWebDriver, bool> ElementIsVisible(IWebElement element)
-		{
-			return driver =>
-			{
-				try { return element.Displayed; }
-				catch { return false; }
-			};
-		}
-		public static void WaitUntilDocumentReady(this IWebDriver driver, int timeoutSeconds = 60)
-		{
-			new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutSeconds)).Until(
-	d => ((IJavaScriptExecutor)d).ExecuteScript("return document.readyState").Equals("complete"));
 		}
 	}
 }

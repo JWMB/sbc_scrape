@@ -2,12 +2,13 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Remote;
 using OpenQA.Selenium.Support.UI;
-using SBCScan.Storage;
+using Scrape.IO;
+using Scrape.IO.Selenium;
+using Scrape.IO.Storage;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -19,13 +20,13 @@ namespace SBCScan
 	class Main : IDisposable
 	{
 		private readonly AppSettings settings;
-		private readonly IDocumentStore store;
+		private readonly IKeyValueStore store;
 		private readonly ILogger<Main> logger;
 
 		private RemoteWebDriver driver;
 		private string downloadFolder;
 
-		public Main(IOptions<AppSettings> settings, IDocumentStore store, ILogger<Main> logger)
+		public Main(IOptions<AppSettings> settings, IKeyValueStore store, ILogger<Main> logger)
 		{
 			this.settings = settings.Value;
 			this.store = store;
@@ -92,11 +93,12 @@ namespace SBCScan
 			for (int i = 0; i < maxNumPeriods; i++)
 			{
 				MediusFlowAPI.Models.SupplierInvoiceGadgetData.Response gadgetData;
+				var dateRange = (Start: start > dateBounds.Min ? start : dateBounds.Min, 
+					End: end < dateBounds.Max ? end : dateBounds.Max);
 				try
 				{
-					gadgetData = await scraper.GetSupplierInvoiceGadgetData(
-						start > dateBounds.Min ? start : dateBounds.Min,
-						end < dateBounds.Max ? end : dateBounds.Max);
+					logger.LogInformation($"GetSupplierInvoiceGadgetData {dateRange.Start} - {dateRange.End}");
+					gadgetData = await scraper.GetSupplierInvoiceGadgetData(dateRange.Start, dateRange.End);
 				}
 				catch (Exception ex)
 				{

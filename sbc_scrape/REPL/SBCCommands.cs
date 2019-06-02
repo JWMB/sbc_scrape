@@ -111,12 +111,12 @@ namespace SBCScan.REPL
 		public override string Id => "scrape";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var defaultDates = new List<DateTime> { DateTime.Today.AddMonths(-3), DateTime.Today };
+			var defaultDates = new List<DateTime> { DateTime.Today.AddMonths(-1), DateTime.Today };
 			var dates = parms.Select((p, i) => ParseArgument(parms, i, DateTime.MinValue)).ToList();
 			for (int i = dates.Count; i < 2; i++)
 				dates.Add(defaultDates[i]);
 
-			var scraped = await main.Scrape(dates[0], dates[1], true, true);
+			var scraped = await main.Scrape(dates[0], dates[1], saveToDisk: false, goBackwards: false);
 			var shortSummary = scraped.Select(iv => new {
 				iv.Id,
 				iv.TaskId,

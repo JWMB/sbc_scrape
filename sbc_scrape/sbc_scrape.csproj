@@ -22,6 +22,8 @@
   <ItemGroup>
     <ProjectReference Include="..\MediusFlowAPI\MediusFlowAPI.csproj" />
     <ProjectReference Include="..\REPL\REPL.csproj" />
+    <ProjectReference Include="..\Scrape.IO\Scrape.IO.csproj" />
+    <ProjectReference Include="..\Scraper.IO.Selenium\Scrape.IO.Selenium.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,7 +1,7 @@
-﻿using MediusFlowAPI;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Remote;
+using Scrape.IO;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,7 +10,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace SBCScan
+namespace Scrape.IO.Selenium
 {
 	public class Fetcher : IFetcher
 	{
@@ -23,43 +23,43 @@ namespace SBCScan
 			this.downloadFolderToCheck = downloadFolderToCheck;
 		}
 
-		private async Task<string> GetInNewTab(string url, string expectedFilename)
-		{
-			var originalHandle = driver.CurrentWindowHandle;
-			var body = driver.FindElement(By.TagName("body"));
-			body.SendKeys(Keys.Control + 't');
-			var newHandle = driver.CurrentWindowHandle;
+		//private async Task<string> GetInNewTab(string url, string expectedFilename)
+		//{
+		//	var originalHandle = driver.CurrentWindowHandle;
+		//	var body = driver.FindElement(By.TagName("body"));
+		//	body.SendKeys(Keys.Control + 't');
+		//	var newHandle = driver.CurrentWindowHandle;
 
-			var gotNewTab = originalHandle != newHandle;
-			driver.Navigate().GoToUrl(url);
-			var file = new FileInfo(Path.Combine(downloadFolderToCheck, expectedFilename));
-			var timeout = DateTime.Now.AddSeconds(3);
-			while (DateTime.Now < timeout)
-			{
-				if (file.Exists)
-					break;
-				await Task.Delay(100);
-			}
-			if (!file.Exists)
-				throw new Exception("ddd");
+		//	var gotNewTab = originalHandle != newHandle;
+		//	driver.Navigate().GoToUrl(url);
+		//	var file = new FileInfo(Path.Combine(downloadFolderToCheck, expectedFilename));
+		//	var timeout = DateTime.Now.AddSeconds(3);
+		//	while (DateTime.Now < timeout)
+		//	{
+		//		if (file.Exists)
+		//			break;
+		//		await Task.Delay(100);
+		//	}
+		//	if (!file.Exists)
+		//		throw new Exception("ddd");
 
-			var lastLength = 0L;
-			while (true)
-			{
-				if (file.Length == lastLength)
-				{
-					if (!file.IsLocked())
-						break;
-				}
-				lastLength = file.Length;
-				await Task.Delay(100);
-			}
+		//	var lastLength = 0L;
+		//	while (true)
+		//	{
+		//		if (file.Length == lastLength)
+		//		{
+		//			if (!file.IsLocked())
+		//				break;
+		//		}
+		//		lastLength = file.Length;
+		//		await Task.Delay(100);
+		//	}
 
-			if (gotNewTab)
-				driver.Close();
+		//	if (gotNewTab)
+		//		driver.Close();
 
-			return file.FullName;
-		}
+		//	return file.FullName;
+		//}
 		public async Task<string> DownloadFile(string url, FetchConfig config = null, string overrideFilenameHeader = null)
 		{
 			config = config ?? new FetchConfig

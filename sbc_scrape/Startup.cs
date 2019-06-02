@@ -3,7 +3,8 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
-using SBCScan.Storage;
+using Scrape.IO;
+using Scrape.IO.Storage;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -48,7 +49,7 @@ namespace SBCScan
 
 			services.AddLogging(configure => configure.AddConsole());
 			services.AddOptions();
-			services.AddScoped<IDocumentStore, SbcFileStorage>(sp => new SbcFileStorage(settings.Value.StorageFolderRoot));
+			services.AddScoped<IKeyValueStore, FileSystemKVStore>(sp => new FileSystemKVStore(settings.Value.StorageFolderRoot));
 		}
 	}
 }

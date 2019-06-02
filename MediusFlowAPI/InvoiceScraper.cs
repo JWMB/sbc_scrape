@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using Scrape.IO;
 using System;
 using System.Collections.Generic;
 using System.Linq;

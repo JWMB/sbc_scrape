@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace MediusFlowAPI
+namespace Scrape.IO
 {
 	public abstract class ModeBase
 	{

@@ -1,21 +1,18 @@
-﻿using MediusFlowAPI;
-using Newtonsoft.Json;
-using System;
+﻿using Newtonsoft.Json;
+using Scrape.IO;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace SBCScan.Storage
+namespace Scrape.IO.Storage
 {
-	public class SbcFileStorage : IDocumentStore
+	public class FileSystemKVStore : IKeyValueStore
 	{
 		protected readonly string rootPath;
 		readonly string extension = ".json";
 
-		public SbcFileStorage(string rootPath)
+		public FileSystemKVStore(string rootPath)
 		{
 			this.rootPath = PathExtensions.Parse(rootPath);
 			if (!Directory.Exists(rootPath))
@@ -34,17 +31,19 @@ namespace SBCScan.Storage
 
 		public async Task<object> Get(string key)
 		{
-			return await File.ReadAllTextAsync(KeyToPath(key));
+			return File.ReadAllText(KeyToPath(key));
+			//TODO: await File.ReadAllTextAsync(KeyToPath(key));
 		}
 		public async Task<T> Get<T>(string key)
 		{
-			var content = await File.ReadAllTextAsync(KeyToPath(key));
+			var content = File.ReadAllText(KeyToPath(key)); //await File.ReadAllTextAsync(KeyToPath(key));
 			return JsonConvert.DeserializeObject<T>(content);
 		}
 
 		public async Task Post(string key, object obj)
 		{
-			await File.WriteAllTextAsync(KeyToPath(key), JsonConvert.SerializeObject(obj, Formatting.Indented));
+			File.WriteAllText(KeyToPath(key), JsonConvert.SerializeObject(obj, Formatting.Indented));
+			//TODO: WriteAllTextAsync(KeyToPath(key), JsonConvert.SerializeObject(obj, Formatting.Indented));
 		}
 
 		public async Task Delete(string key)
