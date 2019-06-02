@@ -23,6 +23,8 @@ namespace SBCScan
 		private readonly IKeyValueStore store;
 		private readonly ILogger<Main> logger;
 
+		private readonly Fetcher fetcher;
+
 		private RemoteWebDriver driver;
 		private string downloadFolder;
 
@@ -32,7 +34,7 @@ namespace SBCScan
 			this.store = store;
 			this.logger = logger;
 
-			downloadFolder = PathExtensions.Parse(this.settings.StorageFolderDownloadedFiles);
+			fetcher = new Fetcher(driver, new FileSystemKVStore(PathExtensions.Parse(this.settings.StorageFolderDownloadedFiles)));
 		}
 
 		public async Task Init()
@@ -40,7 +42,7 @@ namespace SBCScan
 			driver = SetupDriver(downloadFolder);
 			logger.LogInformation($"driver.SessionId = {driver.SessionId}");
 
-			var sbc = new Sbc(driver);
+			var sbc = new SBC(driver);
 			await sbc.Login(settings.LoginPage_BankId, settings.UserLoginId_BankId);
 
 			sbc.LoginToMediusFlow(settings.RedirectUrlMediusFlow);
@@ -49,14 +51,11 @@ namespace SBCScan
 
 		public API CreateApi()
 		{
-			var fetcher = new Fetcher(driver, downloadFolder);
 			return new API(fetcher, settings.MediusFlowRoot, settings.MediusRequestHeader_XUserContext);
 		}
 
 		public InvoiceScraper CreateScraper()
 		{
-			var fetcher = new Fetcher(driver, downloadFolder);
-
 			//TODO: can we get the x-user-context header from existing requests? E.g. puppeteers Network.responseReceived
 			return new InvoiceScraper(fetcher, settings.MediusFlowRoot, settings.MediusRequestHeader_XUserContext);
 		}
@@ -241,47 +240,6 @@ namespace SBCScan
 		{
 			driver?.Close();
 			driver = null;
-		}
-	}
-
-	public class Sbc
-	{
-		private readonly RemoteWebDriver driver;
-
-		public Sbc(RemoteWebDriver driver)
-		{
-			this.driver = driver;
-		}
-
-		public async Task Login(string loginUrl, string username)
-		{
-			var wait10 = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
-
-			driver.Navigate().GoToUrl(loginUrl);
-
-			driver.WaitUntilDocumentReady();
-
-			var pid = driver.FindElement(By.Id("login_UserName"));
-			pid.Clear();
-			pid.SendKeys(username);
-
-			var btn = driver.FindElement(By.Id("login_Login_Button"));
-			btn.Click();
-
-			var finder = By.Id("Forening_picker_login_Login_select_forening_1");
-			new WebDriverWait(driver, TimeSpan.FromMinutes(4)).Until(WebDriverExtensions.ElementIsPresent(finder));
-			driver.FindElement(finder).Click();
-
-			await Task.Delay(500);
-			//System.Threading.Thread.Sleep(1000);
-			driver.WaitUntilDocumentReady();
-		}
-
-		public void LoginToMediusFlow(string url)
-		{
-			// https://stackoverflow.com/questions/17547473/how-to-open-a-new-tab-using-selenium-webdriver
-			driver.Navigate().GoToUrl(url);
-			driver.WaitUntilDocumentReady();
 		}
 	}
 }
