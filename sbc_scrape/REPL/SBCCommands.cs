@@ -46,9 +46,47 @@ namespace SBCScan.REPL
 		public override string Id => "creategrouped";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var summaries = await main.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2019, 1, 1));
-			main.GroupByAccountAndTimePeriod(summaries, TimeSpan.FromDays(7));
-			return "";
+			var summaries = await main.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2010, 1, 1));
+
+			var accountDescriptions = summaries.Select(s => new { s.AccountId, s.AccountName }).Distinct()
+				.ToDictionary(s => s.AccountId, s => s.AccountName);
+
+			var aggregated = main.AggregateByTimePeriodAndFunc(summaries, 
+				inGroup => inGroup.Sum(o => o.GrossAmount),
+				accountSummary => accountSummary.AccountId ?? 0,
+				TimeSpan.FromDays(7));
+
+			// Hmm, the following pivot transform is daft, make it more generic and smarter:
+			var byDateAndColumn = new Dictionary<DateTime, Dictionary<long, List<string>>>();
+			foreach (var item in aggregated)
+			{
+				if (!byDateAndColumn.TryGetValue(item.TimeBin, out var byDate))
+				{
+					byDate = new Dictionary<long, List<string>>();
+					byDateAndColumn.Add(item.TimeBin, byDate);
+				}
+				byDate.Add(item.GroupedBy, new List<string> { item.Aggregate.ToString(), string.Join(",", item.InvoiceIds) });
+			}
+
+			var allGroupColumns = aggregated.Select(o => o.GroupedBy).Distinct().OrderBy(o => o).ToList();
+			var table = new List<List<string>>();
+			var header = new List<string> { "Date" }.
+				Concat(allGroupColumns.Select(o => $"{o} {accountDescriptions[o]}")).ToList();
+			table.Add(header);
+			var emptyRow = header.Select(o => (string)null).ToList();
+			foreach (var byDate in byDateAndColumn.OrderByDescending(k => k.Key))
+			{
+				var row = new List<string>(emptyRow);
+				row[0] = byDate.Key.ToString("yyyy-MM-dd");
+
+				table.Add(row);
+				foreach (var kv in byDate.Value)
+					row[allGroupColumns.IndexOf(kv.Key) + 1] = kv.Value[0];
+				//TODO: for e.g. google spreadsheet, we want Value[1] as a comment or tag, so we can easily find underlying invoices
+			}
+
+			var tsv = string.Join('\n', table.Select(row => string.Join('\t', row)));
+			return tsv;
 		}
 	}
 

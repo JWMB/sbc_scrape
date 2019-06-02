@@ -156,21 +156,58 @@ namespace SBCScan
 			return result;
 		}
 
-		public async Task<string> CreateIndex()
+		public async Task<List<T>> LoadAndTransformInvoices<T>(Func<InvoiceFull.FilenameFormat, bool> quickFilter = null, Func<InvoiceFull, T> selector = null)
 		{
 			var files = (await store.GetAllKeys()).ToList();
-			var infos = files.Select(k => InvoiceFull.FilenameFormat.Parse(k)).ToList();
-			var tasks = await Task.WhenAll(files.Select(f => store.Get(f))); //.Where(r => r != null);
-			//var results = tasks.Select(r => JObject.Parse(r.ToString())).ToList();
-			var results = tasks.Select(r => JsonConvert.DeserializeObject<InvoiceFull>(r.ToString())).ToList();
+			var result = new List<T>();
+			foreach (var file in files)
+			{
+				if (quickFilter != null && quickFilter(InvoiceFull.FilenameFormat.Parse(file)) == false)
+					continue;
+				var invoice = JsonConvert.DeserializeObject<InvoiceFull>((await store.Get(file)).ToString());
+				result.Add(selector(invoice));
+			}
+			return result;
+		}
+		public async Task<List<InvoiceSummary>> LoadInvoiceSummaries(Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
+		{
+			return await LoadAndTransformInvoices(quickFilter: quickFilter, selector: invoice => InvoiceSummary.Summarize(invoice));
+		}
 
-			var summaries = results.Select(r => InvoiceSummary.Summarize(r));
+		public class TimeSpanAndFuncAggregate<TGroupBy, TAggregate>
+		{
+			public TGroupBy GroupedBy { get; set; }
+			public DateTime TimeBin { get; set; }
+			public List<long> InvoiceIds { get; set; }
+			public TAggregate Aggregate { get; set; }
 
-			var byDate = summaries.OrderBy(r => r.InvoiceDate).ToList();
+		}
+		public List<TimeSpanAndFuncAggregate<TGroupBy, TAggregate>> AggregateByTimePeriodAndFunc<TGroupBy, TAggregate>(
+			List<InvoiceSummary> summaries, Func<IEnumerable<InvoiceSummary>, TAggregate> aggregator, 
+			Func<InvoiceSummary, TGroupBy> groupSelector, TimeSpan bin)
+		{
+			var tsAsTicks = bin.Ticks;
+			var summed = summaries.
+				Select(o => new { O = o, Bin = new DateTime((o.InvoiceDate.Value.Ticks / tsAsTicks) * tsAsTicks) })
+				.GroupBy(o => o.Bin)
+				.SelectMany(g => g.GroupBy(o => groupSelector(o.O))
+					.Select(byGrouping => new TimeSpanAndFuncAggregate<TGroupBy, TAggregate>
+					{
+						GroupedBy = byGrouping.Key,
+						TimeBin = g.Key,
+						Aggregate = aggregator(byGrouping.Select(ss => ss.O)),
+						InvoiceIds = byGrouping.Select(ss => ss.O.Id).ToList()
+					})
+					.ToList()
+			).OrderByDescending(o => o.TimeBin);
+			return summed.ToList();
+		}
 
-			var xxx = JsonConvert.SerializeObject(byDate, Formatting.Indented);
-			var csv = ServiceStack.Text.CsvSerializer.SerializeToString(byDate);
-			return csv;
+		public async Task<string> CreateIndex()
+		{
+			var byDate = (await LoadInvoiceSummaries()).OrderByDescending(r => r.InvoiceDate).ToList();
+			//var xxx = JsonConvert.SerializeObject(byDate, Formatting.Indented);
+			return ServiceStack.Text.CsvSerializer.SerializeToString(byDate);
 		}
 
 		static RemoteWebDriver SetupDriver(string downloadFolder)
