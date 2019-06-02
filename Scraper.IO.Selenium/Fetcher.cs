@@ -2,6 +2,7 @@
 using OpenQA.Selenium;
 using OpenQA.Selenium.Remote;
 using Scrape.IO;
+using Scrape.IO.Storage;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -15,12 +16,12 @@ namespace Scrape.IO.Selenium
 	public class Fetcher : IFetcher
 	{
 		private readonly RemoteWebDriver driver;
-		private readonly string downloadFolderToCheck;
+		private readonly IKeyValueStore store;
 
-		public Fetcher(RemoteWebDriver driver, string downloadFolderToCheck)
+		public Fetcher(RemoteWebDriver driver, IKeyValueStore store)
 		{
 			this.driver = driver;
-			this.downloadFolderToCheck = downloadFolderToCheck;
+			this.store = store;
 		}
 
 		//private async Task<string> GetInNewTab(string url, string expectedFilename)
@@ -84,9 +85,10 @@ namespace Scrape.IO.Selenium
 					if (m.Success)
 						filename = m.Groups["filename"].Value;
 				}
-				var path = Path.Combine(downloadFolderToCheck, overrideFilenameHeader ?? filename);
-				await File.WriteAllBytesAsync(path, bytes);
-				return path;
+				filename = overrideFilenameHeader ?? filename;
+				await store.Post(filename, bytes);
+				//await File.WriteAllBytesAsync(path, bytes);
+				return filename;
 			}
 			return response.Body.ToString();
 		}

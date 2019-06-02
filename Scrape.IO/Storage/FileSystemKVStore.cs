@@ -31,6 +31,7 @@ namespace Scrape.IO.Storage
 
 		public async Task<object> Get(string key)
 		{
+			//TODO: read as byte[]?
 			return File.ReadAllText(KeyToPath(key));
 			//TODO: await File.ReadAllTextAsync(KeyToPath(key));
 		}
@@ -42,7 +43,10 @@ namespace Scrape.IO.Storage
 
 		public async Task Post(string key, object obj)
 		{
-			File.WriteAllText(KeyToPath(key), JsonConvert.SerializeObject(obj, Formatting.Indented));
+			if (obj is byte[] bytes)
+				File.WriteAllBytes(KeyToPath(key), bytes);
+			else
+				File.WriteAllText(KeyToPath(key), JsonConvert.SerializeObject(obj, Formatting.Indented));
 			//TODO: WriteAllTextAsync(KeyToPath(key), JsonConvert.SerializeObject(obj, Formatting.Indented));
 		}
 
