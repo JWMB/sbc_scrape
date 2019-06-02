@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "sbc_scrape", "sbc_scrape\sb
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MediusFlowAPI", "MediusFlowAPI\MediusFlowAPI.csproj", "{98EAB492-8F67-4FD0-AD80-6FD643A4093F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "REPL", "REPL\REPL.csproj", "{F9A86A48-3548-4277-A283-CAF56ABA452D}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{98EAB492-8F67-4FD0-AD80-6FD643A4093F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{98EAB492-8F67-4FD0-AD80-6FD643A4093F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{98EAB492-8F67-4FD0-AD80-6FD643A4093F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F9A86A48-3548-4277-A283-CAF56ABA452D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F9A86A48-3548-4277-A283-CAF56ABA452D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F9A86A48-3548-4277-A283-CAF56ABA452D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F9A86A48-3548-4277-A283-CAF56ABA452D}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

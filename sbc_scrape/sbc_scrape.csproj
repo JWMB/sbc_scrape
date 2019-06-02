@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\MediusFlowAPI\MediusFlowAPI.csproj" />
+    <ProjectReference Include="..\REPL\REPL.csproj" />
   </ItemGroup>
 
   <ItemGroup>

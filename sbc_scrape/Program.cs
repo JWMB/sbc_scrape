@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using REPL;
 using SBCScan.REPL;
 using System;
 using System.Collections.Generic;

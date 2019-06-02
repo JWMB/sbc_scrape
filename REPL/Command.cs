@@ -1,20 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
-namespace SBCScan.REPL
+namespace REPL
 {
-
-	interface IQuitCommand
+	public interface IQuitCommand
 	{ }
-	interface IUpdateCommandList
+	public interface IUpdateCommandList
 	{
 		IEnumerable<Command> UpdateCommandList(IEnumerable<Command> currentCommandList);
 	}
 
-	abstract class Command
+	public abstract class Command
 	{
 		public abstract string Id { get; }
 		public abstract Task<object> Evaluate(List<object> parms);
@@ -60,7 +58,7 @@ namespace SBCScan.REPL
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error for {string.Join(' ', input)}:\n{ex.Message}");
+				Console.WriteLine($"Error for {string.Join(" ", input)}:\n{ex.Message}");
 			}
 			if (theRest != null && theRest.Any())
 			{
