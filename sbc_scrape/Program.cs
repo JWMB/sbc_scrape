@@ -19,6 +19,7 @@ namespace SBCScan
 			{
 				var cmds = new List<Command> {
 					new CreateIndexCmd(main),
+					new CreateGroupedCmd(main),
 					new QuitCmd(),
 					new WriteFileCmd(Environment.CurrentDirectory),
 					new ReadFileCmd(Environment.CurrentDirectory),
@@ -27,7 +28,7 @@ namespace SBCScan
 				};
 				cmds.Add(new ListCmd(cmds));
 
-				await Command.RunCommandLoop(cmds);
+				await Command.RunREPL(cmds);
 			}
 		}
 	}
