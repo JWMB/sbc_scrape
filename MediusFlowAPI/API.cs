@@ -4,6 +4,7 @@ using Scrape.IO;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace MediusFlowAPI
@@ -34,13 +35,13 @@ namespace MediusFlowAPI
 		{
 			return task?.Document?.HashFiles?.Where(hf => hf.HashFileType == "InvoiceImage");
 		}
-		public async Task<Dictionary<Guid, object>> GetTaskImages(IEnumerable<Models.Task.HashFile> imageInfos, bool downloadImages)
+		public async Task<Dictionary<Guid, object>> GetTaskImages(IEnumerable<Models.Task.HashFile> imageInfos, bool downloadImages, string filenameFormat = "{0}")
 		{
 			var images = new Dictionary<Guid, object>();
 			if (imageInfos != null)
 			{
 				foreach (var hf in imageInfos)
-					images.Add(hf.Hash, downloadImages ? await GetMedia(hf.Hash, hf.HashFileType) : ""); //Pretty slow
+					images.Add(hf.Hash, downloadImages ? await GetMedia(hf.Hash, string.Format(filenameFormat, hf.HashFileType)) : ""); //Pretty slow
 			}
 			return images;
 		}
@@ -194,8 +195,34 @@ namespace MediusFlowAPI
 		public string AccountName { get; set; }
 		public double? VAT { get; set; }
 		//public string InvoiceType { get; set; }
+		public string Houses
+		{
+			get
+			{
+				return string.Join(", ",
+					RxFindHouse.Select(rx => rx.Matches(Comments))
+					.Where(ms => ms.Count > 0).SelectMany(ms => ms.Cast<Match>().ToList()).Select(m => m.Groups["house"].Value)
+					.Distinct().OrderBy(s => s));
+			}
+		}
+		static List<Regex> _rxFindHouse;
+		static List<Regex> RxFindHouse
+		{
+			get
+			{
+				if (_rxFindHouse == null)
+					_rxFindHouse = new List<Regex> {
+						new Regex(@"(Riksrådsv(ägen|\.)?|RRV|rrv|(n|N)r)\s?(?<house>\d{2,3})"),
+						new Regex(@"(?<house>\d{2,3})\:an"),
+					};
+				return _rxFindHouse;
+			}
+		}
+
 		public string Comments { get; set; }
 		public string History { get; set; }
+
+
 
 		static System.Text.RegularExpressions.Regex rxSimplifyAuthor =
 			new System.Text.RegularExpressions.Regex(@"(?<name>(\w+\s){1,2})\s?\((\d{5,6}|SYSTEM)\)");
@@ -288,6 +315,23 @@ namespace MediusFlowAPI
 		{
 			return $"{(Invoice.InvoiceDate.FromMediusDate()?.ToString("yyyy-MM-dd") ?? "0000")} {Invoice.Supplier.Name} {Invoice.GrossAmount.DisplayValue} {Invoice.Id}";
 		}
+
+		static string MakeSafeFilename(string str, int truncate = 0)
+		{
+			foreach (char c in System.IO.Path.GetInvalidFileNameChars())
+				if (str.Contains(c))
+					str = str.Replace(c, '_');
+			return truncate > 0 && str.Length > truncate ? str.Remove(truncate) : str;
+		}
+
+		public static string GetFilenamePrefix(DateTime invoiceDate, string supplier, long invoiceId)
+		{
+			return string.Join("_",
+				invoiceDate.ToString("yyyy-MM-dd"),
+				MakeSafeFilename(supplier, 15),
+				invoiceId.ToString());
+		}
+
 		public class FilenameFormat
 		{
 			public DateTime InvoiceDate { get; set; }
@@ -295,20 +339,10 @@ namespace MediusFlowAPI
 			public string Supplier { get; set; }
 			public DateTime RegisteredDate { get; set; }
 			public long? State { get; set; }
-			static string MakeSafeFilename(string str, int truncate = 0)
-			{
-				foreach (char c in System.IO.Path.GetInvalidFileNameChars())
-					if (str.Contains(c))
-						str = str.Replace(c, '_');
-				return truncate > 0 && str.Length > truncate ? str.Remove(truncate) : str;
-			}
 
 			public override string ToString()
 			{
-				return string.Join("_",
-					InvoiceDate.ToString("yyyy-MM-dd"),
-					MakeSafeFilename(Supplier, 15),
-					Id.ToString(),
+				return GetFilenamePrefix(InvoiceDate, Supplier, Id) + string.Join("_",
 					RegisteredDate.ToString("MM-dd"),
 					State.ToString()
 					);
