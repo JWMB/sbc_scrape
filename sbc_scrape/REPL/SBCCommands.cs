@@ -52,10 +52,21 @@ namespace SBCScan.REPL
 			var withHouses = summaries.Select(s =>
 				new { Summary = s, Houses = s.Houses?.Split(',').Select(h => h.Trim()).Where(h => h.Length > 0).ToList() })
 				.Where(s => s.Houses != null && s.Houses.Any());
-			withHouses = withHouses.OrderBy(o => o.Houses.First()).ThenByDescending(o => o.Summary.InvoiceDate).ToList();
 
-			return string.Join('\n', withHouses.Select(o => 
-			$"{string.Join(',', o.Houses)}: {o.Summary.GrossAmount} {o.Summary.AccountName} {o.Summary.InvoiceDate} {o.Summary.Supplier}"));
+			var byHouse = withHouses.SelectMany(o => o.Houses.Select(h => new {
+				House = h,
+				OtherHouses = string.Join(",", o.Houses.Except(new string[] { h })),
+				o.Summary }))
+				.GroupBy(o => o.House).ToDictionary(o => o.Key, o => o.ToList());
+
+			return string.Join('\n', byHouse.Select(o =>
+				$"{o.Key}: {o.Value.Sum(v => v.Summary.GrossAmount)}\n  "
+				+ $"{(string.Join("\n  ", o.Value.Select(v => ($"{v.Summary.GrossAmount} {v.Summary.AccountName} {v.Summary.InvoiceDate} {v.Summary.Supplier} {v.OtherHouses}"))))}"));
+
+
+			//withHouses = withHouses.OrderBy(o => o.Houses.First()).ThenByDescending(o => o.Summary.InvoiceDate).ToList();
+			//return string.Join('\n', withHouses.Select(o => 
+			//$"{string.Join(',', o.Houses)}: {o.Summary.GrossAmount} {o.Summary.AccountName} {o.Summary.InvoiceDate} {o.Summary.Supplier}"));
 		}
 	}
 	class CreateGroupedCmd : Command
