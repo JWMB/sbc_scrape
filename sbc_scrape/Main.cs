@@ -66,7 +66,9 @@ namespace SBCScan
 			var result = new Dictionary<InvoiceFull, List<string>>();
 			foreach (var invoice in invoices)
 			{
-				var images = await api.GetTaskImages(api.GetTaskImagesInfo(invoice.FirstTask?.Task), true);
+				var filenameFormat = InvoiceFull.GetFilenamePrefix(invoice.Invoice.InvoiceDate.FromMediusDate().Value,
+					invoice.Invoice.Supplier.Name, invoice.Invoice.Id) + "_{0}";
+				var images = await api.GetTaskImages(api.GetTaskImagesInfo(invoice.FirstTask?.Task), true, filenameFormat);
 				result.Add(invoice, images.Keys.Select(k => k.ToString()).ToList());
 			}
 			return result;

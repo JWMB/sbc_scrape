@@ -41,6 +41,23 @@ namespace SBCScan.REPL
 		public override async Task<object> Evaluate(List<object> parms) => await main.CreateIndex();
 	}
 
+	class CreateHouseIndexCmd : Command
+	{
+		private readonly Main main;
+		public CreateHouseIndexCmd(Main main) => this.main = main;
+		public override string Id => "houseindex";
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			var summaries = await main.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2010, 1, 1));
+			var withHouses = summaries.Select(s =>
+				new { Summary = s, Houses = s.Houses?.Split(',').Select(h => h.Trim()).Where(h => h.Length > 0).ToList() })
+				.Where(s => s.Houses != null && s.Houses.Any());
+			withHouses = withHouses.OrderBy(o => o.Houses.First()).ThenByDescending(o => o.Summary.InvoiceDate).ToList();
+
+			return string.Join('\n', withHouses.Select(o => 
+			$"{string.Join(',', o.Houses)}: {o.Summary.GrossAmount} {o.Summary.AccountName} {o.Summary.InvoiceDate} {o.Summary.Supplier}"));
+		}
+	}
 	class CreateGroupedCmd : Command
 	{
 		private readonly Main main;

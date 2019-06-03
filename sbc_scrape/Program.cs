@@ -21,6 +21,7 @@ namespace SBCScan
 				var cmds = new List<Command> {
 					new CreateIndexCmd(main),
 					new CreateGroupedCmd(main),
+					new CreateHouseIndexCmd(main),
 					new QuitCmd(),
 					new WriteFileCmd(Environment.CurrentDirectory),
 					new ReadFileCmd(Environment.CurrentDirectory),
