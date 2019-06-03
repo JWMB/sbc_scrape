@@ -202,11 +202,10 @@ namespace SBCScan
 		}
 		public List<TimeSpanAndFuncAggregate<TGroupBy, TAggregate>> AggregateByTimePeriodAndFunc<TGroupBy, TAggregate>(
 			List<InvoiceSummary> summaries, Func<IEnumerable<InvoiceSummary>, TAggregate> aggregator, 
-			Func<InvoiceSummary, TGroupBy> groupSelector, TimeSpan bin)
+			Func<InvoiceSummary, TGroupBy> groupSelector, Func<InvoiceSummary, DateTime> timeBinSelector)
 		{
-			var tsAsTicks = bin.Ticks;
 			var summed = summaries.
-				Select(o => new { O = o, Bin = new DateTime((o.InvoiceDate.Value.Ticks / tsAsTicks) * tsAsTicks) })
+				Select(o => new { O = o, Bin = timeBinSelector(o) })
 				.GroupBy(o => o.Bin)
 				.SelectMany(g => g.GroupBy(o => groupSelector(o.O))
 					.Select(byGrouping => new TimeSpanAndFuncAggregate<TGroupBy, TAggregate>

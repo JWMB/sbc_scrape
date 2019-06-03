@@ -53,10 +53,22 @@ namespace SBCScan.REPL
 			var accountDescriptions = summaries.Select(s => new { s.AccountId, s.AccountName }).Distinct()
 				.ToDictionary(s => s.AccountId, s => s.AccountName);
 
+			Func<InvoiceSummary, DateTime> timeBinSelector = null;
+			if (false)
+			{
+				var bin = TimeSpan.FromDays(7);
+				var tsAsTicks = bin.Ticks;
+				timeBinSelector = invoice => new DateTime((invoice.InvoiceDate.Value.Ticks / tsAsTicks) * tsAsTicks);
+			}
+			else
+			{
+				timeBinSelector = invoice => new DateTime(invoice.InvoiceDate.Value.Year, invoice.InvoiceDate.Value.Month, 1);
+			}
+
 			var aggregated = main.AggregateByTimePeriodAndFunc(summaries, 
 				inGroup => inGroup.Sum(o => o.GrossAmount),
 				accountSummary => accountSummary.AccountId ?? 0,
-				TimeSpan.FromDays(7));
+				timeBinSelector);
 
 			// Hmm, the following pivot transform is daft, make it more generic and smarter:
 			var byDateAndColumn = new Dictionary<DateTime, Dictionary<long, List<string>>>();
