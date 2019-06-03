@@ -70,7 +70,11 @@ namespace SBCScan.REPL
 				byDate.Add(item.GroupedBy, new List<string> { item.Aggregate.ToString(), string.Join(",", item.InvoiceIds) });
 			}
 
-			var allGroupColumns = aggregated.Select(o => o.GroupedBy).Distinct().OrderBy(o => o).ToList();
+			//Sort columns by total - most important columns to the left
+			var sorted = aggregated.GroupBy(o => o.GroupedBy).Select(g => new { GroupedBy = g.Key, Sum = g.Sum(o => o.Aggregate) })
+				.OrderByDescending(o => o.Sum);
+			var allGroupColumns = sorted.Select(o => o.GroupedBy).ToList();
+
 			var table = new List<List<string>>();
 			var header = new List<string> { "Date" }.
 				Concat(allGroupColumns.Select(o => $"{o} {accountDescriptions[o]}")).ToList();
