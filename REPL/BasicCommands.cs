@@ -36,6 +36,23 @@ namespace REPL
 		}
 	}
 
+	public class CSVCmd : Command
+	{
+		public CSVCmd() { }
+		public override string Id => "csv";
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			if (parms[0] is string)
+			{
+				var type = AppDomain.CurrentDomain.GetAssemblies()
+					.Select(a => a.GetType(parms[1] as string)).FirstOrDefault();
+				return ServiceStack.Text.CsvSerializer.DeserializeFromString(type, parms[0] as string);
+			}
+			return ServiceStack.Text.CsvSerializer.SerializeToString(parms[0]);
+		}
+	}
+
+
 	public class WriteFileCmd : Command
 	{
 		private readonly string defaultFolder;

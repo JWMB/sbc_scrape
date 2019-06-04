@@ -229,11 +229,11 @@ namespace SBCScan
 			return summed.ToList();
 		}
 
-		public async Task<string> CreateIndex()
+		public async Task<List<InvoiceSummary>> CreateIndex()
 		{
-			var byDate = (await LoadInvoiceSummaries()).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+			return (await LoadInvoiceSummaries()).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 			//var xxx = JsonConvert.SerializeObject(byDate, Formatting.Indented);
-			return ServiceStack.Text.CsvSerializer.SerializeToString(byDate);
+			//return ServiceStack.Text.CsvSerializer.SerializeToString(byDate);
 		}
 
 		static RemoteWebDriver SetupDriver(string downloadFolder)

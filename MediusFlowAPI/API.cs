@@ -262,6 +262,7 @@ namespace MediusFlowAPI
 				return $"{SimplifyAuthor(c.Author)} ({c.CreatedDate?.FromMediusDate()?.ToString("MM-dd HH:mm")}):{c.Text.Replace("\n", "")}";
 			}
 			string Join(string separator, IEnumerable<string> strings) => strings == null ? "" : string.Join(separator, strings);
+			string RemoveFromEnd(string str, string toRemove) => str.EndsWith(toRemove) ? str.Remove(str.Length - toRemove.Length) : str;
 
 			try
 			{
@@ -276,7 +277,7 @@ namespace MediusFlowAPI
 					Supplier = iv.Supplier.Name,
 					DueDate = iv.DueDate.FromMediusDate(),
 					AccountId = accountingDimension1?.Value?.ValueValue,
-					AccountName = accountingDimension1?.Value?.Description,
+					AccountName = RemoveFromEnd(accountingDimension1?.Value?.Description, " -E-"),
 					VAT = taskDoc?.CustomFields.NumericCustomField1.Value,
 					Comments = Join(",", ft?.Comments?.Select(c => GetCommentSummary(c))),
 					History = Join(",", ft?.History?.Select(c => GetHistoryItemSummary(c))),

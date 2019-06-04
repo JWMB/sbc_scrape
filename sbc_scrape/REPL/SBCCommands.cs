@@ -1,8 +1,10 @@
 ﻿using MediusFlowAPI;
 using Newtonsoft.Json;
 using REPL;
+using Scrape.IO;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -43,17 +45,26 @@ namespace SBCScan.REPL
 
 	class ReadSBCInvoices : Command
 	{
-		public ReadSBCInvoices() { }
+		private readonly string defaultFolder;
+		public ReadSBCInvoices(string defaultFolder) => this.defaultFolder = defaultFolder;
 		public override string Id => "sbcinvoices";
-
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			//var root = "C:\\Users\\jonas\\source\\repos\\";
-			var root = "C:\\Users\\jonas\\Documents\\";
-			var all = sbc_scrape.Fakturaparm.ReadAll(root + "sbc_scrape\\sbc_scrape\\scraped\\sbc_fakturaparm");
-			return ServiceStack.Text.CsvSerializer.SerializeToString(all);
+			var read = sbc_scrape.Fakturaparm.ReadAll(defaultFolder).Select(o => o.ToSummary()).ToList();
+			var parm1 = parms.FirstOrDefault();
+			if (parm1 is IEnumerable<InvoiceSummary> input)
+			{
+				//Use "real" data instead of Fakturaparm where they overlap:
+				var duplicatesRemoved = read.Except(input, new sbc_scrape.Fakturaparm.SBCvsMediusEqualityComparer())
+					.Concat(input)
+					.OrderByDescending(o => o.InvoiceDate);
+				return duplicatesRemoved;
+			}
+			return read;
 		}
 	}
+
+
 	class CreateHouseIndexCmd : Command
 	{
 		private readonly Main main;
@@ -76,12 +87,12 @@ namespace SBCScan.REPL
 				$"{o.Key}: {o.Value.Sum(v => v.Summary.GrossAmount)}\n  "
 				+ $"{(string.Join("\n  ", o.Value.Select(v => ($"{v.Summary.GrossAmount} {v.Summary.AccountName} {v.Summary.InvoiceDate} {v.Summary.Supplier} {v.OtherHouses}"))))}"));
 
-
 			//withHouses = withHouses.OrderBy(o => o.Houses.First()).ThenByDescending(o => o.Summary.InvoiceDate).ToList();
 			//return string.Join('\n', withHouses.Select(o => 
 			//$"{string.Join(',', o.Houses)}: {o.Summary.GrossAmount} {o.Summary.AccountName} {o.Summary.InvoiceDate} {o.Summary.Supplier}"));
 		}
 	}
+
 	class CreateGroupedCmd : Command
 	{
 		private readonly Main main;
@@ -89,9 +100,16 @@ namespace SBCScan.REPL
 		public override string Id => "creategrouped";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var summaries = await main.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2010, 1, 1));
+			List<InvoiceSummary> summaries = null;
+			if (parms.FirstOrDefault() is IEnumerable<InvoiceSummary> input)
+				summaries = input.ToList();
+			else
+				summaries = await main.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2010, 1, 1));
 
-			var accountDescriptions = summaries.Select(s => new { s.AccountId, s.AccountName }).Distinct()
+			var accountDescriptionsWithDups = summaries.Select(s => new { s.AccountId, s.AccountName }).Distinct();
+			//We may have competing AccountNames (depending on source)
+			var distinct = accountDescriptionsWithDups.Select(s => s.AccountId).Distinct();
+			var accountDescriptions = distinct.Select(s => accountDescriptionsWithDups.First(d => d.AccountId == s))
 				.ToDictionary(s => s.AccountId, s => s.AccountName);
 
 			Func<InvoiceSummary, DateTime> timeBinSelector = null;
@@ -108,7 +126,7 @@ namespace SBCScan.REPL
 
 			var aggregated = main.AggregateByTimePeriodAndFunc(summaries, 
 				inGroup => inGroup.Sum(o => o.GrossAmount),
-				accountSummary => accountSummary.AccountId ?? 0,
+				accountSummary => accountSummary.AccountId ?? 0, //(accountSummary.AccountId ?? 0) / 1000 * 1000,
 				timeBinSelector);
 
 			// Hmm, the following pivot transform is daft, make it more generic and smarter:
@@ -124,8 +142,12 @@ namespace SBCScan.REPL
 			}
 
 			//Sort columns by total - most important columns to the left
-			var sorted = aggregated.GroupBy(o => o.GroupedBy).Select(g => new { GroupedBy = g.Key, Sum = g.Sum(o => o.Aggregate) })
-				.OrderByDescending(o => o.Sum);
+			//Only look at last year
+			var lookFromDate = aggregated.Max(o => o.TimeBin).AddYears(-1);
+			var sorted = aggregated.GroupBy(o => o.GroupedBy).Select(g => new {
+				GroupedBy = g.Key,
+				Sum = g.Where(o => o.TimeBin > lookFromDate).Sum(o => o.Aggregate) }
+			).OrderByDescending(o => o.Sum);
 			var allGroupColumns = sorted.Select(o => o.GroupedBy).ToList();
 
 			var table = new List<List<string>>();
