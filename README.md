@@ -45,3 +45,4 @@ Reads the json files and creates a csv with the most important information. In o
 * Image handling 
   * use filenames with more info (currently only a GUID) so they can be found manually
   * Some image processing (b/w, resize) for smaller footprint
+  * Integrate OCR (tesseract?) to get more searchable data from invoice images
