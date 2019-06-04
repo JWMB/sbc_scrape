@@ -16,6 +16,7 @@ namespace SBCScan
 		{
 			var startup = new Startup(args);
 
+			sbc_scrape.Fakturaparm.Parse(System.IO.File.ReadAllText("C:\\Users\\jonas\\source\\repos\\sbc_fakturaparm\\2016.html"));
 			using (var main = ActivatorUtilities.CreateInstance<Main>(startup.Services))
 			{
 				var cmds = new List<Command> {
