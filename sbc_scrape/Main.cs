@@ -184,8 +184,15 @@ namespace SBCScan
 			{
 				if (quickFilter != null && quickFilter(InvoiceFull.FilenameFormat.Parse(file)) == false)
 					continue;
-				var invoice = JsonConvert.DeserializeObject<InvoiceFull>((await store.Get(file)).ToString());
-				result.Add(selector(invoice));
+				try
+				{
+					var invoice = JsonConvert.DeserializeObject<InvoiceFull>((await store.Get(file)).ToString());
+					result.Add(selector(invoice));
+				}
+				catch (Exception ex)
+				{
+					throw new Exception($"Deserialization of {file} failed");
+				}
 			}
 			return result;
 		}
@@ -224,7 +231,7 @@ namespace SBCScan
 
 		public async Task<string> CreateIndex()
 		{
-			var byDate = (await LoadInvoiceSummaries()).OrderByDescending(r => r.InvoiceDate).ToList();
+			var byDate = (await LoadInvoiceSummaries()).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 			//var xxx = JsonConvert.SerializeObject(byDate, Formatting.Indented);
 			return ServiceStack.Text.CsvSerializer.SerializeToString(byDate);
 		}

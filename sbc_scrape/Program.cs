@@ -16,19 +16,19 @@ namespace SBCScan
 		{
 			var startup = new Startup(args);
 
-			sbc_scrape.Fakturaparm.Parse(System.IO.File.ReadAllText("C:\\Users\\jonas\\source\\repos\\sbc_fakturaparm\\2016.html"));
 			using (var main = ActivatorUtilities.CreateInstance<Main>(startup.Services))
 			{
 				var cmds = new List<Command> {
 					new CreateIndexCmd(main),
 					new CreateGroupedCmd(main),
 					new CreateHouseIndexCmd(main),
+					new ReadSBCInvoices(),
 					new QuitCmd(),
 					new WriteFileCmd(Environment.CurrentDirectory),
 					new ReadFileCmd(Environment.CurrentDirectory),
 					new InitCmd(main),
 					new AddCommandsTestCmd(),
-				};
+					};
 				cmds.Add(new ListCmd(cmds));
 
 				await Command.RunREPL(cmds);

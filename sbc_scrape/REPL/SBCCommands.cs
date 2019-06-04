@@ -41,6 +41,19 @@ namespace SBCScan.REPL
 		public override async Task<object> Evaluate(List<object> parms) => await main.CreateIndex();
 	}
 
+	class ReadSBCInvoices : Command
+	{
+		public ReadSBCInvoices() { }
+		public override string Id => "sbcinvoices";
+
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			//var root = "C:\\Users\\jonas\\source\\repos\\";
+			var root = "C:\\Users\\jonas\\Documents\\";
+			var all = sbc_scrape.Fakturaparm.ReadAll(root + "sbc_scrape\\sbc_scrape\\scraped\\sbc_fakturaparm");
+			return ServiceStack.Text.CsvSerializer.SerializeToString(all);
+		}
+	}
 	class CreateHouseIndexCmd : Command
 	{
 		private readonly Main main;

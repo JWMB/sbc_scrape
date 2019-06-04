@@ -58,7 +58,7 @@ namespace REPL
 			}
 			catch (Exception ex)
 			{
-				Console.WriteLine($"Error for {string.Join(" ", input)}:\n{ex.Message}");
+				Console.WriteLine($"Error for {string.Join(" ", input)}:\n{ex.Message}\n{ex.StackTrace}");
 				return (null, "Error");
 			}
 			if (theRest != null && theRest.Any())
