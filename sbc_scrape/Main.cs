@@ -39,7 +39,7 @@ namespace SBCScan
 			driver = SetupDriver(downloadFolder);
 			logger.LogInformation($"driver.SessionId = {driver.SessionId}");
 
-			fetcher = new Fetcher(driver, new FileSystemKVStore(PathExtensions.Parse(settings.StorageFolderDownloadedFiles), extension: ""));
+			fetcher = new Fetcher(driver, new FileSystemKVStore(settings.StorageFolderDownloadedFilesResolved, extension: ""));
 
 			var sbc = new SBC(driver);
 			await sbc.Login(settings.LoginPage_BankId, settings.UserLoginId_BankId);
@@ -231,7 +231,8 @@ namespace SBCScan
 
 		public async Task<List<InvoiceSummary>> CreateIndex()
 		{
-			return (await LoadInvoiceSummaries()).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+			var summaries = await LoadInvoiceSummaries();
+			return summaries.OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 			//var xxx = JsonConvert.SerializeObject(byDate, Formatting.Indented);
 			//return ServiceStack.Text.CsvSerializer.SerializeToString(byDate);
 		}

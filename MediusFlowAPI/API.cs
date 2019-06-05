@@ -223,7 +223,7 @@ namespace MediusFlowAPI
 		public string History { get; set; }
 
 
-
+		static System.Globalization.CultureInfo Culture = new System.Globalization.CultureInfo("en-US");
 		static System.Text.RegularExpressions.Regex rxSimplifyAuthor =
 			new System.Text.RegularExpressions.Regex(@"(?<name>(\w+\s){1,2})\s?\((\d{5,6}|SYSTEM)\)");
 		public static InvoiceSummary Summarize(InvoiceFull invoice)
@@ -273,7 +273,7 @@ namespace MediusFlowAPI
 					CreatedDate = taskDoc?.CreatedTimestamp.FromMediusDate()?.Date,
 					TaskState = task?.State,
 					TaskId = task?.Id,
-					GrossAmount = decimal.Parse(iv.GrossAmount.DisplayValue),
+					GrossAmount = decimal.Parse(iv.GrossAmount.DisplayValue, System.Globalization.NumberStyles.Any, Culture),
 					Supplier = iv.Supplier.Name,
 					DueDate = iv.DueDate.FromMediusDate(),
 					AccountId = accountingDimension1?.Value?.ValueValue,
