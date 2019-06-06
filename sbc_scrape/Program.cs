@@ -19,15 +19,13 @@ namespace SBCScan
 		{
 			var startup = new Startup(args);
 
-			var settings = ActivatorUtilities.GetServiceOrCreateInstance<IOptions<AppSettings>>(startup.Services).Value;
-			
 			using (var main = ActivatorUtilities.CreateInstance<Main>(startup.Services))
 			{
 				var cmds = new List<Command> {
 					new CreateIndexCmd(main),
 					new CreateGroupedCmd(main),
 					new CreateHouseIndexCmd(main),
-					new ReadSBCInvoices(Path.Combine(PathExtensions.Parse(settings.StorageFolderRoot), "sbc_fakturaparm")),
+					new ReadSBCInvoices(Path.Combine(GlobalSettings.AppSettings.StorageFolderRootResolved, "sbc_fakturaparm")),
 					new QuitCmd(),
 					new CSVCmd(),
 					new WriteFileCmd(Environment.CurrentDirectory),

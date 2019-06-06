@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using System.Collections.Generic;
 using System.Text;
+using SBCScan;
 
 namespace sbc_scrape
 {
@@ -38,21 +39,9 @@ namespace sbc_scrape
 
 		public class SBCvsMediusEqualityComparer : IEqualityComparer<MediusFlowAPI.InvoiceSummary>
 		{
-			//TODO: as a setting
-			private List<List<long>> mixedUpAccountIds = new List<List<long>> {
-				new List<long>{ 69810, 69830 },
-				new List<long>{ 64890, 64800 },
-				new List<long>{ 64700, 64600 },
-				new List<long>{ 46410, 46400 },
-				new List<long>{ 45530, 45000 },
-				new List<long>{ 45000, 43600 },
-				new List<long>{ 45600, 43600 },
-				new List<long>{ 43391, 43370 },
-			};
-			private bool GetIsMixedUpPair(long id1, long id2)
-			{
-				return mixedUpAccountIds.FirstOrDefault(pair => pair.Contains(id1) && pair.Contains(id2)) != null;
-			}
+			private List<List<long>> mixedUpAccountIds = GlobalSettings.AppSettings.MixedUpAccountIdsParsed;
+
+			private bool GetIsMixedUpPair(long id1, long id2) => mixedUpAccountIds.FirstOrDefault(pair => pair.Contains(id1) && pair.Contains(id2)) != null;
 
 			public bool Equals(MediusFlowAPI.InvoiceSummary b1, MediusFlowAPI.InvoiceSummary b2)
 			{
