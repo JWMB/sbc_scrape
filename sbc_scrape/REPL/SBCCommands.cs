@@ -40,7 +40,21 @@ namespace SBCScan.REPL
 		private readonly Main main;
 		public CreateIndexCmd(Main main) => this.main = main;
 		public override string Id => "createindex";
-		public override async Task<object> Evaluate(List<object> parms) => await main.CreateIndex();
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			var summaries = await main.LoadInvoiceSummaries();
+			var pathToOCRed = GlobalSettings.AppSettings.StorageFolderDownloadedFilesResolved;
+			var ocrFiles = new DirectoryInfo(pathToOCRed).GetFiles("*.txt");
+			foreach (var summary in summaries)
+			{
+				var found = summary.InvoiceImageIds?.Select(v => new { Guid = v, File = ocrFiles.SingleOrDefault(f => f.Name.Contains(v)) })
+					.Where(f => f.File != null).Select(f => new { Guid = f.Guid, Content = File.ReadAllText(f.File.FullName) });
+				summary.InvoiceTexts = string.Join("\n", found.Select(f =>
+					$"{f.Guid}: {string.Join('\n', f.Content.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0))}")
+					);
+			}
+			return summaries.OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+		}
 	}
 
 	class ReadSBCInvoices : Command
@@ -250,7 +264,6 @@ namespace SBCScan.REPL
 			}
 			return string.Join("\n", processed);
 		}
-
 	}
 
 	class GetInvoiceCmd : Command

@@ -212,21 +212,22 @@ namespace MediusFlowAPI
 			{
 				if (_rxFindHouse == null)
 					_rxFindHouse = new List<Regex> {
-						new Regex(@"(Riksrådsv(ägen|\.)?|RRV|rrv|(n|N)r)\s?(?<house>\d{2,3})"),
+						new Regex(@"(Riksrådsv(ägen|\.)?|RRV|rrv|(n|N)r)\.?\s?(?<house>\d{2,3})"),
 						new Regex(@"(?<house>\d{2,3})\:an"),
 					};
 				return _rxFindHouse;
 			}
 		}
 
+		public List<string> InvoiceImageIds { get; set; }
 		public string Comments { get; set; }
 		public string History { get; set; }
-
+		public string InvoiceTexts { get; set; }
 
 		static System.Globalization.CultureInfo Culture = new System.Globalization.CultureInfo("en-US");
 		static System.Text.RegularExpressions.Regex rxSimplifyAuthor =
 			new System.Text.RegularExpressions.Regex(@"(?<name>(\w+\s){1,2})\s?\((\d{5,6}|SYSTEM)\)");
-		public static InvoiceSummary Summarize(InvoiceFull invoice)
+		public static InvoiceSummary Summarize(InvoiceFull invoice, string invoiceTexts = null)
 		{
 			var iv = invoice.Invoice;
 			var ft = invoice.FirstTask;
@@ -281,6 +282,8 @@ namespace MediusFlowAPI
 					VAT = taskDoc?.CustomFields.NumericCustomField1.Value,
 					Comments = Join(",", ft?.Comments?.Select(c => GetCommentSummary(c))),
 					History = Join(",", ft?.History?.Select(c => GetHistoryItemSummary(c))),
+					InvoiceImageIds = task?.Document?.HashFiles?.Where(hf => hf.HashFileType == "InvoiceImage").Select(hf => hf.Hash.ToString()).ToList(),
+					InvoiceTexts = invoiceTexts,
 				};
 			}
 			catch (Exception ex)

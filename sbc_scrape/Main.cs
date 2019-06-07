@@ -231,14 +231,6 @@ namespace SBCScan
 			return summed.ToList();
 		}
 
-		public async Task<List<InvoiceSummary>> CreateIndex()
-		{
-			var summaries = await LoadInvoiceSummaries();
-			return summaries.OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
-			//var xxx = JsonConvert.SerializeObject(byDate, Formatting.Indented);
-			//return ServiceStack.Text.CsvSerializer.SerializeToString(byDate);
-		}
-
 		static RemoteWebDriver SetupDriver(string downloadFolder)
 		{
 			var options = new ChromeOptions();
