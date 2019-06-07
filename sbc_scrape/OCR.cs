@@ -23,17 +23,11 @@ namespace sbc_scrape
 
 			var errors = new StringBuilder();
 			var output = new StringBuilder();
-			var hadErrors = false;
 
 			process.EnableRaisingEvents = true;
 
-			process.OutputDataReceived += (s, d) => {
-				output.Append(d.Data);
-			};
-
-			process.ErrorDataReceived += (s, d) => {
-				errors.Append(d.Data);
-			};
+			process.OutputDataReceived += (s, d) => output.Append(d.Data);
+			process.ErrorDataReceived += (s, d) => errors.Append(d.Data);
 
 			var pid = process.Start();
 			
