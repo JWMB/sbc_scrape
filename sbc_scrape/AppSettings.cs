@@ -24,6 +24,10 @@ namespace SBCScan
 
 		public string MixedUpAccountIds { get; set; }
 		public List<List<long>> MixedUpAccountIdsParsed => JsonConvert.DeserializeObject<List<List<long>>>(MixedUpAccountIds);
+
+		public string PathToTesseract { get; set; }
+		public string PathToTesseractResolved => PathExtensions.Parse(PathToTesseract);
+
 	}
 
 	public static class GlobalSettings

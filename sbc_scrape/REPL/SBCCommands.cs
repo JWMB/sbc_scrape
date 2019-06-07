@@ -218,9 +218,39 @@ namespace SBCScan.REPL
 		public override string Id => "getimages";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var result = await main.DownloadImages(new DateTime(2019,5,15));
-			return "done";
+			var defaultDates = new List<DateTime> { DateTime.Today.AddMonths(-1), DateTime.Today };
+			var dates = parms.Select((p, i) => ParseArgument(parms, i, DateTime.MinValue)).ToList();
+			for (int i = dates.Count; i < 2; i++)
+				dates.Add(defaultDates[i]);
+
+			var result = await main.DownloadImages(dates[0], dates[1]);
+			return string.Join("\n", result.Select(kv => $"{InvoiceFull.FilenameFormat.Create(kv.Key)}: {string.Join(',', kv.Value)}"));
 		}
+	}
+
+	class OCRImagesCmd : Command
+	{
+		public override string Id => "ocr";
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			var files = new DirectoryInfo(GlobalSettings.AppSettings.StorageFolderDownloadedFilesResolved).GetFiles("*.png");
+			var processed = new List<string>();
+			foreach (var file in files)
+			{
+				var ocrFile = file.FullName.Remove(file.FullName.Length - file.Extension.Length) + ".txt";
+				if (!File.Exists(ocrFile))
+				{
+					var started = DateTime.Now;
+					var text = sbc_scrape.OCR.Run(file.FullName, new string[] { "swe", "eng" });
+					var elapsed = DateTime.Now - started;
+					File.WriteAllText(ocrFile, text);
+					Console.WriteLine(ocrFile);
+					processed.Add(ocrFile);
+				}
+			}
+			return string.Join("\n", processed);
+		}
+
 	}
 
 	class GetInvoiceCmd : Command

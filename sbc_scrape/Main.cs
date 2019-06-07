@@ -59,9 +59,11 @@ namespace SBCScan
 			return new InvoiceScraper(fetcher, settings.MediusFlowRoot, settings.MediusRequestHeader_XUserContext);
 		}
 
-		public async Task<Dictionary<InvoiceFull, List<string>>> DownloadImages(DateTime from) //IEnumerable<long> invoiceIds)
+		public async Task<Dictionary<InvoiceFull, List<string>>> DownloadImages(DateTime from, DateTime? to = null) //IEnumerable<long> invoiceIds)
 		{
-			var invoices = await LoadInvoices(ff => ff.InvoiceDate >= from);
+			if (to == null)
+				to = DateTime.Now;
+			var invoices = await LoadInvoices(ff => ff.InvoiceDate >= from && ff.InvoiceDate <= to);
 			var api = CreateApi();
 			var result = new Dictionary<InvoiceFull, List<string>>();
 			foreach (var invoice in invoices)

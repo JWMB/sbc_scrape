@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Threading.Tasks;
+using Scrape.IO;
 
 namespace sbc_scrape
 {
@@ -10,12 +12,14 @@ namespace sbc_scrape
 	{
 		public static string Run(string imageFile, IEnumerable<string> languages)
 		{
-			var pathToTesseract = @"C:\Users\jonas\AppData\Local\Tesseract-OCR";
+			var pathToTesseract = SBCScan.GlobalSettings.AppSettings.PathToTesseractResolved;
+			if (!File.Exists(pathToTesseract))
+				throw new FileNotFoundException($"Tesseract not found at '{pathToTesseract}'");
+
 			var outfile = Path.Combine(Directory.GetCurrentDirectory(), $"ocr_tmp{DateTime.Now.Ticks % 100000}");
 			var process = Process.Start(new ProcessStartInfo {
-				FileName = Path.Combine(pathToTesseract, "tesseract.exe"),
+				FileName = pathToTesseract,
 				Arguments = $"\"{imageFile}\" \"{outfile}\" -l {(string.Join("+", languages))}",
-				//CreateNoWindow = true,
 				UseShellExecute = false,
 				RedirectStandardError = true,
 				RedirectStandardOutput = true,
@@ -43,12 +47,20 @@ namespace sbc_scrape
 			string stdout = output.ToString();
 			string stderr = errors.ToString();
 
-			outfile += ".txt"; //Tesseract adds this automatically
+			var outFileInfo = new FileInfo(outfile + ".txt");
+			//outfile += ".txt"; //Tesseract adds this automatically
 			string result = null;
-			if (File.Exists(outfile))
+			if (outFileInfo.Exists)
 			{
-				result = File.ReadAllText(outfile);
-				File.Delete(outfile);
+				var maxWait = DateTime.Now.AddSeconds(2);
+				while (DateTime.Now < maxWait && outFileInfo.IsLocked())
+				{
+					Task.Delay(100).Wait();
+				}
+				if (outFileInfo.IsLocked())
+					throw new FileLoadException($"File is still locked: {outFileInfo.FullName}");
+				result = File.ReadAllText(outFileInfo.FullName);
+				outFileInfo.Delete();
 			} 
 			else //if (process.ExitCode != 0)
 			{

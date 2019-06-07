@@ -26,11 +26,13 @@ namespace SBCScan
 					new CreateGroupedCmd(main),
 					new CreateHouseIndexCmd(main),
 					new ReadSBCInvoices(Path.Combine(GlobalSettings.AppSettings.StorageFolderRootResolved, "sbc_fakturaparm")),
+					new OCRImagesCmd(),
+					new InitCmd(main),
+
 					new QuitCmd(),
 					new CSVCmd(),
 					new WriteFileCmd(Environment.CurrentDirectory),
 					new ReadFileCmd(Environment.CurrentDirectory),
-					new InitCmd(main),
 					new AddCommandsTestCmd(),
 					};
 				cmds.Add(new ListCmd(cmds));
