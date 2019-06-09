@@ -86,7 +86,7 @@ namespace SBCScan.REPL
 		public override string Id => "houseindex";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var summaries = await main.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2010, 1, 1));
+			var summaries = await main.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2001, 1, 1));
 			var withHouses = summaries.Select(s =>
 				new { Summary = s, Houses = s.Houses?.Split(',').Select(h => h.Trim()).Where(h => h.Length > 0).ToList() })
 				.Where(s => s.Houses != null && s.Houses.Any());
@@ -263,6 +263,34 @@ namespace SBCScan.REPL
 				}
 			}
 			return string.Join("\n", processed);
+		}
+	}
+
+	class ConvertInvoiceImageFilenameCmd : Command
+	{
+		private readonly Main main;
+		public ConvertInvoiceImageFilenameCmd(Main main) => this.main = main;
+		public override string Id => "convii";
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			var summaries = await main.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2001, 1, 1));
+			var dir = new DirectoryInfo(GlobalSettings.AppSettings.StorageFolderDownloadedFilesResolved);
+			foreach (var ext in new string[] { ".png", ".txt" })
+			{
+				var files = dir.GetFiles("*" + ext);
+				var fileNames = files.Select(f => f.Name.Remove(f.Name.Length - ext.Length)).ToList();
+				foreach (var summary in summaries)
+				{
+					var filenameFormat = InvoiceFull.GetFilenamePrefix(summary.InvoiceDate.Value, summary.Supplier, summary.Id) + "_{0}";
+					var found = summary.InvoiceImageIds.Where(id => fileNames.Contains(id));
+					foreach (var f in found)
+					{
+						var newName = string.Format(filenameFormat, f);
+						File.Move(Path.Combine(dir.FullName, f + ext), Path.Combine(dir.FullName, newName + ext));
+					}
+				}
+			}
+			return "";
 		}
 	}
 

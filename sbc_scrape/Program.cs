@@ -28,6 +28,7 @@ namespace SBCScan
 					new ReadSBCInvoices(Path.Combine(GlobalSettings.AppSettings.StorageFolderRootResolved, "sbc_fakturaparm")),
 					new OCRImagesCmd(),
 					new InitCmd(main),
+					new ConvertInvoiceImageFilenameCmd(main),
 
 					new QuitCmd(),
 					new CSVCmd(),
