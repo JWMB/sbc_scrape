@@ -42,6 +42,17 @@ namespace SBCScan.REPL
 		public override string Id => "createindex";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
+			return (await main.LoadInvoiceSummaries()).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+		}
+	}
+
+	class Summaries : Command
+	{
+		private readonly Main main;
+		public Summaries(Main main) => this.main = main;
+		public override string Id => "summaries";
+		public override async Task<object> Evaluate(List<object> parms)
+		{
 			var summaries = await main.LoadInvoiceSummaries();
 			var pathToOCRed = GlobalSettings.AppSettings.StorageFolderDownloadedFilesResolved;
 			var ocrFiles = new DirectoryInfo(pathToOCRed).GetFiles("*.txt");
@@ -54,6 +65,27 @@ namespace SBCScan.REPL
 					);
 			}
 			return summaries.OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+		}
+	}
+
+	class ObjectToFilenameAndObject : Command
+	{
+		public ObjectToFilenameAndObject() { }
+		public override string Id => "o2fo";
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			var t = parms[0].GetType();
+			var ienum = parms[0] as System.Collections.IEnumerable;
+			var result = new Dictionary<string, object>();
+			foreach (var item in ienum)
+			{
+				if (item is InvoiceSummary isum)
+				{
+					var filename = $"{InvoiceFull.FilenameFormat.Create(isum)}.json";
+					result.Add(filename, JsonConvert.SerializeObject(isum, Formatting.Indented));
+				}
+			}
+			return result;
 		}
 	}
 

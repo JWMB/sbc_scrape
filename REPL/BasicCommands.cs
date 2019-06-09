@@ -64,6 +64,7 @@ namespace REPL
 			var filePath = Path.Combine(defaultFolder, (string)parms[0]);
 			File.WriteAllText(filePath, parms[1].ToString());
 			//TODO: where is File.WriteAllTextAsync?
+			//TODO: accept other paths than relative to defaultFolder
 			return filePath;
 		}
 	}
@@ -77,7 +78,37 @@ namespace REPL
 		{
 			var filePath = Path.Combine(defaultFolder, (string)parms[0]);
 			//TODO: where is File.ReadAllTextAsync?
+			//TODO: accept other paths than relative to defaultFolder
 			return File.ReadAllText(filePath);
 		}
 	}
+
+	public class WriteFiles : Command
+	{
+		private readonly string defaultFolder;
+		public WriteFiles(string defaultFolder) => this.defaultFolder = defaultFolder;
+		public override string Id => "writefiles";
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			//var folder = Path.Combine(defaultFolder, (string)parms[0]);
+			var folder = defaultFolder;
+
+			var result = new List<(string, long)>();
+			var dictParm = parms[0];
+			var t = dictParm.GetType();
+			if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Dictionary<,>) && t.GetGenericArguments()[0] == typeof(string))
+			{
+				var dict = dictParm as System.Collections.IDictionary;
+				foreach (var key in dict.Keys)
+				{
+					var filePath = Path.Combine(folder, (string)key);
+					File.WriteAllText(filePath, dict[key].ToString());
+					result.Add((filePath, dict[key].ToString().Length));
+				}
+			}
+			return string.Join("\n", result.Select(r => $"{r.Item1}: {r.Item2}"));
+		}
+	}
+
+
 }

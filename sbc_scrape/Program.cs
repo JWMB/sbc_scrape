@@ -29,10 +29,13 @@ namespace SBCScan
 					new OCRImagesCmd(),
 					new InitCmd(main),
 					new ConvertInvoiceImageFilenameCmd(main),
+					new Summaries(main),
+					new ObjectToFilenameAndObject(),
 
 					new QuitCmd(),
 					new CSVCmd(),
 					new WriteFileCmd(Environment.CurrentDirectory),
+					new WriteFiles(Environment.CurrentDirectory),
 					new ReadFileCmd(Environment.CurrentDirectory),
 					new AddCommandsTestCmd(),
 					};

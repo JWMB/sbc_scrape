@@ -79,6 +79,21 @@ namespace MediusFlowAPI
 
 				return fmt.ToString();
 			}
+			public static string Create(InvoiceSummary invoice)
+			{
+				//TODO: key should be the registered date?
+				var fmt = new FilenameFormat
+				{
+					InvoiceDate = invoice.InvoiceDate ?? DateTime.MinValue,
+					Supplier = invoice.Supplier,
+					Id = invoice.Id,
+					RegisteredDate = invoice.CreatedDate ?? DateTime.MinValue,
+					State = invoice.TaskState,
+				};
+
+				return fmt.ToString();
+			}
+
 			public static FilenameFormat Parse(string filename)
 			{
 				var split = filename.Split('_');
