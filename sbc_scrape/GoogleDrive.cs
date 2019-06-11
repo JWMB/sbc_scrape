@@ -2,6 +2,7 @@
 using Google.Apis.Drive.v3;
 using Google.Apis.Services;
 using Google.Apis.Util.Store;
+using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -13,37 +14,50 @@ namespace sbc_scrape
 {
 	class GoogleDrive
 	{
-		static string[] Scopes = { DriveService.Scope.Drive }; //DriveReadonly
-
-		public static void Test(string applicationName = "sbc-data-access", string credentialsFilepath = @"credentials.json")
+		private DriveService service;
+		public GoogleDrive(string applicationName = "sbc-data-access", string credentialsFilepath = @"credentials.json", string[] scopes = null)
 		{
-			//UserCredential credential;
-			//using (var stream =
-			//	new FileStream(credentialsFilepath, FileMode.Open, FileAccess.Read))
-			//{
-			//	// The file token.json stores the user's access and refresh tokens, and is created automatically when the authorization flow completes for the first time.
-			//	string credPath = "token.json";
-			//	credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
-			//		GoogleClientSecrets.Load(stream).Secrets, Scopes, "user", CancellationToken.None, new FileDataStore(credPath, true)).Result;
-			//}
+			if (scopes == null)
+				scopes = new string[] { DriveService.Scope.Drive }; //DriveReadonly
 
-			var credential = GoogleCredential.FromFile(credentialsFilepath).CreateScoped(Scopes);
+			Google.Apis.Http.IConfigurableHttpClientInitializer credential;
+			var parsedCredentialsFile = JObject.Parse(File.ReadAllText(credentialsFilepath));
+			var credType = parsedCredentialsFile.SelectToken("$.type")?.Value<string>();
+			if (credType == "service_client")
+			{
+				credential = GoogleCredential.FromFile(credentialsFilepath).CreateScoped(scopes);
+			}
+			//else if (parsedCredentialsFile.SelectToken("$.web") != null)
+			else if (parsedCredentialsFile.SelectToken("$.installed") != null)
+			{
+				using (var stream =
+					new FileStream(credentialsFilepath, FileMode.Open, FileAccess.Read))
+				{
+					// The file token.json stores the user's access and refresh tokens, and is created automatically when the authorization flow completes for the first time.
+					string credPath = "token.json";
+					credential = GoogleWebAuthorizationBroker.AuthorizeAsync(
+						GoogleClientSecrets.Load(stream).Secrets, scopes, "user", CancellationToken.None, new FileDataStore(credPath, true)).Result;
+				}
+			}
+			else
+				throw new ArgumentException("Unknown type of credentials");
 
-			var service = new DriveService(new BaseClientService.Initializer()
+			service = new DriveService(new BaseClientService.Initializer()
 			{
 				HttpClientInitializer = credential,
 				ApplicationName = applicationName,
 			});
-
-			//var uploaded = UploadFile(service, @"", new string[] { });
-			var files = GetFiles(service);
 		}
 
-		public static List<Google.Apis.Drive.v3.Data.File> GetFiles(DriveService service)
+		public List<Google.Apis.Drive.v3.Data.File> GetFiles()
 		{
 			var listRequest = service.Files.List();
 			listRequest.PageSize = 100;
+			//https://developers.google.com/drive/api/v3/performance#partial-response
 			listRequest.Fields = "nextPageToken, files(id, name, parents, mimeType)";
+			//https://developers.google.com/drive/api/v3/search-files
+			listRequest.Q = "'me' in owners and trashed=false and !sharedWithMe";
+			//listRequest.Q = "mimeType='application/vnd.google-apps.folder'";
 			//https://developers.google.com/drive/api/v3/search-shareddrives
 
 			var result = new List<Google.Apis.Drive.v3.Data.File>();
@@ -59,22 +73,33 @@ namespace sbc_scrape
 			return result;
 		}
 
-		public static Google.Apis.Drive.v3.Data.File UploadFile(DriveService service, string uploadFile,
-			IEnumerable<string> parentIds, string descrp = "Uploaded with .NET!", string contentType = "application/json")
+		public Google.Apis.Drive.v3.Data.File UploadFile(string uploadFile,
+			IEnumerable<string> parentIds = null, string descrp = "Uploaded with .NET!", string contentType = "application/json")
 		{
 			var body = new Google.Apis.Drive.v3.Data.File();
 			body.Name = Path.GetFileName(uploadFile);
 			body.Description = descrp;
 			body.MimeType = contentType;
-			body.Parents = parentIds?.ToList();
+			body.Parents = parentIds?.ToList() ?? new List<string>();
 
 			using (var stream =	new FileStream(uploadFile, FileMode.Open, FileAccess.Read))
 			{
 				var request = service.Files.Create(body, stream, contentType);
-				request.Fields = "files(id, name, parents, mimeType)";
+				request.Fields = "id, name, parents"; //mimeType
 				request.UseContentAsIndexableText = true;
 
-				request.Upload();
+				var progress = request.Upload();
+				//Not sure if needed, but return value indicates it...:
+				while (progress.Status != Google.Apis.Upload.UploadStatus.Completed
+					&& progress.Status != Google.Apis.Upload.UploadStatus.Failed)
+				{
+					Thread.Sleep(100);
+				}
+
+				if (progress.Status == Google.Apis.Upload.UploadStatus.Failed)
+				{
+					throw progress.Exception;
+				}
 				return request.ResponseBody;
 			}
 		}
