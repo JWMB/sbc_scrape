@@ -40,6 +40,12 @@ namespace sbc_scrape
 		public class SBCvsMediusEqualityComparer : IEqualityComparer<MediusFlowAPI.InvoiceSummary>
 		{
 			private List<List<long>> mixedUpAccountIds = GlobalSettings.AppSettings.MixedUpAccountIdsParsed;
+			private readonly bool matchMixedUpAccounts;
+
+			public SBCvsMediusEqualityComparer(bool matchMixedUpAccounts = true)
+			{
+				this.matchMixedUpAccounts = matchMixedUpAccounts;
+			}
 
 			private bool GetIsMixedUpPair(long id1, long id2) => mixedUpAccountIds.FirstOrDefault(pair => pair.Contains(id1) && pair.Contains(id2)) != null;
 
@@ -56,7 +62,7 @@ namespace sbc_scrape
 					//These can have wildly different dates though same invoice - see 2016-12-22_Just Nu Malmö_2938517_01-16_2.json
 					//SBC Fakturaparm says DueDate = 2017-01-18, MediusFlow says 2017-01-01
 					&& b1.Supplier == b2.Supplier
-					&& (b1.AccountId == b2.AccountId || (GetIsMixedUpPair(b1.AccountId.Value, b2.AccountId.Value)));
+					&& (b1.AccountId == b2.AccountId || (matchMixedUpAccounts && (GetIsMixedUpPair(b1.AccountId.Value, b2.AccountId.Value))));
 			}
 
 			public int GetHashCode(MediusFlowAPI.InvoiceSummary bx)
@@ -68,7 +74,17 @@ namespace sbc_scrape
 
 		public static List<Fakturaparm> ReadAll(string folder)
 		{
-			return new System.IO.DirectoryInfo(folder).GetFiles("*.html").SelectMany(file => Parse(System.IO.File.ReadAllText(file.FullName))).ToList();
+			return new System.IO.DirectoryInfo(folder).GetFiles("*.html")
+				.SelectMany(file => {
+					try
+					{
+						return Parse(System.IO.File.ReadAllText(file.FullName));
+					}
+					catch (Exception ex)
+					{
+						throw new FormatException($"{ex.Message} for '{file.FullName}'", ex);
+					}
+				}).ToList();
 		}
 
 		public static List<Fakturaparm> Parse(string html)
@@ -80,8 +96,11 @@ namespace sbc_scrape
 				.Select(n => new { Key = n.GetAttributeValue("value", 0), Value = HtmlEntity.DeEntitize(n.InnerText) })
 				.ToDictionary(k => k.Key, k => k.Value.Replace($"{k.Key} ", ""));
 
-			//"table class="portal-table"";
-			var node = doc.DocumentNode.SelectSingleNode("/html[1]/body[1]/form[1]/div[6]/div[1]/div[5]/div[3]/div[2]/div[1]/div[2]/div[1]/table[1]");
+			var node = doc.DocumentNode.SelectSingleNode("//table[@class='portal-table']");
+			if (node == null)
+				throw new FormatException("Couldn't find table node");
+			node = node.ChildNodes.FirstOrDefault(n => n.Name == "tbody") ?? node; //Some variants have no tbody, but tr directly under
+
 			var rows = node.ChildNodes.Where(n => n.Name == "tr");
 			var headerRow = rows.First();
 			var cells = headerRow.ChildNodes.Where(n => n.Name == "th");
