@@ -100,8 +100,24 @@ namespace SBCScan.REPL
 			var parm1 = parms.FirstOrDefault();
 			if (parm1 is IEnumerable<InvoiceSummary> input)
 			{
+				if (false)
+				{
+					//Find inconsistancies between two systems:
+					var exactOverlap = read.Intersect(input, new sbc_scrape.Fakturaparm.SBCvsMediusEqualityComparer(false));
+					var fudgedOverlap = read.Intersect(input, new sbc_scrape.Fakturaparm.SBCvsMediusEqualityComparer(true));
+					var fudgedOnly = fudgedOverlap.Except(exactOverlap);
+					var fudgedBothSources = fudgedOnly.Concat(input.Intersect(fudgedOnly, new sbc_scrape.Fakturaparm.SBCvsMediusEqualityComparer(true)));
+					var notInMediusFlow = read.Where(s => s.InvoiceDate > new DateTime(2016, 4, 1))
+						.Except(input, new sbc_scrape.Fakturaparm.SBCvsMediusEqualityComparer(true));
+
+					var all = fudgedBothSources.Select(s => new { S = s, Reason = "Fudged" })
+						.Concat(notInMediusFlow.Select(s => new { S = s, Reason = "Missing" }));
+					var tmp = string.Join("\n", all.OrderByDescending(s => s.S.InvoiceDate)
+						.Select(s => $"{(s.S.InvoiceDate?.ToString("yyyy-MM-dd"))} {s.Reason} {s.S.AccountId} {s.S.Supplier} {s.S.GrossAmount}"));
+				}
+
 				//Use "real" data instead of Fakturaparm where they overlap:
-				var duplicatesRemoved = read.Except(input, new sbc_scrape.Fakturaparm.SBCvsMediusEqualityComparer())
+				var duplicatesRemoved = read.Except(input, new sbc_scrape.Fakturaparm.SBCvsMediusEqualityComparer(true))
 					.Concat(input)
 					.OrderByDescending(o => o.InvoiceDate);
 				return duplicatesRemoved;
