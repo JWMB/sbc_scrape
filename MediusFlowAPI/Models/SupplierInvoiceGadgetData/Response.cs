@@ -79,9 +79,9 @@
 		public GrossAmount TaxAmount { get; set; }
 
 		[JsonProperty("CurrencyCode")]
-		public CurrencyCode CurrencyCode { get; set; }
+		public string CurrencyCode { get; set; } //CurrencyCode
 
-		[JsonProperty("CurrencyRate")]
+	[JsonProperty("CurrencyRate")]
 		public long CurrencyRate { get; set; }
 
 		[JsonProperty("NetAmountInAccountingCurrency")]
@@ -97,10 +97,10 @@
 		public InvoiceTypeName InvoiceTypeName { get; set; }
 
 		[JsonProperty("CurrentTask")]
-		public CurrentTask CurrentTask { get; set; }
+		public string CurrentTask { get; set; } //CurrentTask
 
 		[JsonProperty("CurrentHandlers")]
-		public CurrentHandlers CurrentHandlers { get; set; }
+		public string CurrentHandlers { get; set; }
 
 		[JsonProperty("ContractNumber")]
 		public string ContractNumber { get; set; }
@@ -118,7 +118,7 @@
 		public TypeEnum Type { get; set; }
 
 		[JsonProperty("CurrencyCode")]
-		public CurrencyCode CurrencyCode { get; set; }
+		public string CurrencyCode { get; set; } //CurrencyCode
 
 		[JsonProperty("DisplayValue")]
 		public string DisplayValue { get; set; }
@@ -162,11 +162,11 @@
 
 	public enum CompanyName { Riksrådsvägen6297 };
 
-	public enum CurrencyCode { Sek };
+	//public enum CurrencyCode { Sek };
 
-	public enum CurrentHandlers { Empty, Slutattestant };
+	//public enum CurrentHandlers { Empty, Slutattestant };
 
-	public enum CurrentTask { Arkiverad, Attestera, Makulerad };
+	//public enum CurrentTask { Arkiverad, Attestera, Makulerad };
 
 	public enum TypeEnum { MediusCoreDtOsAmountDtoMediusCoreCommon };
 
@@ -191,9 +191,9 @@
 			Converters =
 			{
 				CompanyNameConverter.Singleton,
-				CurrencyCodeConverter.Singleton,
-				CurrentHandlersConverter.Singleton,
-				CurrentTaskConverter.Singleton,
+				//CurrencyCodeConverter.Singleton,
+				//CurrentHandlersConverter.Singleton,
+				//CurrentTaskConverter.Singleton,
 				TypeEnumConverter.Singleton,
 				InvoiceTypeNameConverter.Singleton,
 				new IsoDateTimeConverter { DateTimeStyles = DateTimeStyles.AssumeUniversal }
@@ -235,123 +235,123 @@
 		public static readonly CompanyNameConverter Singleton = new CompanyNameConverter();
 	}
 
-	internal class CurrencyCodeConverter : JsonConverter
-	{
-		public override bool CanConvert(Type t) => t == typeof(CurrencyCode) || t == typeof(CurrencyCode?);
+	//internal class CurrencyCodeConverter : JsonConverter
+	//{
+	//	public override bool CanConvert(Type t) => t == typeof(CurrencyCode) || t == typeof(CurrencyCode?);
 
-		public override object ReadJson(JsonReader reader, Type t, object existingValue, JsonSerializer serializer)
-		{
-			if (reader.TokenType == JsonToken.Null) return null;
-			var value = serializer.Deserialize<string>(reader);
-			if (value == "SEK")
-			{
-				return CurrencyCode.Sek;
-			}
-			throw new Exception("Cannot unmarshal type CurrencyCode");
-		}
+	//	public override object ReadJson(JsonReader reader, Type t, object existingValue, JsonSerializer serializer)
+	//	{
+	//		if (reader.TokenType == JsonToken.Null) return null;
+	//		var value = serializer.Deserialize<string>(reader);
+	//		if (value == "SEK")
+	//		{
+	//			return CurrencyCode.Sek;
+	//		}
+	//		throw new Exception("Cannot unmarshal type CurrencyCode");
+	//	}
 
-		public override void WriteJson(JsonWriter writer, object untypedValue, JsonSerializer serializer)
-		{
-			if (untypedValue == null)
-			{
-				serializer.Serialize(writer, null);
-				return;
-			}
-			var value = (CurrencyCode)untypedValue;
-			if (value == CurrencyCode.Sek)
-			{
-				serializer.Serialize(writer, "SEK");
-				return;
-			}
-			throw new Exception("Cannot marshal type CurrencyCode");
-		}
+	//	public override void WriteJson(JsonWriter writer, object untypedValue, JsonSerializer serializer)
+	//	{
+	//		if (untypedValue == null)
+	//		{
+	//			serializer.Serialize(writer, null);
+	//			return;
+	//		}
+	//		var value = (CurrencyCode)untypedValue;
+	//		if (value == CurrencyCode.Sek)
+	//		{
+	//			serializer.Serialize(writer, "SEK");
+	//			return;
+	//		}
+	//		throw new Exception("Cannot marshal type CurrencyCode");
+	//	}
 
-		public static readonly CurrencyCodeConverter Singleton = new CurrencyCodeConverter();
-	}
+	//	public static readonly CurrencyCodeConverter Singleton = new CurrencyCodeConverter();
+	//}
 
-	internal class CurrentHandlersConverter : JsonConverter
-	{
-		public override bool CanConvert(Type t) => t == typeof(CurrentHandlers) || t == typeof(CurrentHandlers?);
+	//internal class CurrentHandlersConverter : JsonConverter
+	//{
+	//	public override bool CanConvert(Type t) => t == typeof(CurrentHandlers) || t == typeof(CurrentHandlers?);
 
-		public override object ReadJson(JsonReader reader, Type t, object existingValue, JsonSerializer serializer)
-		{
-			if (reader.TokenType == JsonToken.Null) return null;
-			var value = serializer.Deserialize<string>(reader);
-			switch (value)
-			{
-				case "":
-					return CurrentHandlers.Empty;
-				case "Slutattestant":
-					return CurrentHandlers.Slutattestant;
-			}
-			throw new Exception("Cannot unmarshal type CurrentHandlers");
-		}
+	//	public override object ReadJson(JsonReader reader, Type t, object existingValue, JsonSerializer serializer)
+	//	{
+	//		if (reader.TokenType == JsonToken.Null) return null;
+	//		var value = serializer.Deserialize<string>(reader);
+	//		switch (value)
+	//		{
+	//			case "":
+	//				return CurrentHandlers.Empty;
+	//			case "Slutattestant":
+	//				return CurrentHandlers.Slutattestant;
+	//		}
+	//		throw new Exception("Cannot unmarshal type CurrentHandlers");
+	//	}
 
-		public override void WriteJson(JsonWriter writer, object untypedValue, JsonSerializer serializer)
-		{
-			if (untypedValue == null)
-			{
-				serializer.Serialize(writer, null);
-				return;
-			}
-			var value = (CurrentHandlers)untypedValue;
-			switch (value)
-			{
-				case CurrentHandlers.Empty:
-					serializer.Serialize(writer, "");
-					return;
-				case CurrentHandlers.Slutattestant:
-					serializer.Serialize(writer, "Slutattestant");
-					return;
-			}
-			throw new Exception("Cannot marshal type CurrentHandlers");
-		}
+	//	public override void WriteJson(JsonWriter writer, object untypedValue, JsonSerializer serializer)
+	//	{
+	//		if (untypedValue == null)
+	//		{
+	//			serializer.Serialize(writer, null);
+	//			return;
+	//		}
+	//		var value = (CurrentHandlers)untypedValue;
+	//		switch (value)
+	//		{
+	//			case CurrentHandlers.Empty:
+	//				serializer.Serialize(writer, "");
+	//				return;
+	//			case CurrentHandlers.Slutattestant:
+	//				serializer.Serialize(writer, "Slutattestant");
+	//				return;
+	//		}
+	//		throw new Exception("Cannot marshal type CurrentHandlers");
+	//	}
 
-		public static readonly CurrentHandlersConverter Singleton = new CurrentHandlersConverter();
-	}
+	//	public static readonly CurrentHandlersConverter Singleton = new CurrentHandlersConverter();
+	//}
 
-	internal class CurrentTaskConverter : JsonConverter
-	{
-		public override bool CanConvert(Type t) => t == typeof(CurrentTask) || t == typeof(CurrentTask?);
+	//internal class CurrentTaskConverter : JsonConverter
+	//{
+	//	public override bool CanConvert(Type t) => t == typeof(CurrentTask) || t == typeof(CurrentTask?);
 
-		public override object ReadJson(JsonReader reader, Type t, object existingValue, JsonSerializer serializer)
-		{
-			if (reader.TokenType == JsonToken.Null) return null;
-			var value = serializer.Deserialize<string>(reader);
-			switch (value)
-			{
-				case "Arkiverad":
-					return CurrentTask.Arkiverad;
-				case "Attestera":
-					return CurrentTask.Attestera;
-				case "Makulerad":
-					return CurrentTask.Makulerad;
-			}
-			throw new Exception("Cannot unmarshal type CurrentTask");
-		}
+	//	public override object ReadJson(JsonReader reader, Type t, object existingValue, JsonSerializer serializer)
+	//	{
+	//		if (reader.TokenType == JsonToken.Null) return null;
+	//		var value = serializer.Deserialize<string>(reader);
+	//		switch (value)
+	//		{
+	//			case "Arkiverad":
+	//				return CurrentTask.Arkiverad;
+	//			case "Attestera":
+	//				return CurrentTask.Attestera;
+	//			case "Makulerad":
+	//				return CurrentTask.Makulerad;
+	//		}
+	//		throw new Exception($"Cannot unmarshal type CurrentTask {value}");
+	//	}
 
-		public override void WriteJson(JsonWriter writer, object untypedValue, JsonSerializer serializer)
-		{
-			if (untypedValue == null)
-			{
-				serializer.Serialize(writer, null);
-				return;
-			}
-			var value = (CurrentTask)untypedValue;
-			switch (value)
-			{
-				case CurrentTask.Arkiverad:
-					serializer.Serialize(writer, "Arkiverad");
-					return;
-				case CurrentTask.Attestera:
-					serializer.Serialize(writer, "Attestera");
-					return;
-			}
-			throw new Exception("Cannot marshal type CurrentTask");
-		}
+	//	public override void WriteJson(JsonWriter writer, object untypedValue, JsonSerializer serializer)
+	//	{
+	//		if (untypedValue == null)
+	//		{
+	//			serializer.Serialize(writer, null);
+	//			return;
+	//		}
+	//		var value = (CurrentTask)untypedValue;
+	//		switch (value)
+	//		{
+	//			case CurrentTask.Arkiverad:
+	//				serializer.Serialize(writer, "Arkiverad");
+	//				return;
+	//			case CurrentTask.Attestera:
+	//				serializer.Serialize(writer, "Attestera");
+	//				return;
+	//		}
+	//		throw new Exception("Cannot marshal type CurrentTask");
+	//	}
 
-		public static readonly CurrentTaskConverter Singleton = new CurrentTaskConverter();
-	}
+	//	public static readonly CurrentTaskConverter Singleton = new CurrentTaskConverter();
+	//}
 
 	internal class ParseStringConverter : JsonConverter
 	{
