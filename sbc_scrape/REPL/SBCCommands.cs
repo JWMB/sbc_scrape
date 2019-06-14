@@ -1,7 +1,7 @@
 ﻿using MediusFlowAPI;
 using Newtonsoft.Json;
 using REPL;
-using sbc_scrape.Fakturaparm;
+using sbc_scrape.SBC;
 using Scrape.IO;
 using System;
 using System.Collections.Generic;
@@ -31,6 +31,7 @@ namespace SBCScan.REPL
 						new GetTaskCmd(main.MediusFlow.CreateApi()),
 						new GetImagesCmd(main),
 						new ScrapeCmd(main),
+						new FetchSBCTransactions(main),
 						new FetchSBCInvoices(main),
 						new UpdateInvoices(main),
 					});
@@ -70,6 +71,49 @@ namespace SBCScan.REPL
 		}
 	}
 
+	class ReadSBCTransactions : Command
+	{
+		private readonly string defaultFolder;
+		public ReadSBCTransactions(string defaultFolder) => this.defaultFolder = defaultFolder;
+		public override string Id => "sbctransactions";
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			return BankTransaction.ReadAll(defaultFolder).ToList();
+		}
+	}
+
+	class FetchSBCTransactions : Command
+	{
+		private readonly Main main;
+		public FetchSBCTransactions(Main main) => this.main = main;
+		public override string Id => "fetchsbctransactions";
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			return await SBCFatchHtmls<BankTransaction>(parms, year =>
+			{
+				var html = main.SBC.FetchBankTransactionsHtml(year).Result;
+				File.WriteAllText(Path.Combine(
+					GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(BankTransaction.FilenamePattern, year)), html);
+				return BankTransaction.Parse(html);
+			});
+		}
+
+		public static async Task<List<T>> SBCFatchHtmls<T>(List<object> parms, Func<int, List<T>> f)
+		{
+			var yearStart = int.Parse(parms.FirstOrDefault()?.ToString() ?? DateTime.Today.Year.ToString());
+			var yearEnd = yearStart;
+			if (parms.Count > 1)
+				yearEnd = int.Parse(parms[1].ToString());
+			var result = new List<T>();
+			for (var year = yearStart; year <= yearEnd; year++)
+			{
+				result.AddRange(f(year));
+			}
+			return result;
+		}
+	}
+
+
 	class ReadSBCInvoices : Command
 	{
 		private readonly string defaultFolder;
@@ -77,7 +121,7 @@ namespace SBCScan.REPL
 		public override string Id => "sbcinvoices";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			return SBCInvoice.ReadAll(defaultFolder).Select(o => o.ToSummary()).ToList();
+			return Invoice.ReadAll(defaultFolder).Select(o => o.ToSummary()).ToList();
 		}
 	}
 
@@ -88,10 +132,13 @@ namespace SBCScan.REPL
 		public override string Id => "fetchsbcinvoices";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var year = int.Parse(parms.FirstOrDefault()?.ToString() ?? DateTime.Today.Year.ToString());
-			var html = await main.SBC.FetchInvoiceListHtml(year);
-			File.WriteAllText(GlobalSettings.AppSettings.StorageFolderSBCInvoiceHTML, html);
-			return SBCInvoice.Parse(html);
+			return await FetchSBCTransactions.SBCFatchHtmls<Invoice>(parms, year =>
+			{
+				var html = main.SBC.FetchInvoicesHtml(year).Result;
+				File.WriteAllText(Path.Combine(
+					GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(Invoice.FilenamePattern, year)), html);
+				return Invoice.Parse(html);
+			});
 		}
 	}
 
@@ -103,8 +150,9 @@ namespace SBCScan.REPL
 		public override async Task<object> Evaluate(List<object> parms)
 		{
 			var year = DateTime.Today.Year;
-			var html = await main.SBC.FetchInvoiceListHtml(year);
-			File.WriteAllText(Path.Combine(GlobalSettings.AppSettings.StorageFolderSBCInvoiceHTML, $"{year}.html"), html);
+			var html = await main.SBC.FetchInvoicesHtml(year);
+			File.WriteAllText(Path.Combine(
+				GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(Invoice.FilenamePattern, year)), html);
 
 			var scraped = await main.MediusFlow.Scrape();
 

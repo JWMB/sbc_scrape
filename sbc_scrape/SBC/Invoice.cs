@@ -5,9 +5,9 @@ using System.Collections.Generic;
 using System.Text;
 using SBCScan;
 
-namespace sbc_scrape.Fakturaparm
+namespace sbc_scrape.SBC
 {
-	public class SBCInvoice
+	public class Invoice
 	{
 		public DateTime RegisteredDate { get; set; }
 		public DateTime? PaymentDate { get; set; }
@@ -123,9 +123,10 @@ namespace sbc_scrape.Fakturaparm
 			}
 		}
 
-		public static List<SBCInvoice> ReadAll(string folder)
+		public static string FilenamePattern => "Invoices_{0}.html";
+		public static List<Invoice> ReadAll(string folder)
 		{
-			return new System.IO.DirectoryInfo(folder).GetFiles("*.html")
+			return new System.IO.DirectoryInfo(folder).GetFiles(string.Format(FilenamePattern, "*"))
 				.SelectMany(file => {
 					try
 					{
@@ -138,7 +139,7 @@ namespace sbc_scrape.Fakturaparm
 				}).ToList();
 		}
 
-		public static List<SBCInvoice> Parse(string html)
+		public static List<Invoice> Parse(string html)
 		{
 			var doc = new HtmlDocument();
 			doc.LoadHtml(html);
@@ -166,7 +167,7 @@ namespace sbc_scrape.Fakturaparm
 				}).ToList()).ToList();
 
 			var culture = new System.Globalization.CultureInfo("sv-SE");
-			return parsedRows.Select(r => new SBCInvoice {
+			return parsedRows.Select(r => new Invoice {
 				RegisteredDate = DateTime.Parse(r[0]),
 				PaymentDate = string.IsNullOrWhiteSpace(r[1]) ? (DateTime?)null : DateTime.Parse(r[1]),
 				Supplier = r[2],

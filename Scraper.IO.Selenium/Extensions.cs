@@ -32,5 +32,15 @@ namespace Scrape.IO.Selenium
 			new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutSeconds)).Until(
 	d => ((IJavaScriptExecutor)d).ExecuteScript("return document.readyState").Equals("complete"));
 		}
+
+		public static void NavigateAndWaitReadyIfNotThere(this IWebDriver driver, string url)
+		{
+			if (driver.Url != url)
+			{
+				driver.Navigate().GoToUrl(url);
+				driver.WaitUntilDocumentReady();
+			}
+		}
+
 	}
 }

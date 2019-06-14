@@ -10,6 +10,7 @@ namespace SBCScan
 	{
 		public string MediusRequestHeader_XUserContext { get; set; }
 		public string UserLoginId_BankId { get; set; }
+		public string UserLogin_BrfId { get; set; }
 		public string RedirectUrlMediusFlow { get; set; }
 		public string LoginPage_BankId { get; set; }
 
@@ -18,7 +19,7 @@ namespace SBCScan
 		public string StorageFolderRoot { get; set; }
 		public string StorageFolderDownloadedFiles { get; set; }
 		public string PathToTesseract { get; set; }
-		public string StorageFolderSBCInvoiceHTML { get; set; }
+		public string StorageFolderSbcHtml { get; set; }
 
 
 		public string MixedUpAccountIds { get; set; }
@@ -30,7 +31,7 @@ namespace SBCScan
 			StorageFolderRoot = PathExtensions.Parse(StorageFolderRoot);
 			StorageFolderDownloadedFiles = PathExtensions.Parse(StorageFolderDownloadedFiles);
 			PathToTesseract = PathExtensions.Parse(PathToTesseract);
-			StorageFolderSBCInvoiceHTML = PathExtensions.Parse(StorageFolderSBCInvoiceHTML);
+			StorageFolderSbcHtml = PathExtensions.Parse(StorageFolderSbcHtml);
 		}
 	}
 

@@ -6,6 +6,7 @@ using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Remote;
 using OpenQA.Selenium.Support.UI;
+using SBCScan.SBC;
 using Scrape.IO;
 using Scrape.IO.Selenium;
 using Scrape.IO.Storage;
@@ -24,12 +25,12 @@ namespace SBCScan
 		private readonly ILogger<Main> logger;
 
 		private Fetcher fetcher;
-		private SBC sbc;
+		private SBCMain sbc;
 		private MediusFlow mediusFlow;
 		private RemoteWebDriver driver;
 		private string downloadFolder;
 
-		public SBC SBC { get => sbc; }
+		public SBCMain SBC { get => sbc; }
 		public MediusFlow MediusFlow { get => mediusFlow; }
 
 		public Main(IOptions<AppSettings> settings, IKeyValueStore store, ILogger<Main> logger)
@@ -48,9 +49,9 @@ namespace SBCScan
 
 			fetcher = new Fetcher(driver, new FileSystemKVStore(settings.StorageFolderDownloadedFiles, extension: ""));
 
-			sbc = new SBC(driver);
+			sbc = new SBCMain(driver);
 
-			await sbc.Login(settings.LoginPage_BankId, settings.UserLoginId_BankId);
+			await sbc.Login(settings.LoginPage_BankId, settings.UserLoginId_BankId, settings.UserLogin_BrfId);
 
 			mediusFlow.Init(fetcher);
 
@@ -61,7 +62,7 @@ namespace SBCScan
 
 		public async Task<List<InvoiceSummary>> LoadInvoices(bool includeOCRd)
 		{
-			var sbc = sbc_scrape.Fakturaparm.SBCInvoice.ReadAll(GlobalSettings.AppSettings.StorageFolderSBCInvoiceHTML)
+			var sbc = sbc_scrape.SBC.Invoice.ReadAll(GlobalSettings.AppSettings.StorageFolderSbcHtml)
 				.Select(o => o.ToSummary()).ToList();
 			var mediusFlow = await MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2001, 1, 1));
 
@@ -80,11 +81,11 @@ namespace SBCScan
 				// TODO: SBC also has images
 			}
 
-			var mismatched = sbc_scrape.Fakturaparm.SBCInvoice.GetMismatchedEntries(mediusFlow, sbc);
+			var mismatched = sbc_scrape.SBC.Invoice.GetMismatchedEntries(mediusFlow, sbc);
 			var tmp = string.Join("\n", mismatched.OrderByDescending(s => s.Summary.InvoiceDate)
 	.Select(s => $"{(s.Summary.InvoiceDate?.ToString("yyyy-MM-dd"))} {s.Type} {s.Source} {s.Summary.AccountId} {s.Summary.Supplier} {s.Summary.GrossAmount}"));
 
-			return sbc_scrape.Fakturaparm.SBCInvoice.Join(mediusFlow, sbc);
+			return sbc_scrape.SBC.Invoice.Join(mediusFlow, sbc);
 		}
 
 		static RemoteWebDriver SetupDriver(string downloadFolder)

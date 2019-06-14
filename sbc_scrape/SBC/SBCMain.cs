@@ -7,18 +7,18 @@ using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace SBCScan
+namespace SBCScan.SBC
 {
-	public class SBC
+	public class SBCMain
 	{
 		private readonly RemoteWebDriver driver;
 
-		public SBC(RemoteWebDriver driver)
+		public SBCMain(RemoteWebDriver driver)
 		{
 			this.driver = driver;
 		}
 
-		public async Task Login(string loginUrl, string username)
+		public async Task Login(string loginUrl, string username, string brfId)
 		{
 			var wait10 = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
 
@@ -33,7 +33,8 @@ namespace SBCScan
 			var btn = driver.FindElement(By.Id("login_Login_Button"));
 			btn.Click();
 
-			var finder = By.Id("Forening_picker_login_Login_select_forening_1");
+			var finder = By.XPath($"//input[@type='submit' and @value='{brfId}']");
+			//var finder = By.Id("Forening_picker_login_Login_select_forening_1");
 			new WebDriverWait(driver, TimeSpan.FromMinutes(4)).Until(WebDriverExtensions.ElementIsPresent(finder));
 			driver.FindElement(finder).Click();
 
@@ -49,14 +50,25 @@ namespace SBCScan
 			driver.WaitUntilDocumentReady();
 		}
 
-		public async Task<string> FetchInvoiceListHtml(int year)
+		public async Task<string> FetchBankTransactionsHtml(int year)
 		{
-			var url = "https://varbrf.sbc.se/Portalen/Ekonomi/Fakturaparm/";
-			if (driver.Url != url)
-			{
-				driver.Navigate().GoToUrl(url);
-				driver.WaitUntilDocumentReady();
-			}
+			driver.NavigateAndWaitReadyIfNotThere("https://varbrf.sbc.se/Portalen/Ekonomi/Revisor/Kontoutdrag/");
+			//var accountSelect = driver.FindElement(By.XPath("//select[contains(@id,'_DDKonto')]"));
+
+			var yearSelect = driver.FindElement(By.XPath("//select[contains(@id,'_DDAr')]"));
+			var yearOption = yearSelect.FindElement(By.XPath($"//option[starts-with(text(), '{year}')]"));
+			yearOption.Click();
+
+			driver.FindElement(By.XPath("//input[@type='submit']")).Click();
+			driver.WaitUntilDocumentReady();
+
+			var fullpage = driver.PageSource;
+			return fullpage;
+		}
+
+		public async Task<string> FetchInvoicesHtml(int year)
+		{
+			driver.NavigateAndWaitReadyIfNotThere("https://varbrf.sbc.se/Portalen/Ekonomi/Fakturaparm/");
 
 			var yearSelect = driver.FindElement(By.XPath("//select[contains(@id,'_DDAr')]"));
 			var yearOption = yearSelect.FindElement(By.XPath($"//option[starts-with(text(), '{year}')]")); //name()
