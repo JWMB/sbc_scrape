@@ -92,17 +92,21 @@ namespace SBCScan
 
 			logger.LogInformation($"Already downloaded invoice dates: {earliest.ToShortDateString()} - {latest.ToShortDateString()}");
 
-
 			var timespan = TimeSpan.FromDays(7 * (goBackwards ? -1 : 1));
 			var maxNumPeriods = 26;
 
-			DateTime start = latest;
-			DateTime end = latest.Add(timespan);
-
+			DateTime start, end;
 			if (goBackwards)
 			{
 				start = earliest.Add(timespan);
 				end = earliest;
+			}
+			else
+			{
+				//We need to revisit invoices - those with TaskState = 1 were not finished
+				//Also comments may have been updated, so add an additional 15 days back
+				start = alreadyScraped.Where(iv => iv.State == 1).Min(iv => iv.InvoiceDate).AddDays(-15);
+				end = start.Add(timespan);
 			}
 
 			var skippedIds = new List<long>();
@@ -136,6 +140,7 @@ namespace SBCScan
 					{
 						if (alreadyScraped.First(s => s.Id == invoice.Id).State == 2)
 						{
+							//TODO: we really should download, in case comments/history have changed (or include that info in filename)
 							skippedIds.Add(invoice.Id);
 							logger.LogInformation($"Skipping {invoice.Id} {invoice.InvoiceDate?.FromMediusDate()}");
 							continue;
