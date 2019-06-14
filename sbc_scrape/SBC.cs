@@ -48,5 +48,28 @@ namespace SBCScan
 			driver.Navigate().GoToUrl(url);
 			driver.WaitUntilDocumentReady();
 		}
+
+		public async Task<string> FetchInvoiceListHtml(int year)
+		{
+			var url = "https://varbrf.sbc.se/Portalen/Ekonomi/Fakturaparm/";
+			if (driver.Url != url)
+			{
+				driver.Navigate().GoToUrl(url);
+				driver.WaitUntilDocumentReady();
+			}
+
+			var yearSelect = driver.FindElement(By.XPath("//select[contains(@id,'_DDAr')]"));
+			var yearOption = yearSelect.FindElement(By.XPath($"//option[starts-with(text(), '{year}')]")); //name()
+			yearOption.Click();
+
+			//var monthFrom = driver.FindElement(By.XPath("//select[contains(@id,'_DDPeriodFrom')]"));
+			//var monthTo = driver.FindElement(By.XPath("//select[contains(@id,'_DDPeriodTo')]"));
+
+			driver.FindElement(By.XPath("//input[@type='submit']")).Click();
+			driver.WaitUntilDocumentReady();
+
+			var fullpage = driver.PageSource;
+			return fullpage;
+		}
 	}
 }
