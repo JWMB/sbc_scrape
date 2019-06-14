@@ -56,7 +56,7 @@ namespace SBCScan.REPL
 		public override async Task<object> Evaluate(List<object> parms)
 		{
 			var summaries = await main.LoadInvoiceSummaries();
-			var pathToOCRed = GlobalSettings.AppSettings.StorageFolderDownloadedFilesResolved;
+			var pathToOCRed = GlobalSettings.AppSettings.StorageFolderDownloadedFiles;
 			var ocrFiles = new DirectoryInfo(pathToOCRed).GetFiles("*.txt");
 			foreach (var summary in summaries)
 			{
@@ -102,27 +102,11 @@ namespace SBCScan.REPL
 			var parm1 = parms.FirstOrDefault();
 			if (parm1 is IEnumerable<InvoiceSummary> input)
 			{
-				if (false)
-				{
-					//Find inconsistancies between two systems:
-					var exactOverlap = read.Intersect(input, new SBCInvoice.SBCvsMediusEqualityComparer(false));
-					var fudgedOverlap = read.Intersect(input, new SBCInvoice.SBCvsMediusEqualityComparer(true));
-					var fudgedOnly = fudgedOverlap.Except(exactOverlap);
-					var fudgedBothSources = fudgedOnly.Concat(input.Intersect(fudgedOnly, new SBCInvoice.SBCvsMediusEqualityComparer(true)));
-					var notInMediusFlow = read.Where(s => s.InvoiceDate > new DateTime(2016, 4, 1))
-						.Except(input, new SBCInvoice.SBCvsMediusEqualityComparer(true));
+				var mismatched = SBCInvoice.GetMismatchedEntries(input, read);
+				var tmp = string.Join("\n", mismatched.OrderByDescending(s => s.Summary.InvoiceDate)
+	.Select(s => $"{(s.Summary.InvoiceDate?.ToString("yyyy-MM-dd"))} {s.Type} {s.Source} {s.Summary.AccountId} {s.Summary.Supplier} {s.Summary.GrossAmount}"));
 
-					var all = fudgedBothSources.Select(s => new { S = s, Reason = "Fudged" })
-						.Concat(notInMediusFlow.Select(s => new { S = s, Reason = "Missing" }));
-					var tmp = string.Join("\n", all.OrderByDescending(s => s.S.InvoiceDate)
-						.Select(s => $"{(s.S.InvoiceDate?.ToString("yyyy-MM-dd"))} {s.Reason} {s.S.AccountId} {s.S.Supplier} {s.S.GrossAmount}"));
-				}
-
-				//Use "real" data instead of Fakturaparm where they overlap:
-				var duplicatesRemoved = read.Except(input, new SBCInvoice.SBCvsMediusEqualityComparer(true))
-					.Concat(input)
-					.OrderByDescending(o => o.InvoiceDate);
-				return duplicatesRemoved;
+				return SBCInvoice.Join(input, read);
 			}
 			return read;
 		}
@@ -135,7 +119,9 @@ namespace SBCScan.REPL
 		public override string Id => "fetchsbcinvoices";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var html = await main.SBC.FetchInvoiceListHtml(DateTime.Today.Year);
+			var year = int.Parse(parms.FirstOrDefault()?.ToString() ?? DateTime.Today.Year.ToString());
+			var html = await main.SBC.FetchInvoiceListHtml(year);
+			File.WriteAllText(GlobalSettings.AppSettings.StorageFolderSBCInvoiceHTML, html);
 			return SBCInvoice.Parse(html);
 		}
 	}
@@ -308,7 +294,7 @@ namespace SBCScan.REPL
 		public override string Id => "ocr";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var files = new DirectoryInfo(GlobalSettings.AppSettings.StorageFolderDownloadedFilesResolved).GetFiles("*.png");
+			var files = new DirectoryInfo(GlobalSettings.AppSettings.StorageFolderDownloadedFiles).GetFiles("*.png");
 			var processed = new List<string>();
 			foreach (var file in files)
 			{
@@ -335,7 +321,7 @@ namespace SBCScan.REPL
 		public override async Task<object> Evaluate(List<object> parms)
 		{
 			var summaries = await main.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2001, 1, 1));
-			var dir = new DirectoryInfo(GlobalSettings.AppSettings.StorageFolderDownloadedFilesResolved);
+			var dir = new DirectoryInfo(GlobalSettings.AppSettings.StorageFolderDownloadedFiles);
 			foreach (var ext in new string[] { ".png", ".txt" })
 			{
 				var files = dir.GetFiles("*" + ext);

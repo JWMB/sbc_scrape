@@ -37,6 +37,48 @@ namespace sbc_scrape.Fakturaparm
 			};
 		}
 
+		public class InvoiceSummaryMismatch
+		{
+			public MediusFlowAPI.InvoiceSummary Summary { get; set; }
+			public string Source { get; set; }
+			public string Type { get; set; }
+		}
+
+		public static List<InvoiceSummaryMismatch> GetMismatchedEntries(
+			IEnumerable<MediusFlowAPI.InvoiceSummary> mediusFlowSummaries,
+			IEnumerable<MediusFlowAPI.InvoiceSummary> sbcSummaries)
+		{
+			//Find inconsistancies between two systems:
+			var exactOverlap = sbcSummaries.Intersect(mediusFlowSummaries, new SBCvsMediusEqualityComparer(false));
+			var fudgedOverlap = sbcSummaries.Intersect(mediusFlowSummaries, new SBCvsMediusEqualityComparer(true));
+			var fudgedOnly = fudgedOverlap.Except(exactOverlap);
+			var fudgedFromMediusFlow = mediusFlowSummaries.Intersect(fudgedOnly, new SBCvsMediusEqualityComparer(true));
+			var fudgedBothSources = fudgedOnly.Select(s => new InvoiceSummaryMismatch { Summary = s, Source = "SBC" })
+				.Concat(fudgedFromMediusFlow.Select(s => new InvoiceSummaryMismatch { Summary = s, Source = "MFw" }))
+				.ToList();
+
+			fudgedBothSources.ForEach(item => { item.Type = "Acct"; });
+
+			var notInMediusFlow = sbcSummaries.Where(s => s.InvoiceDate > new DateTime(2016, 4, 1))
+				.Except(mediusFlowSummaries, new SBCvsMediusEqualityComparer(true));
+
+			return fudgedBothSources.Concat(notInMediusFlow.Select(s => new InvoiceSummaryMismatch {
+				Summary = s, Source = "SBC", Type = "Miss" })).OrderByDescending(s => s.Summary.InvoiceDate).ToList();
+		}
+
+		public static List<MediusFlowAPI.InvoiceSummary> Join(IEnumerable<MediusFlowAPI.InvoiceSummary> mediusFlowSummaries,
+			IEnumerable<MediusFlowAPI.InvoiceSummary> sbcSummaries)
+		{
+			//TODO: nope - instead, "insert" the additional data into the sbc summarty
+			var duplicatesRemoved = sbcSummaries.Except(mediusFlowSummaries, new SBCvsMediusEqualityComparer(true))
+	.Concat(mediusFlowSummaries);
+
+			////Use "real" data instead of Fakturaparm where they overlap:
+			//var duplicatesRemoved = sbcSummaries.Except(mediusFlowSummaries, new SBCvsMediusEqualityComparer(true))
+			//	.Concat(mediusFlowSummaries);
+			return duplicatesRemoved.OrderByDescending(o => o.InvoiceDate).ToList();
+		}
+
 		public class SBCvsMediusEqualityComparer : IEqualityComparer<MediusFlowAPI.InvoiceSummary>
 		{
 			private List<List<long>> mixedUpAccountIds = GlobalSettings.AppSettings.MixedUpAccountIdsParsed;
