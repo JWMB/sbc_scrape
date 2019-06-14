@@ -19,13 +19,17 @@ namespace SBCScan
 		{
 			var startup = new Startup(args);
 
+			var outputFolder = GlobalSettings.AppSettings.OutputFolder;
+			if (!Directory.Exists(outputFolder))
+				Directory.CreateDirectory(outputFolder);
+
 			using (var main = ActivatorUtilities.CreateInstance<Main>(startup.Services))
 			{
 				var cmds = new List<Command> {
 					new CreateIndexCmd(main),
 					new CreateGroupedCmd(main),
 					new CreateHouseIndexCmd(main),
-					new ReadSBCInvoices(Path.Combine(GlobalSettings.AppSettings.StorageFolderRootResolved, "sbc_fakturaparm")),
+					new ReadSBCInvoices(Path.Combine(GlobalSettings.AppSettings.StorageFolderSBCInvoiceHTML)),
 					new OCRImagesCmd(),
 					new InitCmd(main),
 					new ConvertInvoiceImageFilenameCmd(main),
@@ -34,9 +38,9 @@ namespace SBCScan
 
 					new QuitCmd(),
 					new CSVCmd(),
-					new WriteFileCmd(Environment.CurrentDirectory),
-					new WriteFiles(Environment.CurrentDirectory),
-					new ReadFileCmd(Environment.CurrentDirectory),
+					new WriteFileCmd(outputFolder),
+					new WriteFiles(outputFolder),
+					new ReadFileCmd(outputFolder),
 					new AddCommandsTestCmd(),
 					};
 				cmds.Add(new ListCmd(cmds));

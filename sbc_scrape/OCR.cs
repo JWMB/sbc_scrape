@@ -12,7 +12,7 @@ namespace sbc_scrape
 	{
 		public static string Run(string imageFile, IEnumerable<string> languages)
 		{
-			var pathToTesseract = SBCScan.GlobalSettings.AppSettings.PathToTesseractResolved;
+			var pathToTesseract = SBCScan.GlobalSettings.AppSettings.PathToTesseract;
 			if (!File.Exists(pathToTesseract))
 				throw new FileNotFoundException($"Tesseract not found at '{pathToTesseract}'");
 

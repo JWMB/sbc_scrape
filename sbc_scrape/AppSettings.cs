@@ -13,21 +13,25 @@ namespace SBCScan
 		public string RedirectUrlMediusFlow { get; set; }
 		public string LoginPage_BankId { get; set; }
 
+		public string OutputFolder { get; set; }
 		public string MediusFlowRoot { get; set; }
-		public string MediusFlowRootResolved => PathExtensions.Parse(MediusFlowRoot);
-
 		public string StorageFolderRoot { get; set; }
-		public string StorageFolderRootResolved => PathExtensions.Parse(StorageFolderRoot);
-
 		public string StorageFolderDownloadedFiles { get; set; }
-		public string StorageFolderDownloadedFilesResolved => PathExtensions.Parse(StorageFolderDownloadedFiles);
+		public string PathToTesseract { get; set; }
+		public string StorageFolderSBCInvoiceHTML { get; set; }
+
 
 		public string MixedUpAccountIds { get; set; }
 		public List<List<long>> MixedUpAccountIdsParsed => JsonConvert.DeserializeObject<List<List<long>>>(MixedUpAccountIds);
 
-		public string PathToTesseract { get; set; }
-		public string PathToTesseractResolved => PathExtensions.Parse(PathToTesseract);
-
+		public void ResolvePaths()
+		{
+			OutputFolder = PathExtensions.Parse(OutputFolder);
+			StorageFolderRoot = PathExtensions.Parse(StorageFolderRoot);
+			StorageFolderDownloadedFiles = PathExtensions.Parse(StorageFolderDownloadedFiles);
+			PathToTesseract = PathExtensions.Parse(PathToTesseract);
+			StorageFolderSBCInvoiceHTML = PathExtensions.Parse(StorageFolderSBCInvoiceHTML);
+		}
 	}
 
 	public static class GlobalSettings

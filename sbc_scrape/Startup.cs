@@ -40,7 +40,9 @@ namespace SBCScan
 			Services = services.BuildServiceProvider();
 
 			GlobalSettings.Configuration = Configuration;
-			GlobalSettings.AppSettings = ActivatorUtilities.GetServiceOrCreateInstance<IOptions<AppSettings>>(Services).Value;
+			var appSettings = ActivatorUtilities.GetServiceOrCreateInstance<IOptions<AppSettings>>(Services).Value;
+			appSettings.ResolvePaths();
+			GlobalSettings.AppSettings = appSettings;
 		}
 
 		public void ConfigureServices(IServiceCollection services)
@@ -52,7 +54,7 @@ namespace SBCScan
 
 			services.AddLogging(configure => configure.AddConsole());
 			services.AddOptions();
-			services.AddScoped<IKeyValueStore, FileSystemKVStore>(sp => new FileSystemKVStore(settings.Value.StorageFolderRootResolved));
+			services.AddScoped<IKeyValueStore, FileSystemKVStore>(sp => new FileSystemKVStore(settings.Value.StorageFolderRoot));
 		}
 	}
 }

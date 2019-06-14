@@ -42,7 +42,7 @@ namespace SBCScan
 			driver = SetupDriver(downloadFolder);
 			logger.LogInformation($"driver.SessionId = {driver.SessionId}");
 
-			fetcher = new Fetcher(driver, new FileSystemKVStore(settings.StorageFolderDownloadedFilesResolved, extension: ""));
+			fetcher = new Fetcher(driver, new FileSystemKVStore(settings.StorageFolderDownloadedFiles, extension: ""));
 
 			sbc = new SBC(driver);
 			await sbc.Login(settings.LoginPage_BankId, settings.UserLoginId_BankId);

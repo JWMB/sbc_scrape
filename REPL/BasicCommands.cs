@@ -109,6 +109,4 @@ namespace REPL
 			return string.Join("\n", result.Select(r => $"{r.Item1}: {r.Item2}"));
 		}
 	}
-
-
 }
