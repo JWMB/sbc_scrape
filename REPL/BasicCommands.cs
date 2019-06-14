@@ -42,13 +42,29 @@ namespace REPL
 		public override string Id => "csv";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			if (parms[0] is string)
+			var conf = new CsvHelper.Configuration.Configuration { Delimiter = "\t" };
+
+			if (parms.Count > 1 && parms[1] is string str) // Deserialize
 			{
+				var typeName = parms[0] as string;
 				var type = AppDomain.CurrentDomain.GetAssemblies()
-					.Select(a => a.GetType(parms[1] as string)).FirstOrDefault();
-				return ServiceStack.Text.CsvSerializer.DeserializeFromString(type, parms[0] as string);
+					.Select(a => a.GetTypes().FirstOrDefault(t => t.Name == typeName)).FirstOrDefault(t => t != null);
+				if (type == null)
+					throw new ArgumentException($"Type not found: {typeName}");
+
+				using (var reader = new StringReader(str))
+				using (var csv = new CsvHelper.CsvReader(reader, conf))
+				{
+					return csv.GetRecords(type).ToList();
+				}
 			}
-			return ServiceStack.Text.CsvSerializer.SerializeToString(parms[0]);
+
+			using (var writer = new StringWriter())
+			using (var csv = new CsvHelper.CsvWriter(writer, conf))
+			{
+				csv.WriteRecords(parms[0] as IEnumerable<object>);
+				return writer.ToString();
+			}
 		}
 	}
 
