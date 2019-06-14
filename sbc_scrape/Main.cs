@@ -24,8 +24,11 @@ namespace SBCScan
 		private readonly ILogger<Main> logger;
 
 		private Fetcher fetcher;
+		private SBC sbc;
 		private RemoteWebDriver driver;
 		private string downloadFolder;
+
+		public SBC SBC { get => sbc; }
 
 		public Main(IOptions<AppSettings> settings, IKeyValueStore store, ILogger<Main> logger)
 		{
@@ -41,7 +44,7 @@ namespace SBCScan
 
 			fetcher = new Fetcher(driver, new FileSystemKVStore(settings.StorageFolderDownloadedFilesResolved, extension: ""));
 
-			var sbc = new SBC(driver);
+			sbc = new SBC(driver);
 			await sbc.Login(settings.LoginPage_BankId, settings.UserLoginId_BankId);
 
 			sbc.LoginToMediusFlow(settings.RedirectUrlMediusFlow);

@@ -1,6 +1,7 @@
 ﻿using MediusFlowAPI;
 using Newtonsoft.Json;
 using REPL;
+using sbc_scrape.Fakturaparm;
 using Scrape.IO;
 using System;
 using System.Collections.Generic;
@@ -30,6 +31,7 @@ namespace SBCScan.REPL
 						new GetTaskCmd(main.CreateApi()),
 						new GetImagesCmd(main),
 						new ScrapeCmd(main),
+						new FetchSBCInvoices(main),
 					});
 			return currentCommandList.Concat(new Command[] { new ListCmd(currentCommandList) });
 		}
@@ -96,19 +98,19 @@ namespace SBCScan.REPL
 		public override string Id => "sbcinvoices";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var read = sbc_scrape.Fakturaparm.ReadAll(defaultFolder).Select(o => o.ToSummary()).ToList();
+			var read = SBCInvoice.ReadAll(defaultFolder).Select(o => o.ToSummary()).ToList();
 			var parm1 = parms.FirstOrDefault();
 			if (parm1 is IEnumerable<InvoiceSummary> input)
 			{
 				if (false)
 				{
 					//Find inconsistancies between two systems:
-					var exactOverlap = read.Intersect(input, new sbc_scrape.Fakturaparm.SBCvsMediusEqualityComparer(false));
-					var fudgedOverlap = read.Intersect(input, new sbc_scrape.Fakturaparm.SBCvsMediusEqualityComparer(true));
+					var exactOverlap = read.Intersect(input, new SBCInvoice.SBCvsMediusEqualityComparer(false));
+					var fudgedOverlap = read.Intersect(input, new SBCInvoice.SBCvsMediusEqualityComparer(true));
 					var fudgedOnly = fudgedOverlap.Except(exactOverlap);
-					var fudgedBothSources = fudgedOnly.Concat(input.Intersect(fudgedOnly, new sbc_scrape.Fakturaparm.SBCvsMediusEqualityComparer(true)));
+					var fudgedBothSources = fudgedOnly.Concat(input.Intersect(fudgedOnly, new SBCInvoice.SBCvsMediusEqualityComparer(true)));
 					var notInMediusFlow = read.Where(s => s.InvoiceDate > new DateTime(2016, 4, 1))
-						.Except(input, new sbc_scrape.Fakturaparm.SBCvsMediusEqualityComparer(true));
+						.Except(input, new SBCInvoice.SBCvsMediusEqualityComparer(true));
 
 					var all = fudgedBothSources.Select(s => new { S = s, Reason = "Fudged" })
 						.Concat(notInMediusFlow.Select(s => new { S = s, Reason = "Missing" }));
@@ -117,7 +119,7 @@ namespace SBCScan.REPL
 				}
 
 				//Use "real" data instead of Fakturaparm where they overlap:
-				var duplicatesRemoved = read.Except(input, new sbc_scrape.Fakturaparm.SBCvsMediusEqualityComparer(true))
+				var duplicatesRemoved = read.Except(input, new SBCInvoice.SBCvsMediusEqualityComparer(true))
 					.Concat(input)
 					.OrderByDescending(o => o.InvoiceDate);
 				return duplicatesRemoved;
@@ -126,6 +128,17 @@ namespace SBCScan.REPL
 		}
 	}
 
+	class FetchSBCInvoices : Command
+	{
+		private readonly Main main;
+		public FetchSBCInvoices(Main main) => this.main = main;
+		public override string Id => "fetchsbcinvoices";
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			var html = await main.SBC.FetchInvoiceListHtml(DateTime.Today.Year);
+			return SBCInvoice.Parse(html);
+		}
+	}
 
 	class CreateHouseIndexCmd : Command
 	{
