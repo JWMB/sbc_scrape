@@ -69,14 +69,23 @@ namespace sbc_scrape.Fakturaparm
 		public static List<MediusFlowAPI.InvoiceSummary> Join(IEnumerable<MediusFlowAPI.InvoiceSummary> mediusFlowSummaries,
 			IEnumerable<MediusFlowAPI.InvoiceSummary> sbcSummaries)
 		{
-			//TODO: nope - instead, "insert" the additional data into the sbc summarty
-			var duplicatesRemoved = sbcSummaries.Except(mediusFlowSummaries, new SBCvsMediusEqualityComparer(true))
-	.Concat(mediusFlowSummaries);
+			var comparer = new SBCvsMediusEqualityComparer(true);
+			var onlyInMediusFlow = mediusFlowSummaries.Except(sbcSummaries, comparer);
+			var onlyInSbc = sbcSummaries.Except(mediusFlowSummaries, comparer);
+
+			var joined = mediusFlowSummaries.Join(sbcSummaries, s => s, s => s, (mf, sbc) => {
+				mf.AccountId = sbc.AccountId;
+				//mf.DueDate = sbc.DueDate;
+				return mf;
+				}, comparer);
+
+			var all = onlyInMediusFlow.Concat(onlyInSbc).Concat(joined);
+			return all.OrderByDescending(o => o.InvoiceDate).ToList();
 
 			////Use "real" data instead of Fakturaparm where they overlap:
 			//var duplicatesRemoved = sbcSummaries.Except(mediusFlowSummaries, new SBCvsMediusEqualityComparer(true))
 			//	.Concat(mediusFlowSummaries);
-			return duplicatesRemoved.OrderByDescending(o => o.InvoiceDate).ToList();
+			//return duplicatesRemoved.OrderByDescending(o => o.InvoiceDate).ToList();
 		}
 
 		public class SBCvsMediusEqualityComparer : IEqualityComparer<MediusFlowAPI.InvoiceSummary>
