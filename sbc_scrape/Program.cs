@@ -29,10 +29,11 @@ namespace SBCScan
 					new CreateIndexCmd(main),
 					new CreateGroupedCmd(main),
 					new CreateHouseIndexCmd(main),
-					new ReadSBCInvoices(Path.Combine(GlobalSettings.AppSettings.StorageFolderSbcHtml)),
-					new ReadSBCTransactions(Path.Combine(GlobalSettings.AppSettings.StorageFolderSbcHtml)),
+					new ReadSBCInvoices(GlobalSettings.AppSettings.StorageFolderSbcHtml),
+					new ReadSBCTransactions(GlobalSettings.AppSettings.StorageFolderSbcHtml),
 					new OCRImagesCmd(),
 					new InitCmd(main),
+					new InvoiceTransactionJoin(GlobalSettings.AppSettings.StorageFolderSbcHtml, main),
 					new ConvertInvoiceImageFilenameCmd(main),
 					new ObjectToFilenameAndObject(),
 
