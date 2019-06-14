@@ -60,6 +60,7 @@ namespace MediusFlowAPI
 			public override string ToString()
 			{
 				return GetFilenamePrefix(InvoiceDate, Supplier, Id) + string.Join("_",
+					"",
 					RegisteredDate.ToString("MM-dd"),
 					State.ToString()
 					);

@@ -25,16 +25,20 @@ namespace SBCScan
 
 		private Fetcher fetcher;
 		private SBC sbc;
+		private MediusFlow mediusFlow;
 		private RemoteWebDriver driver;
 		private string downloadFolder;
 
 		public SBC SBC { get => sbc; }
+		public MediusFlow MediusFlow { get => mediusFlow; }
 
 		public Main(IOptions<AppSettings> settings, IKeyValueStore store, ILogger<Main> logger)
 		{
 			this.settings = settings.Value;
 			this.store = store;
 			this.logger = logger;
+
+			mediusFlow = new MediusFlow(store, logger); //TODO: better pattern for loggers...
 		}
 
 		public async Task Init()
@@ -45,198 +49,42 @@ namespace SBCScan
 			fetcher = new Fetcher(driver, new FileSystemKVStore(settings.StorageFolderDownloadedFiles, extension: ""));
 
 			sbc = new SBC(driver);
+
 			await sbc.Login(settings.LoginPage_BankId, settings.UserLoginId_BankId);
+
+			mediusFlow.Init(fetcher);
+
 
 			sbc.LoginToMediusFlow(settings.RedirectUrlMediusFlow);
 			logger.LogInformation($"Logged in");
 		}
 
-		public API CreateApi()
+		public async Task<List<InvoiceSummary>> LoadInvoices(bool includeOCRd)
 		{
-			return new API(fetcher, settings.MediusFlowRoot, settings.MediusRequestHeader_XUserContext);
-		}
+			var sbc = sbc_scrape.Fakturaparm.SBCInvoice.ReadAll(GlobalSettings.AppSettings.StorageFolderSBCInvoiceHTML)
+				.Select(o => o.ToSummary()).ToList();
+			var mediusFlow = await MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2001, 1, 1));
 
-		public InvoiceScraper CreateScraper()
-		{
-			//TODO: can we get the x-user-context header from existing requests? E.g. puppeteers Network.responseReceived
-			return new InvoiceScraper(fetcher, settings.MediusFlowRoot, settings.MediusRequestHeader_XUserContext);
-		}
-
-		public async Task<Dictionary<InvoiceFull, List<string>>> DownloadImages(DateTime from, DateTime? to = null) //IEnumerable<long> invoiceIds)
-		{
-			if (to == null)
-				to = DateTime.Now;
-			var invoices = await LoadInvoices(ff => ff.InvoiceDate >= from && ff.InvoiceDate <= to);
-			var api = CreateApi();
-			var result = new Dictionary<InvoiceFull, List<string>>();
-			foreach (var invoice in invoices)
+			if (includeOCRd)
 			{
-				var filenameFormat = InvoiceFull.GetFilenamePrefix(invoice.Invoice.InvoiceDate.FromMediusDate().Value,
-					invoice.Invoice.Supplier.Name, invoice.Invoice.Id) + "_{0}";
-				var images = await api.GetTaskImages(api.GetTaskImagesInfo(invoice.FirstTask?.Task), true, filenameFormat);
-				result.Add(invoice, images.Keys.Select(k => k.ToString()).ToList());
-			}
-			return result;
-		}
-
-		public async Task<List<InvoiceSummary>> Scrape(DateTime? minDate = null, DateTime? maxDate = null, bool saveToDisk = true, bool goBackwards = false)
-		{
-			var skipAlreadyArchived = true;
-			var alreadyScraped = (await store.GetAllKeys()).Select(k => InvoiceFull.FilenameFormat.Parse(k)).ToList(); // .GetAllArchivedInvoiceDates();
-			var alreadyScrapedDates = alreadyScraped.Select(s => s.InvoiceDate);
-			var alreadyScrapedIds = alreadyScraped.Select(s => s.Id).ToList();
-
-			var dateBounds = (Min: minDate ?? new DateTime(2016, 1, 1), Max: maxDate ?? DateTime.Now.Date);
-			var latest = alreadyScrapedDates.Concat(new DateTime[] { dateBounds.Min }).Max();
-			var earliest = alreadyScrapedDates.Concat(new DateTime[] { dateBounds.Max }).Min();
-
-			logger.LogInformation($"Already downloaded invoice dates: {earliest.ToShortDateString()} - {latest.ToShortDateString()}");
-
-			var timespan = TimeSpan.FromDays(7 * (goBackwards ? -1 : 1));
-			var maxNumPeriods = 26;
-
-			DateTime start, end;
-			if (goBackwards)
-			{
-				start = earliest.Add(timespan);
-				end = earliest;
-			}
-			else
-			{
-				//We need to revisit invoices - those with TaskState = 1 were not finished
-				//Also comments may have been updated, so add an additional 15 days back
-				start = alreadyScraped.Where(iv => iv.State == 1).Min(iv => iv.InvoiceDate).AddDays(-15);
-				end = start.Add(timespan);
+				var pathToOCRed = GlobalSettings.AppSettings.StorageFolderDownloadedFiles;
+				var ocrFiles = new DirectoryInfo(pathToOCRed).GetFiles("*.txt");
+				foreach (var summary in mediusFlow)
+				{
+					var found = summary.InvoiceImageIds?.Select(v => new { Guid = v, File = ocrFiles.SingleOrDefault(f => f.Name.Contains(v)) })
+						.Where(f => f.File != null).Select(f => new { Guid = f.Guid, Content = File.ReadAllText(f.File.FullName) });
+					summary.InvoiceTexts = string.Join("\n", found.Select(f =>
+						$"{f.Guid}: {string.Join('\n', f.Content.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0))}")
+						);
+				}
+				// TODO: SBC also has images
 			}
 
-			var skippedIds = new List<long>();
-			var scraper = CreateScraper();
-			var result = new List<InvoiceSummary>();
-			for (int i = 0; i < maxNumPeriods; i++)
-			{
-				MediusFlowAPI.Models.SupplierInvoiceGadgetData.Response gadgetData;
-				var dateRange = (Start: start > dateBounds.Min ? start : dateBounds.Min, 
-					End: end < dateBounds.Max ? end : dateBounds.Max);
-				try
-				{
-					logger.LogInformation($"GetSupplierInvoiceGadgetData {dateRange.Start} - {dateRange.End}");
-					gadgetData = await scraper.GetSupplierInvoiceGadgetData(dateRange.Start, dateRange.End);
-				}
-				catch (Exception ex)
-				{
-					logger.LogCritical(ex, $"GetSupplierInvoiceGadgetData");
-					break;
-				}
+			var mismatched = sbc_scrape.Fakturaparm.SBCInvoice.GetMismatchedEntries(mediusFlow, sbc);
+			var tmp = string.Join("\n", mismatched.OrderByDescending(s => s.Summary.InvoiceDate)
+	.Select(s => $"{(s.Summary.InvoiceDate?.ToString("yyyy-MM-dd"))} {s.Type} {s.Source} {s.Summary.AccountId} {s.Summary.Supplier} {s.Summary.GrossAmount}"));
 
-				logger.LogInformation($"Found {gadgetData.Invoices.Count()} invoices");
-
-				var ordered = goBackwards ?
-					gadgetData.Invoices.OrderByDescending(iv => (iv.InvoiceDate?.FromMediusDate() ?? DateTime.Today))
-					: gadgetData.Invoices.OrderBy(iv => (iv.InvoiceDate?.FromMediusDate() ?? DateTime.Today));
-
-				foreach (var invoice in ordered)
-				{
-					if (skipAlreadyArchived && alreadyScrapedIds.Contains(invoice.Id))
-					{
-						if (alreadyScraped.First(s => s.Id == invoice.Id).State == 2)
-						{
-							//TODO: we really should download, in case comments/history have changed (or include that info in filename)
-							skippedIds.Add(invoice.Id);
-							logger.LogInformation($"Skipping {invoice.Id} {invoice.InvoiceDate?.FromMediusDate()}");
-							continue;
-						}
-					}
-
-					try
-					{
-						var downloaded = await scraper.GetInvoices(new List<MediusFlowAPI.Models.SupplierInvoiceGadgetData.Invoice> { invoice });
-						foreach (var item in downloaded)
-						{
-							if (saveToDisk)
-							{
-								if (alreadyScrapedIds.Contains(invoice.Id))
-								{
-									var oldOne = alreadyScraped.First(s => s.Id == invoice.Id);
-									await store.Delete(oldOne.ToString());
-								}
-								await store.Post(InvoiceFull.FilenameFormat.Create(item), item);
-							}
-							var summarized = InvoiceSummary.Summarize(item);
-							result.Add(summarized);
-							logger.LogInformation($"{summarized.Id} {summarized.InvoiceDate} {summarized.CreatedDate} {summarized.GrossAmount} {summarized.Supplier}");
-						}
-					}
-					catch (Exception ex)
-					{
-						logger.LogCritical(ex, $"GetInvoice {invoice.Id} {invoice.InvoiceDate?.FromMediusDate()}");
-					}
-				}
-
-				if (start <= dateBounds.Min || (goBackwards ? end > dateBounds.Max : end >= dateBounds.Max))
-					break;
-				start = start.Add(timespan);
-				end = end.Add(timespan);
-			}
-			logger.LogInformation($"Complete");
-			return result;
-		}
-
-		public async Task<List<InvoiceFull>> LoadInvoices(Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
-		{
-			return await LoadAndTransformInvoices(o => o, quickFilter);
-		}
-
-		public async Task<List<T>> LoadAndTransformInvoices<T>(Func<InvoiceFull, T> selector, Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
-		{
-			var files = (await store.GetAllKeys()).ToList();
-			var result = new List<T>();
-			foreach (var file in files)
-			{
-				if (quickFilter != null && quickFilter(InvoiceFull.FilenameFormat.Parse(file)) == false)
-					continue;
-				try
-				{
-					var invoice = JsonConvert.DeserializeObject<InvoiceFull>((await store.Get(file)).ToString());
-					result.Add(selector(invoice));
-				}
-				catch (Exception ex)
-				{
-					throw new Exception($"Deserialization of {file} failed");
-				}
-			}
-			return result;
-		}
-		public async Task<List<InvoiceSummary>> LoadInvoiceSummaries(Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
-		{
-			return await LoadAndTransformInvoices(quickFilter: quickFilter, selector: invoice => InvoiceSummary.Summarize(invoice));
-		}
-
-		public class TimeSpanAndFuncAggregate<TGroupBy, TAggregate>
-		{
-			public TGroupBy GroupedBy { get; set; }
-			public DateTime TimeBin { get; set; }
-			public List<long> InvoiceIds { get; set; }
-			public TAggregate Aggregate { get; set; }
-
-		}
-		public List<TimeSpanAndFuncAggregate<TGroupBy, TAggregate>> AggregateByTimePeriodAndFunc<TGroupBy, TAggregate>(
-			List<InvoiceSummary> summaries, Func<IEnumerable<InvoiceSummary>, TAggregate> aggregator, 
-			Func<InvoiceSummary, TGroupBy> groupSelector, Func<InvoiceSummary, DateTime> timeBinSelector)
-		{
-			var summed = summaries.
-				Select(o => new { O = o, Bin = timeBinSelector(o) })
-				.GroupBy(o => o.Bin)
-				.SelectMany(g => g.GroupBy(o => groupSelector(o.O))
-					.Select(byGrouping => new TimeSpanAndFuncAggregate<TGroupBy, TAggregate>
-					{
-						GroupedBy = byGrouping.Key,
-						TimeBin = g.Key,
-						Aggregate = aggregator(byGrouping.Select(ss => ss.O)),
-						InvoiceIds = byGrouping.Select(ss => ss.O.Id).ToList()
-					})
-					.ToList()
-			).OrderByDescending(o => o.TimeBin);
-			return summed.ToList();
+			return sbc_scrape.Fakturaparm.SBCInvoice.Join(mediusFlow, sbc);
 		}
 
 		static RemoteWebDriver SetupDriver(string downloadFolder)

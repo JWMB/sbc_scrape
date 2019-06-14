@@ -32,7 +32,7 @@ namespace SBCScan.REPL
 		public override string Id => "convii";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var summaries = await main.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2001, 1, 1));
+			var summaries = await main.MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2001, 1, 1));
 			var dir = new DirectoryInfo(GlobalSettings.AppSettings.StorageFolderDownloadedFiles);
 			foreach (var ext in new string[] { ".png", ".txt" })
 			{

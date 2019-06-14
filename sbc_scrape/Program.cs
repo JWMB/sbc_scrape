@@ -33,7 +33,6 @@ namespace SBCScan
 					new OCRImagesCmd(),
 					new InitCmd(main),
 					new ConvertInvoiceImageFilenameCmd(main),
-					new Summaries(main),
 					new ObjectToFilenameAndObject(),
 
 					new QuitCmd(),

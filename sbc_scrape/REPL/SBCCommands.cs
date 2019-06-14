@@ -27,8 +27,8 @@ namespace SBCScan.REPL
 		{
 			currentCommandList = currentCommandList.Where(c => !(c is ListCmd))
 				.Concat(new Command[] {
-						new GetInvoiceCmd(main.CreateScraper()),
-						new GetTaskCmd(main.CreateApi()),
+						new GetInvoiceCmd(main.MediusFlow.CreateScraper()),
+						new GetTaskCmd(main.MediusFlow.CreateApi()),
 						new GetImagesCmd(main),
 						new ScrapeCmd(main),
 						new FetchSBCInvoices(main),
@@ -45,29 +45,7 @@ namespace SBCScan.REPL
 		public override string Id => "createindex";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			return (await main.LoadInvoiceSummaries()).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
-		}
-	}
-
-	class Summaries : Command
-	{
-		private readonly Main main;
-		public Summaries(Main main) => this.main = main;
-		public override string Id => "summaries";
-		public override async Task<object> Evaluate(List<object> parms)
-		{
-			var summaries = await main.LoadInvoiceSummaries();
-			var pathToOCRed = GlobalSettings.AppSettings.StorageFolderDownloadedFiles;
-			var ocrFiles = new DirectoryInfo(pathToOCRed).GetFiles("*.txt");
-			foreach (var summary in summaries)
-			{
-				var found = summary.InvoiceImageIds?.Select(v => new { Guid = v, File = ocrFiles.SingleOrDefault(f => f.Name.Contains(v)) })
-					.Where(f => f.File != null).Select(f => new { Guid = f.Guid, Content = File.ReadAllText(f.File.FullName) });
-				summary.InvoiceTexts = string.Join("\n", found.Select(f =>
-					$"{f.Guid}: {string.Join('\n', f.Content.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0))}")
-					);
-			}
-			return summaries.OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+			return (await main.LoadInvoices(false)).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 		}
 	}
 
@@ -99,17 +77,7 @@ namespace SBCScan.REPL
 		public override string Id => "sbcinvoices";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var read = SBCInvoice.ReadAll(defaultFolder).Select(o => o.ToSummary()).ToList();
-			var parm1 = parms.FirstOrDefault();
-			if (parm1 is IEnumerable<InvoiceSummary> input)
-			{
-				var mismatched = SBCInvoice.GetMismatchedEntries(input, read);
-				var tmp = string.Join("\n", mismatched.OrderByDescending(s => s.Summary.InvoiceDate)
-	.Select(s => $"{(s.Summary.InvoiceDate?.ToString("yyyy-MM-dd"))} {s.Type} {s.Source} {s.Summary.AccountId} {s.Summary.Supplier} {s.Summary.GrossAmount}"));
-
-				return SBCInvoice.Join(input, read);
-			}
-			return read;
+			return SBCInvoice.ReadAll(defaultFolder).Select(o => o.ToSummary()).ToList();
 		}
 	}
 
@@ -138,7 +106,7 @@ namespace SBCScan.REPL
 			var html = await main.SBC.FetchInvoiceListHtml(year);
 			File.WriteAllText(Path.Combine(GlobalSettings.AppSettings.StorageFolderSBCInvoiceHTML, $"{year}.html"), html);
 
-			var scraped = await main.Scrape();
+			var scraped = await main.MediusFlow.Scrape();
 
 			//TODO: check diff with existing files and return what was updated/added
 
@@ -153,7 +121,7 @@ namespace SBCScan.REPL
 		public override string Id => "houseindex";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var summaries = await main.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2001, 1, 1));
+			var summaries = await main.MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2001, 1, 1));
 			var withHouses = summaries.Select(s =>
 				new { Summary = s, Houses = s.Houses?.Split(',').Select(h => h.Trim()).Where(h => h.Length > 0).ToList() })
 				.Where(s => s.Houses != null && s.Houses.Any());
@@ -185,7 +153,7 @@ namespace SBCScan.REPL
 			if (parms.FirstOrDefault() is IEnumerable<InvoiceSummary> input)
 				summaries = input.ToList();
 			else
-				summaries = await main.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2010, 1, 1));
+				summaries = await main.LoadInvoices(false); // MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2010, 1, 1));
 
 			var accountDescriptionsWithDups = summaries.Select(s => new { s.AccountId, s.AccountName }).Distinct();
 			//We may have competing AccountNames (depending on source)
@@ -205,7 +173,7 @@ namespace SBCScan.REPL
 				timeBinSelector = invoice => new DateTime(invoice.InvoiceDate.Value.Year, invoice.InvoiceDate.Value.Month, 1);
 			}
 
-			var aggregated = main.AggregateByTimePeriodAndFunc(summaries, 
+			var aggregated = main.MediusFlow.AggregateByTimePeriodAndFunc(summaries, 
 				inGroup => inGroup.Sum(o => o.GrossAmount),
 				accountSummary => accountSummary.AccountId ?? 0, //(accountSummary.AccountId ?? 0) / 1000 * 1000,
 				timeBinSelector);
@@ -264,7 +232,7 @@ namespace SBCScan.REPL
 			for (int i = dates.Count; i < 2; i++)
 				dates.Add(defaultDates[i]);
 
-			var scraped = await main.Scrape(dates[0], dates[1], saveToDisk: false, goBackwards: false);
+			var scraped = await main.MediusFlow.Scrape(dates[0], dates[1], saveToDisk: false, goBackwards: false);
 			return scraped.Select(iv =>
 			$"{iv.Id} {iv.TaskId} {iv.InvoiceDate} {iv.Supplier} {iv.GrossAmount} {iv.AccountId} {iv.AccountName}");
 		}
@@ -283,7 +251,7 @@ namespace SBCScan.REPL
 			for (int i = dates.Count; i < 2; i++)
 				dates.Add(defaultDates[i]);
 
-			var result = await main.DownloadImages(dates[0], dates[1]);
+			var result = await main.MediusFlow.DownloadImages(dates[0], dates[1]);
 			return string.Join("\n", result.Select(kv => $"{InvoiceFull.FilenameFormat.Create(kv.Key)}: {string.Join(',', kv.Value)}"));
 		}
 	}
