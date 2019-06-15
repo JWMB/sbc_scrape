@@ -7,6 +7,35 @@ using SBCScan;
 
 namespace sbc_scrape.SBC
 {
+	class InvoiceSource : HtmlSource<Invoice>
+	{
+		public override string SavedFilePrefix => "Invoices";
+		public override string UrlPath => "Portalen/Ekonomi/Fakturaparm/";
+		public override List<Invoice> Parse(string html) => ParseX(html).Cast<Invoice>().ToList();
+		public List<Invoice> ParseX(string html)
+		{
+			var doc = new HtmlDocument();
+			doc.LoadHtml(html);
+
+			var accountNames = doc.DocumentNode.SelectNodes("(//table[contains(@class, 'portal-table-nogrid')]//select)[1]//option")
+				.Select(n => new { Key = n.GetAttributeValue("value", 0), Value = HtmlEntity.DeEntitize(n.InnerText) })
+				.ToDictionary(k => k.Key, k => k.Value.Replace($"{k.Key} ", ""));
+
+			var culture = new System.Globalization.CultureInfo("sv-SE");
+			return ParseDocument(html, r => new Invoice
+			{
+				RegisteredDate = DateTime.Parse(r[0]),
+				PaymentDate = string.IsNullOrWhiteSpace(r[1]) ? (DateTime?)null : DateTime.Parse(r[1]),
+				Supplier = r[2],
+				LevNr = r[3],
+				AccountId = int.Parse(r[4]),
+				AccountName = accountNames.GetValueOrDefault(int.Parse(r[4]), "N/A"),
+				Amount = decimal.Parse(r[5], System.Globalization.NumberStyles.Any, culture),
+				InvoiceLink = r[6]
+			}, new string[] { "Ver serie", "Ver nr" }).ToList();
+		}
+	}
+
 	public class Invoice
 	{
 		public DateTime RegisteredDate { get; set; }
@@ -121,62 +150,6 @@ namespace sbc_scrape.SBC
 				//Seems we can't trust accountId, but the first digit is correct
 				return ($"{bx.AccountId.ToString().Remove(1)}{bx.GrossAmount}{(bx.InvoiceDate?.ToString("yyyy-MM-dd"))}{bx.Supplier}").GetHashCode(); //{bx.DueDate}
 			}
-		}
-
-		public static string FilenamePattern => "Invoices_{0}.html";
-		public static List<Invoice> ReadAll(string folder)
-		{
-			return new System.IO.DirectoryInfo(folder).GetFiles(string.Format(FilenamePattern, "*"))
-				.SelectMany(file => {
-					try
-					{
-						return Parse(System.IO.File.ReadAllText(file.FullName));
-					}
-					catch (Exception ex)
-					{
-						throw new FormatException($"{ex.Message} for '{file.FullName}'", ex);
-					}
-				}).ToList();
-		}
-
-		public static List<Invoice> Parse(string html)
-		{
-			var doc = new HtmlDocument();
-			doc.LoadHtml(html);
-
-			var accountNames = doc.DocumentNode.SelectNodes("(//table[contains(@class, 'portal-table-nogrid')]//select)[1]//option")
-				.Select(n => new { Key = n.GetAttributeValue("value", 0), Value = HtmlEntity.DeEntitize(n.InnerText) })
-				.ToDictionary(k => k.Key, k => k.Value.Replace($"{k.Key} ", ""));
-
-			var node = doc.DocumentNode.SelectSingleNode("//table[@class='portal-table']");
-			if (node == null)
-				throw new FormatException("Couldn't find table node");
-			node = node.ChildNodes.FirstOrDefault(n => n.Name == "tbody") ?? node; //Some variants have no tbody, but tr directly under
-
-			var rows = node.ChildNodes.Where(n => n.Name == "tr");
-			var headerRow = rows.First();
-			var cells = headerRow.ChildNodes.Where(n => n.Name == "th");
-			var columnNames = cells.Select(n => HtmlEntity.DeEntitize(n.FirstChild.InnerText)).ToList();
-
-			var skipColumns = new string[] { "Ver serie", "Ver nr" };
-			var skipColumnIndices = skipColumns.Select(c => columnNames.IndexOf(c)).Where(i => i >= 0).ToList();
-
-			var parsedRows = rows.Skip(1).Select(r => r.ChildNodes.Where(n => n.Name == "td").ToList())
-				.Select(row => row.Where((r, i) => !skipColumnIndices.Contains(i)).Select(c => {
-					return c.FirstChild.Name == "a" ? c.FirstChild.GetAttributeValue("href", "") : HtmlEntity.DeEntitize(c.InnerText);
-				}).ToList()).ToList();
-
-			var culture = new System.Globalization.CultureInfo("sv-SE");
-			return parsedRows.Select(r => new Invoice {
-				RegisteredDate = DateTime.Parse(r[0]),
-				PaymentDate = string.IsNullOrWhiteSpace(r[1]) ? (DateTime?)null : DateTime.Parse(r[1]),
-				Supplier = r[2],
-				LevNr = r[3],
-				AccountId = int.Parse(r[4]),
-				AccountName = accountNames.GetValueOrDefault(int.Parse(r[4]), "N/A"),
-				Amount = decimal.Parse(r[5], System.Globalization.NumberStyles.Any, culture), //.Replace(",", System.Globalization.CultureInfo.CurrentCulture.NumberFormat.CurrencyDecimalSeparator)),
-				InvoiceLink = r[6]
-			}).ToList();
 		}
 	}
 }
