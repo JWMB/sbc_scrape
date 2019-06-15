@@ -84,48 +84,11 @@ namespace SBCScan.REPL
 		public override string Id => "jit";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var invoices = (await main.LoadInvoices(false)).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+			var invoices = (await main.LoadInvoices(false)).Where(o => o.DueDate.HasValue).ToList();
+			var receipts = new ReceiptsSource().ReadAll(defaultFolder);
+			//var transactions = new BankTransactionSource().ReadAll(defaultFolder);
 
-			var transactions = new BankTransactionSource().ReadAll(defaultFolder); // BankTransaction.ReadAll(defaultFolder).ToList();
-
-			var compInvoices = invoices.Where(o => o.DueDate.HasValue).Select(o => new Comparable { Date = o.DueDate.Value, Amount = o.GrossAmount });
-			var compTransact = transactions.Select(o => new Comparable { Date = o.AccountingDate, Amount = -o.Amount });
-
-			//HS 15069192 = Handelsbanken
-			//LB UTTAG = invoice
-
-			var intersect = compInvoices.Intersect(compTransact).ToList();
-
-			var sorted = invoices.Where(o => o.DueDate.HasValue).Select(o =>
-				new {
-					Date = o.DueDate.Value,
-					Output = $"{o.GrossAmount}\t{o.Supplier}"
-				})
-				.Concat(transactions.Where(o => !(o.Text.Contains("56901309") && o.Amount > 0)).Select(o => //Ignore 
-					new {
-						Date = o.AccountingDate,
-						Output = $"{-o.Amount}\t{(o.Text == "HS 15069192" ? "Handelsbanken!" : o.Text)}\t{o.CurrencyDate}"
-					}))
-				.OrderByDescending(o => o.Date)
-				.Select(o => $"{o.Date.ToShortDateString()}\t{o.Output}");
-			return string.Join("\n", sorted);
-		}
-		class Comparable
-		{
-			public DateTime Date;
-			public decimal Amount;
-
-			//readonly DateTime RefDate = new DateTime(2000, 1, 1);
-			public override int GetHashCode()
-			{
-				return Amount.GetHashCode(); // $"{(Date - RefDate).TotalDays}{Amount}".GetHashCode(); //RefDate (Date.ToString("yyyyMMdd"))
-			}
-			public override bool Equals(object obj)
-			{
-				if (!(obj is Comparable other))
-					return false;
-				return other.Amount == Amount && Math.Abs((other.Date - Date).TotalDays) <= 1;
-			}
+			return new sbc_scrape.DataJoiner().Evaluate(invoices, receipts);
 		}
 	}
 

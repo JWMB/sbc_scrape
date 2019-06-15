@@ -13,9 +13,11 @@ namespace MediusFlowAPI
 		public DateTime? InvoiceDate { get; set; }
 		public DateTime? CreatedDate { get; set; }
 		public DateTime? DueDate { get; set; }
+		public DateTime? FinalPostingingDate { get; set; }
 		public long? TaskState { get; set; }
 		public decimal GrossAmount { get; set; }
 		public string Supplier { get; set; }
+		public string SupplierId { get; set; }
 		public long? AccountId { get; set; }
 		public string AccountName { get; set; }
 		public double? VAT { get; set; }
@@ -89,7 +91,7 @@ namespace MediusFlowAPI
 			}
 			string Join(string separator, IEnumerable<string> strings) => strings == null ? "" : string.Join(separator, strings);
 			string RemoveFromEnd(string str, string toRemove) => str.EndsWith(toRemove) ? str.Remove(str.Length - toRemove.Length) : str;
-
+			
 			try
 			{
 				return new InvoiceSummary
@@ -97,10 +99,12 @@ namespace MediusFlowAPI
 					Id = iv.Id,
 					InvoiceDate = iv.InvoiceDate.FromMediusDate(),
 					CreatedDate = taskDoc?.CreatedTimestamp.FromMediusDate()?.Date,
+					FinalPostingingDate = taskDoc?.VoucherObject?.FinalPostingDate.FromMediusDate()?.Date,
 					TaskState = task?.State,
 					TaskId = task?.Id,
 					GrossAmount = decimal.Parse(iv.GrossAmount.DisplayValue, System.Globalization.NumberStyles.Any, Culture),
 					Supplier = iv.Supplier.Name,
+					SupplierId = iv.Supplier.SupplierId,
 					DueDate = iv.DueDate.FromMediusDate(),
 					AccountId = accountingDimension1?.Value?.ValueValue,
 					AccountName = RemoveFromEnd(accountingDimension1?.Value?.Description, " -E-"),
