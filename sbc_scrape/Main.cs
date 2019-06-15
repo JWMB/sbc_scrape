@@ -62,7 +62,7 @@ namespace SBCScan
 
 		public async Task<List<InvoiceSummary>> LoadInvoices(bool includeOCRd)
 		{
-			var sbc = sbc_scrape.SBC.Invoice.ReadAll(GlobalSettings.AppSettings.StorageFolderSbcHtml)
+			var sbc = new sbc_scrape.SBC.InvoiceSource().ReadAll(GlobalSettings.AppSettings.StorageFolderSbcHtml)
 				.Select(o => o.ToSummary()).ToList();
 			var mediusFlow = await MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2001, 1, 1));
 

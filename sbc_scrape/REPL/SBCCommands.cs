@@ -31,8 +31,8 @@ namespace SBCScan.REPL
 						new GetTaskCmd(main.MediusFlow.CreateApi()),
 						new GetImagesCmd(main),
 						new ScrapeCmd(main),
-						new FetchSBCTransactions(main),
-						new FetchSBCInvoices(main),
+						new FetchSBCHtml(main),
+						//new FetchSBCInvoices(main),
 						new UpdateInvoices(main),
 					});
 			return currentCommandList.Concat(new Command[] { new ListCmd(currentCommandList) });
@@ -86,7 +86,7 @@ namespace SBCScan.REPL
 		{
 			var invoices = (await main.LoadInvoices(false)).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 
-			var transactions = BankTransaction.ReadAll(defaultFolder).ToList();
+			var transactions = new BankTransactionSource().ReadAll(defaultFolder); // BankTransaction.ReadAll(defaultFolder).ToList();
 
 			var compInvoices = invoices.Where(o => o.DueDate.HasValue).Select(o => new Comparable { Date = o.DueDate.Value, Amount = o.GrossAmount });
 			var compTransact = transactions.Select(o => new Comparable { Date = o.AccountingDate, Amount = -o.Amount });
@@ -129,74 +129,83 @@ namespace SBCScan.REPL
 		}
 	}
 
-	class ReadSBCTransactions : Command
+	class ReadSBCHtml : Command
 	{
 		private readonly string defaultFolder;
-		public ReadSBCTransactions(string defaultFolder) => this.defaultFolder = defaultFolder;
-		public override string Id => "sbctransactions";
+		public ReadSBCHtml(string defaultFolder) => this.defaultFolder = defaultFolder;
+		public override string Id => "sbc";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			return BankTransaction.ReadAll(defaultFolder).ToList();
-		}
-	}
-
-	class FetchSBCTransactions : Command
-	{
-		private readonly Main main;
-		public FetchSBCTransactions(Main main) => this.main = main;
-		public override string Id => "fetchsbctransactions";
-		public override async Task<object> Evaluate(List<object> parms)
-		{
-			return await SBCFatchHtmls<BankTransaction>(parms, year =>
+			var src = FetchSBCHtml.GetHtmlSourceInstance(parms[0] as string);
+			var result = src.ReadAllObjects(defaultFolder);
+			if (src is InvoiceSource invSrc)
 			{
-				var html = main.SBC.FetchBankTransactionsHtml(year).Result;
-				File.WriteAllText(Path.Combine(
-					GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(BankTransaction.FilenamePattern, year)), html);
-				return BankTransaction.Parse(html);
-			});
-		}
-
-		public static async Task<List<T>> SBCFatchHtmls<T>(List<object> parms, Func<int, List<T>> f)
-		{
-			var yearStart = int.Parse(parms.FirstOrDefault()?.ToString() ?? DateTime.Today.Year.ToString());
-			var yearEnd = yearStart;
-			if (parms.Count > 1)
-				yearEnd = int.Parse(parms[1].ToString());
-			var result = new List<T>();
-			for (var year = yearStart; year <= yearEnd; year++)
-			{
-				result.AddRange(f(year));
+				result = result.Select(r => (r as Invoice).ToSummary()).Cast<object>().ToList();
 			}
 			return result;
 		}
 	}
 
-
-	class ReadSBCInvoices : Command
-	{
-		private readonly string defaultFolder;
-		public ReadSBCInvoices(string defaultFolder) => this.defaultFolder = defaultFolder;
-		public override string Id => "sbcinvoices";
-		public override async Task<object> Evaluate(List<object> parms)
-		{
-			return Invoice.ReadAll(defaultFolder).Select(o => o.ToSummary()).ToList();
-		}
-	}
-
-	class FetchSBCInvoices : Command
+	class FetchSBCHtml : Command
 	{
 		private readonly Main main;
-		public FetchSBCInvoices(Main main) => this.main = main;
-		public override string Id => "fetchsbcinvoices";
+		public FetchSBCHtml(Main main) => this.main = main;
+		public override string Id => "fetchsbc";
+		public static HtmlSource GetHtmlSourceInstance(string typeName)
+		{
+			switch (typeName)
+			{
+				case "BankTransaction":
+				case "x":
+					return new BankTransactionSource();
+				case "Receipt":
+				case "r":
+					return new ReceiptsSource();
+				case "Invoice":
+				case "i":
+				default:
+					return new InvoiceSource();
+			}
+		}
+
+		static System.Text.RegularExpressions.Regex rxDate = new System.Text.RegularExpressions.Regex(@"^(?<year>\d{2,4})-?(?<month>\d{1,2})?");
+		public static DateTime? ParseDate(string input)
+		{
+			var m = rxDate.Match(input);
+			if (!m.Success)
+				return null;
+			var year = int.Parse(m.Groups["year"].Value);
+			year = year < 100 ? year + (year < 30 ? 2000 : 1900) : year;
+			var month = m.Groups["month"].Success ? int.Parse(m.Groups["month"].Value) : 1;
+			return new DateTime(year, month, 1);
+		}
+
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			return await FetchSBCTransactions.SBCFatchHtmls<Invoice>(parms, year =>
+			var src = GetHtmlSourceInstance(parms[0] as string);
+
+			var start = new DateTime(DateTime.Today.Year, 1, 1);
+			var end = new DateTime(start.Year, 12, 1);
+			if (parms.Count > 1)
 			{
-				var html = main.SBC.FetchInvoicesHtml(year).Result;
+				start = ParseDate(parms[1].ToString()) ?? start;
+				end = new DateTime(start.Year, 12, 1);
+				if (parms.Count > 2)
+					end = ParseDate(parms[2].ToString()) ?? end;
+			}
+
+			var result = new List<object>();
+			for (var year = start.Year; year <= end.Year; year++)
+			{
+				var monthFrom = year == start.Year ? start.Month : 1;
+				var monthTo = year == end.Year ? end.Month : 12;
+				var html = main.SBC.FetchHtmlSource(src.UrlPath, year, monthFrom, monthTo).Result;
+				var filenameSuffix = $"{year}{(monthFrom == 1 && monthTo == 12 ? "" : $"_{monthFrom}-{monthTo}")}";
 				File.WriteAllText(Path.Combine(
-					GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(Invoice.FilenamePattern, year)), html);
-				return Invoice.Parse(html);
-			});
+					GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(src.FilenamePattern, filenameSuffix)), html);
+				result.AddRange(src.ParseObjects(html));
+			}
+			return result;
 		}
 	}
 
@@ -208,9 +217,11 @@ namespace SBCScan.REPL
 		public override async Task<object> Evaluate(List<object> parms)
 		{
 			var year = DateTime.Today.Year;
-			var html = await main.SBC.FetchInvoicesHtml(year);
+
+			var src = new InvoiceSource();
+			var html = await main.SBC.FetchHtmlSource(src.UrlPath, year);
 			File.WriteAllText(Path.Combine(
-				GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(Invoice.FilenamePattern, year)), html);
+				GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(src.FilenamePattern, year)), html);
 
 			var scraped = await main.MediusFlow.Scrape();
 

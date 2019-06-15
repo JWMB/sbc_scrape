@@ -50,32 +50,27 @@ namespace SBCScan.SBC
 			driver.WaitUntilDocumentReady();
 		}
 
-		public async Task<string> FetchBankTransactionsHtml(int year)
+		public async Task<string> FetchHtmlSource(string urlPath, int year, int monthFrom = 1, int monthTo = 12)
 		{
-			driver.NavigateAndWaitReadyIfNotThere("https://varbrf.sbc.se/Portalen/Ekonomi/Revisor/Kontoutdrag/");
+			driver.NavigateAndWaitReadyIfNotThere("https://varbrf.sbc.se/" + urlPath);
 			//var accountSelect = driver.FindElement(By.XPath("//select[contains(@id,'_DDKonto')]"));
 
-			var yearSelect = driver.FindElement(By.XPath("//select[contains(@id,'_DDAr')]"));
-			var yearOption = yearSelect.FindElement(By.XPath($"//option[starts-with(text(), '{year}')]"));
-			yearOption.Click();
+			void ClickSelectOption(string selectIdContains, string optionTextStartsWith)
+			{
+				var elSelect = driver.FindElement(By.XPath($"//select[contains(@id,'_DD{selectIdContains}')]"));
+				var elOption = elSelect.FindElement(By.XPath($"//option[starts-with(text(), '{optionTextStartsWith}')]"));
+				elOption.Click();
+			}
 
-			driver.FindElement(By.XPath("//input[@type='submit']")).Click();
-			driver.WaitUntilDocumentReady();
+			if (monthFrom != 1)
+				ClickSelectOption("PeriodFrom", monthFrom.ToString());
+			if (monthTo != 12)
+				ClickSelectOption("PeriodTo", monthTo.ToString());
 
-			var fullpage = driver.PageSource;
-			return fullpage;
-		}
-
-		public async Task<string> FetchInvoicesHtml(int year)
-		{
-			driver.NavigateAndWaitReadyIfNotThere("https://varbrf.sbc.se/Portalen/Ekonomi/Fakturaparm/");
-
-			var yearSelect = driver.FindElement(By.XPath("//select[contains(@id,'_DDAr')]"));
-			var yearOption = yearSelect.FindElement(By.XPath($"//option[starts-with(text(), '{year}')]")); //name()
-			yearOption.Click();
-
-			//var monthFrom = driver.FindElement(By.XPath("//select[contains(@id,'_DDPeriodFrom')]"));
-			//var monthTo = driver.FindElement(By.XPath("//select[contains(@id,'_DDPeriodTo')]"));
+			ClickSelectOption("Ar", year.ToString());
+			//var yearSelect = driver.FindElement(By.XPath("//select[contains(@id,'_DDAr')]"));
+			//var yearOption = yearSelect.FindElement(By.XPath($"//option[starts-with(text(), '{year}')]"));
+			//yearOption.Click();
 
 			driver.FindElement(By.XPath("//input[@type='submit']")).Click();
 			driver.WaitUntilDocumentReady();
