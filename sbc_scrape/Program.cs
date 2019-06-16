@@ -32,7 +32,7 @@ namespace SBCScan
 					new ReadSBCHtml(GlobalSettings.AppSettings.StorageFolderSbcHtml),
 					new OCRImagesCmd(),
 					new InitCmd(main),
-					new InvoiceTransactionJoin(GlobalSettings.AppSettings.StorageFolderSbcHtml, main),
+					new JoinDataSources(GlobalSettings.AppSettings.StorageFolderSbcHtml, main),
 					new ConvertInvoiceImageFilenameCmd(main),
 					new ObjectToFilenameAndObject(),
 

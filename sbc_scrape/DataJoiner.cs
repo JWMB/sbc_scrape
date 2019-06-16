@@ -7,9 +7,15 @@ using System.Text;
 
 namespace sbc_scrape
 {
-	class DataJoiner
+	public class DataJoiner
 	{
-		public string Evaluate(List<InvoiceSummary> invoices, List<Receipt> receipts, List<BankTransaction> transactions)
+		public List<MatchedTransaction> Join(List<InvoiceSummary> invoices, List<Receipt> receipts, List<BankTransaction> transactions)
+		{
+			return Join(invoices, receipts, transactions, out var _);
+		}
+
+		public List<MatchedTransaction> Join(List<InvoiceSummary> invoices, List<Receipt> receipts, List<BankTransaction> transactions,
+			out (List<BankTransaction> transactions, List<InvoiceAndOrReceipt> invoicesAndReceipts) unmatched)
 		{
 			var dateRange = (Min: new DateTime(2019, 1, 1), Max: DateTime.Today);
 			Func<DateTime, bool> inRange = d => d >= dateRange.Min && d.Date <= dateRange.Max;
@@ -33,12 +39,7 @@ namespace sbc_scrape
 				SupplierId = o.SupplierId,
 				Supplier = o.Supplier,
 				Object = o });
-			var compTransact = transactions.Select(o => new Comparable {
-				Date = o.AccountingDate,
-				OptionalDate = o.CurrencyDate,
-				Amount = -o.Amount });
 			//HS 15069192 = Handelsbanken
-			//LB UTTAG = invoice?
 
 			var passes = new Comparable.EqualityComparer[] {
 				new Comparable.EqualityComparer(1),
@@ -143,54 +144,24 @@ namespace sbc_scrape
 			PerformSearch((searchTx, invrecByDateX) =>
 				searchTx.Where(o => o.Reference == "6091 LB32").Select(tx => {
 					if (invrecByDateX.TryGetValue(tx.AccountingDate, out var invrecsForDate)) {
-						//Remove (some) combination of invoices/receipts to see if we get a match
-						for (int numToRemove = 2; numToRemove < Math.Min(4, invrecsForDate.Count); numToRemove++)
-							foreach (var list in GenerateCombos(invrecsForDate, numToRemove)) {
-								var tmp = invrecsForDate.Except(list);
-								if (tmp.Sum(o => o.Amount) == -tx.Amount)
-									return new MatchedTransaction { Transaction = tx, InvRecs = tmp.ToList() };
-							}
+						if (invrecsForDate.Count > 2)
+						{
+							//Remove (some) combination of invoices/receipts to see if we get a match
+							for (int numToRemove = 2; numToRemove < Math.Min(4, invrecsForDate.Count); numToRemove++)
+								foreach (var list in GenerateCombos(invrecsForDate, numToRemove))
+								{
+									var tmp = invrecsForDate.Except(list);
+									if (tmp.Sum(o => o.Amount) == -tx.Amount)
+										return new MatchedTransaction { Transaction = tx, InvRecs = tmp.ToList() };
+								}
+						}
 					}
 					return null;
 				})
 			);
+			unmatched = (transactions: searchTransactions, invoicesAndReceipts: searchInvRecs);
 
-
-			var sorted = searchInvRecs.Select(o => new {
-				o.Date, Output = $"{o.Amount}\t{o.Supplier}\t{o.ContainsCode}" })
-				.Concat(searchTransactions.Where(o => o.Reference != "6091 BGINB").Select(o => new {
-					Date = o.AccountingDate, Output = $"{o.Amount}\t{o.Text}\t{o.Reference}"}))
-				.OrderByDescending(o => o.Date)
-				.Select(o => $"{o.Date.ToShortDateString()}\t{o.Output}").ToList();
-
-			//var sorted = allJoined.Select(o => new {
-			//	o.Receipt.Date, Output = $"{o.Invoice.GrossAmount}\t{o.Invoice.Supplier}\t{o.Invoice.Id}"})
-			//	.Concat(transactions.Select(o => new {
-			//		Date = o.AccountingDate, Output = $"{o.Amount}\t{o.Text}\t{o.Reference}"
-			//	}))
-			//	.OrderByDescending(o => o.Date)
-			//	.Select(o => $"{o.Date.ToShortDateString()}\t{o.Output}").ToList();
-
-			//var sorted = SortRows(unhandledInvoices, unhandledReceipts, null);
-			return string.Join("\n", sorted);
-		}
-
-		List<string> SortRows(IEnumerable<InvoiceSummary> invoices, IEnumerable<Receipt> receipts, IEnumerable<BankTransaction> transactions)
-		{
-			invoices = invoices ?? new InvoiceSummary[] { };
-			receipts = receipts ?? new Receipt[] { };
-			transactions = transactions ?? new BankTransaction[] { };
-
-			return invoices.Where(o => o.DueDate.HasValue).Select(o =>
-				new { Date = o.DueDate.Value, Output = $"{o.GrossAmount}\t{o.Supplier}\t{o.SupplierId}\t{o.Id}\t{o.FinalPostingingDate}" })
-				.Concat(receipts.Select(o => new { o.Date, Output = $"{o.Amount}\t{o.Supplier}\t{o.SupplierId}" }))
-				.Concat(transactions.Where(o => !(o.Text.Contains("56901309") && o.Amount > 0)).Select(o =>
-					new {
-						Date = o.AccountingDate,
-						Output = $"{-o.Amount}\t{(o.Text == "HS 15069192" ? "Handelsbanken!" : o.Text)}\t{o.CurrencyDate}"
-					}))
-				.OrderByDescending(o => o.Date)
-				.Select(o => $"{o.Date.ToShortDateString()}\t{o.Output}").ToList();
+			return allMatchedTransactions;
 		}
 
 		public static IEnumerable<List<T>> GenerateCombos<T>(List<T> items, int numItems)
@@ -226,7 +197,7 @@ namespace sbc_scrape
 			}
 		}
 
-		class InvoiceAndOrReceipt
+		public class InvoiceAndOrReceipt
 		{
 			public Receipt Receipt;
 			public InvoiceSummary Invoice;
@@ -241,7 +212,7 @@ namespace sbc_scrape
 				Receipt = receipt;
 			}
 		}
-		class MatchedTransaction
+		public class MatchedTransaction
 		{
 			public BankTransaction Transaction;
 			public List<InvoiceAndOrReceipt> InvRecs;
@@ -283,36 +254,6 @@ namespace sbc_scrape
 							: supplierReplacements.GetValueOrDefault(b1.Supplier, b1.Supplier) == supplierReplacements.GetValueOrDefault(b2.Supplier, b2.Supplier));
 				}
 				public int GetHashCode(Comparable o) => o.Amount.GetHashCode();
-			}
-		}
-
-
-		static class LevenshteinDistance
-		{
-			public static int Compute(string s, string t)
-			{
-				var n = s.Length;
-				var m = t.Length;
-				var d = new int[n + 1, m + 1];
-
-				if (n == 0)
-					return m;
-				if (m == 0)
-					return n;
-
-				for (var i = 0; i <= n; d[i, 0] = i++) { }
-				for (var j = 0; j <= m; d[0, j] = j++) { }
-
-				for (var i = 1; i <= n; i++) {
-					for (var j = 1; j <= m; j++) {
-						var cost = (t[j - 1] == s[i - 1]) ? 0 : 1;
-
-						d[i, j] = Math.Min(
-							Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
-							d[i - 1, j - 1] + cost);
-					}
-				}
-				return d[n, m];
 			}
 		}
 	}

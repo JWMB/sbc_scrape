@@ -71,24 +71,102 @@ namespace SBCScan.REPL
 		}
 	}
 
-	class InvoiceTransactionJoin : Command
+	class JoinDataSources : Command
 	{
 		private readonly string defaultFolder;
 		private readonly Main main;
 
-		public InvoiceTransactionJoin(string defaultFolder, Main main)
+		public JoinDataSources(string defaultFolder, Main main)
 		{
 			this.defaultFolder = defaultFolder;
 			this.main = main;
 		}
-		public override string Id => "jit";
+		public override string Id => "join";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
 			var invoices = (await main.LoadInvoices(false)).Where(o => o.DueDate.HasValue).ToList();
 			var receipts = new ReceiptsSource().ReadAll(defaultFolder);
 			var transactions = new BankTransactionSource().ReadAll(defaultFolder);
 
-			return new sbc_scrape.DataJoiner().Evaluate(invoices, receipts, transactions);
+			var joined = new sbc_scrape.DataJoiner().Join(invoices, receipts, transactions, out var unmatched);
+
+			var sortedUnmatched = unmatched.invoicesAndReceipts.Select(o => new {
+				o.Date, Output = $"{o.Amount}\t{o.Supplier}\t{o.ContainsCode}" })
+				.Concat(unmatched.transactions.Where(o => o.Reference != "6091 BGINB").Select(o => new {
+					Date = o.AccountingDate, Output = $"{o.Amount}\t{o.Text}\t{o.Reference}"}))
+				.OrderByDescending(o => o.Date)
+				.Select(o => $"{o.Date.ToShortDateString()}\t{o.Output}").ToList();
+
+			var dbg = string.Join("\n", sortedUnmatched);
+
+			decimal AmountCorrectSign(decimal amount, BankTransaction trx)
+			{
+				return amount * ((trx != null &&
+					(trx.Reference.EndsWith(" BGINB") || trx.Reference.EndsWith(" AG") || trx.Reference.EndsWith(" AVGIFT"))) ? 1 : -1);
+			}
+
+			var byInvRec = joined.SelectMany(o => o.InvRecs.Select(i => new JoinedRow{
+					Date = i.Date,
+					Amount = AmountCorrectSign(i.Amount, o.Transaction),
+					Supplier = i.Supplier,
+					AccountId = i.Invoice?.AccountId,
+					AccountName = i.Invoice?.AccountName,
+					InvoiceId = i.Invoice?.Id,
+					ReceiptId = i.Receipt?.Information,
+					AccountingDate = o.Transaction.AccountingDate,
+					TransactionText = o.Transaction.Text,
+					TransactionRef = o.Transaction.Reference,
+				}))
+				.Concat(unmatched.invoicesAndReceipts.Select(o => new JoinedRow {
+					Date = o.Date,
+					Missing = "TRX",
+					Amount = o.Amount,
+					Supplier = o.Supplier,
+					AccountId = o.Invoice?.AccountId,
+					AccountName = o.Invoice?.AccountName,
+					InvoiceId = o.Invoice?.Id,
+					ReceiptId = o.Receipt?.Information,
+					AccountingDate = null,
+					TransactionText = null,
+					TransactionRef = null,
+				})
+				.Concat(unmatched.transactions.Select(o => new JoinedRow {
+					Date = o.AccountingDate,
+					Missing = "I/R",
+					Amount = AmountCorrectSign(o.Amount, o),
+					Supplier = null,
+					InvoiceId = null,
+					ReceiptId = null,
+					AccountingDate = o.AccountingDate,
+					TransactionText = o.Text,
+					TransactionRef = o.Reference,
+				}))
+				).OrderByDescending(o => o.Date).ToList();
+
+			var amountAcc = 0M;
+			for (int i = byInvRec.Count - 1; i >= 0; i--)
+			{
+				var item = byInvRec[i];
+				amountAcc += string.IsNullOrEmpty(item.TransactionRef) ? 0 : item.Amount;
+				item.AmountAcc = amountAcc;
+			}
+			return byInvRec;
+		}
+
+		class JoinedRow
+		{
+			public DateTime Date { get; set; }
+			public string Missing { get; set; }
+			public decimal Amount { get; set; }
+			public string Supplier { get; set; }
+			public long? AccountId { get; set; }
+			public string AccountName { get; set; }
+			public long? InvoiceId { get; set; }
+			public string ReceiptId { get; set; }
+			public DateTime? AccountingDate { get; set; }
+			public string TransactionText { get; set; }
+			public string TransactionRef { get; set; }
+			public decimal AmountAcc { get; set; }
 		}
 	}
 

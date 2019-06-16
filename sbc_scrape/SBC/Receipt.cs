@@ -19,9 +19,9 @@ namespace sbc_scrape.SBC
 				//BG = r[0],
 				Date = DateTime.Parse(r[1]),
 				SupplierId = r[2],
-				FromAccount = r[3],
+				OCR = r[3],
 				Amount = decimal.Parse(r[4], culture),
-				Unknown = r[5],
+				Information = r[5],
 				Supplier = r[6],
 			});
 		}
@@ -32,9 +32,9 @@ namespace sbc_scrape.SBC
 		//Bankgironummer	Betalningsdatum	LevID Ekonomi	Ocr	Belopp	Information
 		public DateTime Date { get; set; }
 		public string SupplierId { get; set; }
-		public string FromAccount { get; set; }
+		public string OCR { get; set; }
 		public decimal Amount { get; set; }
-		public string Unknown { get; set; }
+		public string Information { get; set; }
 		public string Supplier { get; set; }
 
 		public override string ToString()
