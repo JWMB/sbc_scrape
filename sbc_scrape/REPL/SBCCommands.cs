@@ -86,9 +86,9 @@ namespace SBCScan.REPL
 		{
 			var invoices = (await main.LoadInvoices(false)).Where(o => o.DueDate.HasValue).ToList();
 			var receipts = new ReceiptsSource().ReadAll(defaultFolder);
-			//var transactions = new BankTransactionSource().ReadAll(defaultFolder);
+			var transactions = new BankTransactionSource().ReadAll(defaultFolder);
 
-			return new sbc_scrape.DataJoiner().Evaluate(invoices, receipts);
+			return new sbc_scrape.DataJoiner().Evaluate(invoices, receipts, transactions);
 		}
 	}
 
