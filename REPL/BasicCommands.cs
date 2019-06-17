@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -35,6 +36,39 @@ namespace REPL
 				commands.Select(c => $"{c.GetType().Name.Replace("Cmd", "")}: {c.Id}\n{c.Help}"));
 		}
 	}
+
+	//TODO: will require switching from Console.ReadLine
+	//public class CommandHistory : Command
+	//{
+	//	class ExecutedCommand
+	//	{
+	//		public string Command { get; set; }
+	//		public DateTime Timestamp { get; set; }
+	//	}
+
+	//	private List<ExecutedCommand> commands = new List<ExecutedCommand>();
+	//	private readonly string filepathHistory;
+
+	//	public void Append(string command)
+	//	{
+	//		commands.Add(new ExecutedCommand { Command = command, Timestamp = DateTime.Now });
+	//		var maxCount = 50;
+	//		if (commands.Count > maxCount)
+	//			commands = commands.Skip(commands.Count - maxCount).ToList();
+	//		File.WriteAllText(filepathHistory, JsonConvert.SerializeObject(commands));
+	//	}
+
+	//	public override string Id => "history";
+	//	public CommandHistory(string filepathHistory) {
+	//		this.filepathHistory = filepathHistory;
+	//		if (File.Exists(filepathHistory))
+	//			commands = JsonConvert.DeserializeObject<List<ExecutedCommand>>(File.ReadAllText(filepathHistory));
+	//	}
+	//	public override async Task<object> Evaluate(List<object> parms)
+	//	{
+	//		return commands;
+	//	}
+	//}
 
 	public class CSVCmd : Command
 	{
