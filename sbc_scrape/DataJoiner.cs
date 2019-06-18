@@ -17,14 +17,6 @@ namespace sbc_scrape
 		public List<MatchedTransaction> Join(List<InvoiceSummary> invoices, List<Receipt> receipts, List<BankTransaction> transactions,
 			out (List<BankTransaction> transactions, List<InvoiceAndOrReceipt> invoicesAndReceipts) unmatched)
 		{
-			var dateRange = (Min: new DateTime(2019, 1, 1), Max: DateTime.Today);
-			Func<DateTime, bool> inRange = d => d >= dateRange.Min && d.Date <= dateRange.Max;
-			//Func<InvoiceSummary, DateTime?> GetRelevantDate = o => o.FinalPostingingDate.HasValue && o.FinalPostingingDate.Value > o.DueDate.Value ? o.FinalPostingingDate.Value : o.DueDate.Value;
-
-			invoices = invoices.Where(o => inRange(o.DueDate.Value)).ToList();
-			receipts = receipts.Where(o => inRange(o.Date)).ToList();
-			transactions = transactions?.Where(o => inRange(o.AccountingDate)).ToList();
-
 			var compInvoices = invoices.Select(o => new Comparable {
 				Date = o.DueDate.Value,
 				OptionalDate = o.FinalPostingingDate ?? DateTime.MinValue,

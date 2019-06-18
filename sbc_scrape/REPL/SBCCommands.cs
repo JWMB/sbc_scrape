@@ -88,6 +88,24 @@ namespace SBCScan.REPL
 			var receipts = new ReceiptsSource().ReadAll(defaultFolder);
 			var transactions = new BankTransactionSource().ReadAll(defaultFolder);
 
+			var dateRange = (Min: new DateTime(2017, 1, 1), Max: DateTime.Today);
+			Func<DateTime, bool> inRange = d => d >= dateRange.Min && d.Date <= dateRange.Max;
+
+			invoices = invoices.Where(o => inRange(o.DueDate.Value)).ToList();
+			receipts = receipts.Where(o => inRange(o.Date)).ToList();
+			transactions = transactions?.Where(o => inRange(o.AccountingDate)).ToList();
+
+			var trxOrderWithinDate = new Dictionary<DateTime, List<decimal>>();
+			foreach (var o in transactions)
+			{
+				if (!trxOrderWithinDate.TryGetValue(o.CurrencyDate, out var list))
+				{
+					list = new List<decimal>();
+					trxOrderWithinDate.Add(o.CurrencyDate, list);
+				}
+				list.Add(o.TotalAccountAmount);
+			}
+
 			var joined = new sbc_scrape.DataJoiner().Join(invoices, receipts, transactions, out var unmatched);
 
 			var sortedUnmatched = unmatched.invoicesAndReceipts.Select(o => new {
@@ -102,7 +120,9 @@ namespace SBCScan.REPL
 			decimal AmountCorrectSign(decimal amount, BankTransaction trx)
 			{
 				return amount * ((trx != null &&
-					(trx.Reference.EndsWith(" BGINB") || trx.Reference.EndsWith(" AG") || trx.Reference.EndsWith(" AVGIFT"))) ? 1 : -1);
+					(trx.Reference.EndsWith(" BGINB")
+					|| trx.Reference.EndsWith(" AG")
+					|| trx.Reference.EndsWith(" AVGIFT"))) ? 1 : -1); //|| trx.Reference.EndsWith("LÖN UTTAG")
 			}
 
 			var byInvRec = joined.SelectMany(o => o.InvRecs.Select(i => new JoinedRow{
@@ -113,10 +133,12 @@ namespace SBCScan.REPL
 					AccountName = i.Invoice?.AccountName,
 					InvoiceId = i.Invoice?.Id,
 					ReceiptId = i.Receipt?.Information,
-					AccountingDate = o.Transaction.AccountingDate,
+					CurrencyDate = o.Transaction.CurrencyDate,
 					TransactionText = o.Transaction.Text,
 					TransactionRef = o.Transaction.Reference,
-				}))
+					AmountAccFromTrx = o.Transaction.TotalAccountAmount,
+					OrderWithinDate = trxOrderWithinDate[o.Transaction.CurrencyDate].IndexOf(o.Transaction.TotalAccountAmount),
+			}))
 				.Concat(unmatched.invoicesAndReceipts.Select(o => new JoinedRow {
 					Date = o.Date,
 					Missing = "TRX",
@@ -126,24 +148,29 @@ namespace SBCScan.REPL
 					AccountName = o.Invoice?.AccountName,
 					InvoiceId = o.Invoice?.Id,
 					ReceiptId = o.Receipt?.Information,
-					AccountingDate = null,
+					CurrencyDate = null,
 					TransactionText = null,
 					TransactionRef = null,
+					OrderWithinDate = 0,
 				})
 				.Concat(unmatched.transactions.Select(o => new JoinedRow {
 					Date = o.AccountingDate,
 					Missing = "I/R",
-					Amount = AmountCorrectSign(o.Amount, o),
+					Amount = o.Amount,
 					Supplier = null,
 					InvoiceId = null,
 					ReceiptId = null,
-					AccountingDate = o.AccountingDate,
+					CurrencyDate = o.CurrencyDate,
 					TransactionText = o.Text,
 					TransactionRef = o.Reference,
+					AmountAccFromTrx = o.TotalAccountAmount,
+					OrderWithinDate = trxOrderWithinDate[o.CurrencyDate].IndexOf(o.TotalAccountAmount),
 				}))
-				).OrderByDescending(o => o.Date).ToList();
+				).OrderByDescending(o => o.CurrencyDate ?? o.Date).ThenBy(o => o.OrderWithinDate).ToList();
 
-			var amountAcc = 0M;
+			//adjust incoming amountAcc to reflect that transactions include the total sum of the first transactions of first date in start value
+			//(which may reflect multiple invoices/receipts)
+			var amountAcc = transactions.Last().TotalAccountAmount - transactions.Last().Amount;
 			for (int i = byInvRec.Count - 1; i >= 0; i--)
 			{
 				var item = byInvRec[i];
@@ -163,10 +190,12 @@ namespace SBCScan.REPL
 			public string AccountName { get; set; }
 			public long? InvoiceId { get; set; }
 			public string ReceiptId { get; set; }
-			public DateTime? AccountingDate { get; set; }
+			public DateTime? CurrencyDate { get; set; }
 			public string TransactionText { get; set; }
 			public string TransactionRef { get; set; }
 			public decimal AmountAcc { get; set; }
+			public decimal AmountAccFromTrx { get; set; }
+			public int OrderWithinDate { get; set; }
 		}
 	}
 
