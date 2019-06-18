@@ -55,22 +55,17 @@ namespace SBCScan.SBC
 			driver.NavigateAndWaitReadyIfNotThere("https://varbrf.sbc.se/" + urlPath);
 			//var accountSelect = driver.FindElement(By.XPath("//select[contains(@id,'_DDKonto')]"));
 
-			void ClickSelectOption(string selectIdContains, string optionTextStartsWith)
+			void ClickSelectOption(string selectIdContains, string optionText)
 			{
-				var elSelect = driver.FindElement(By.XPath($"//select[contains(@id,'_DD{selectIdContains}')]"));
-				var elOption = elSelect.FindElement(By.XPath($"//option[starts-with(text(), '{optionTextStartsWith}')]"));
-				elOption.Click();
+				var xpath = $"//select[contains(@id,'{selectIdContains}')]/option[text() = '{optionText}']";
+				var elOption = driver.FindElement(By.XPath(xpath));
+				if (elOption != null)
+					elOption.Click();
 			}
 
-			if (monthFrom != 1)
-				ClickSelectOption("PeriodFrom", monthFrom.ToString());
-			if (monthTo != 12)
-				ClickSelectOption("PeriodTo", monthTo.ToString());
-
+			ClickSelectOption("PeriodFrom", monthFrom.ToString());
+			ClickSelectOption("PeriodTom", monthTo.ToString());
 			ClickSelectOption("Ar", year.ToString());
-			//var yearSelect = driver.FindElement(By.XPath("//select[contains(@id,'_DDAr')]"));
-			//var yearOption = yearSelect.FindElement(By.XPath($"//option[starts-with(text(), '{year}')]"));
-			//yearOption.Click();
 
 			driver.FindElement(By.XPath("//input[@type='submit']")).Click();
 			driver.WaitUntilDocumentReady();
