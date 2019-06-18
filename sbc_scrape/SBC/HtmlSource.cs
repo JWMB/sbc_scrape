@@ -51,7 +51,7 @@ namespace sbc_scrape.SBC
 
 		public List<TRow> ReadAll(string folder)
 		{
-			return new System.IO.DirectoryInfo(folder).GetFiles(string.Format(FilenamePattern, "*"))
+			return new System.IO.DirectoryInfo(folder).GetFiles(string.Format(FilenamePattern, "*")).OrderByDescending(o => o.Name)
 				.SelectMany(file =>
 				{
 					try
