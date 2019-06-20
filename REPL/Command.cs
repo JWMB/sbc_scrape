@@ -75,11 +75,99 @@ namespace REPL
 			var help = (listCmd == null && quitCmd == null) ? "" : $"{(quitCmd == null ? "" : $"{quitCmd.Id} to quit")} {(listCmd == null ? "" : $"{listCmd.Id} to list commands")}";
 			Console.WriteLine($"Enter command{(help == null ? "" : $"({help})")}:");
 
+			var commandHistory = new List<string> { "very old command", "old command" };
+			var indexInHistory = commandHistory.Count;
 			var quitting = false;
+			var prompt = "> ";
 			while (!quitting)
 			{
-				Console.Write("> ");
-				var lines = Console.ReadLine().Trim().Split(';').Select(s => s.Trim()).Where(s => s.Length > 0);
+				Console.ForegroundColor = ConsoleColor.Green;
+				Console.Write(prompt);
+				Console.ForegroundColor = ConsoleColor.White;
+				var input = new List<char>();
+				var position = 0;
+				while (true)
+				{
+					{
+						var current = (Console.CursorLeft, Console.CursorTop);
+						Console.SetCursorPosition(0, current.CursorTop + 2);
+
+						//Text:
+						Console.ForegroundColor = ConsoleColor.Blue;
+						Console.Write(string.Join("", input) + string.Join("", Enumerable.Range(input.Count, Console.WindowWidth).Select(i => " ")));
+						Console.ForegroundColor = ConsoleColor.White;
+
+						//Cursor:
+						Console.BackgroundColor = ConsoleColor.Red;
+						Console.CursorLeft = position;
+						Console.Write(position < input.Count ? input[position] : ' ');
+
+						Console.BackgroundColor = ConsoleColor.Black;
+
+						Console.SetCursorPosition(current.CursorLeft, current.CursorTop);
+					}
+
+					var key = Console.ReadKey(true);
+					//Note: Ctrl+V is handled as if text was coming from keyboard (ie multiple keystrokes)
+
+					if (key.Key == ConsoleKey.UpArrow || key.Key == ConsoleKey.DownArrow)
+					{
+						var newIndexInHistory = Math.Max(0, Math.Min(indexInHistory + (key.Key == ConsoleKey.UpArrow ? -1 : 1), commandHistory.Count));
+						//var direction = key.Key == ConsoleKey.UpArrow ? -1 : 1;
+						if (newIndexInHistory != indexInHistory) //(direction > 0 && direction <= commandHistory.Count)
+						{
+							if (indexInHistory == commandHistory.Count)
+							{
+								commandHistory.Add(string.Join("", input));
+							}
+							Console.CursorLeft = prompt.Length;
+							Console.Write(string.Join("", input.Select(i => " ")));
+							indexInHistory = newIndexInHistory;
+							input = commandHistory[indexInHistory].ToList();
+							Console.CursorLeft = prompt.Length;
+							Console.Write(string.Join("", input));
+							position = input.Count;
+						}
+					}
+					else if (key.Key == ConsoleKey.LeftArrow || key.Key == ConsoleKey.RightArrow)
+					{
+						position = Math.Max(0, Math.Min(position + (key.Key == ConsoleKey.LeftArrow ? -1 : 1), input.Count));
+						Console.CursorLeft = prompt.Length + position;
+					}
+					else if (key.Key == ConsoleKey.Enter)
+						break;
+					else if (key.Key == ConsoleKey.Backspace)
+					{
+						if (position > 0)
+						{
+							position--;
+							input.RemoveAt(position);
+							Console.Write(key.KeyChar);
+							Console.Write(" ");
+							Console.Write(key.KeyChar);
+						}
+						continue;
+					}
+					if (key.KeyChar == '\0')
+						continue;
+
+					if (position >= input.Count)
+					{
+						Console.Write(key.KeyChar);
+						input.Add(key.KeyChar);
+					}
+					else
+					{
+						input.Insert(position, key.KeyChar);
+						Console.CursorLeft = prompt.Length;
+						Console.Write(string.Join("", input));
+						Console.CursorLeft = prompt.Length + position + 1;
+					}
+					position++;
+				}
+				Console.WriteLine("");
+				//var input = Console.ReadLine();
+				var lines = string.Join("", input).Trim().Split(';').Select(s => s.Trim()).Where(s => s.Length > 0);
 				foreach (var line in lines)
 				{
 					var split = line.Split(' ').Cast<object>().ToList();
