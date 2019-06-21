@@ -28,57 +28,48 @@ namespace REPL
 		private readonly string prompt;
 		private readonly List<string> commandHistory;
 		private int indexInHistory;
+		private ConsoleBase console;
 
 		public ReadConsoleByChar(string prompt, List<string> commandHistory)
 		{
 			this.prompt = prompt;
 			this.commandHistory = commandHistory;
 			indexInHistory = commandHistory.Count;
+			console = new MyConsole();
 		}
 
 		private void ShowDebug(string input, int position)
 		{
-			var current = (Console.CursorLeft, Console.CursorTop);
-			var numLines = input.Length / Console.WindowWidth;
-			var lineStartY = (Console.CursorTop > Console.WindowTop + Console.WindowHeight - 4)
-				? Console.WindowTop
-				: Console.WindowTop + Console.WindowHeight - numLines - 2;
-			Console.SetCursorPosition(0, lineStartY);
+			var current = console.CursorPosition;
+			var numLines = input.Length / console.Window.Width;
+			var lineStartY = (current.Y > console.Window.Top + console.Window.Height - 4)
+				? console.Window.Top
+				: console.Window.Top + console.Window.Height - numLines - 2;
 
 			//Text:
-			Console.ForegroundColor = ConsoleColor.Blue;
-			var numCharsToEndOfLastLine = Console.WindowWidth - input.Length % Console.WindowWidth;
-			Console.Write(input + string.Join("", Enumerable.Range(0, numCharsToEndOfLastLine).Select(i => " ")));
-			Console.ForegroundColor = ConsoleColor.White;
+			console.CursorPosition = (0, lineStartY);
+			var numCharsToEndOfLastLine = console.Window.Width - input.Length % console.Window.Width;
+			console.Write(input + string.Join("", Enumerable.Range(0, numCharsToEndOfLastLine).Select(i => " ")), ConsoleColor.Blue);
 
 			//Cursor:
-			Console.BackgroundColor = ConsoleColor.Red;
-			SetCursorPosition(position, lineStartY);
-			Console.Write(position < input.Length ? input[position] : ' ');
-			Console.BackgroundColor = ConsoleColor.Black;
+			console.CursorPositionWrapped = (position, lineStartY);
+			console.Write(position < input.Length ? input[position] : ' ', null, ConsoleColor.Red);
 
-			Console.SetCursorPosition(current.CursorLeft, current.CursorTop);
-		}
-
-		private static void SetCursorPosition(int positionOnLine, int lineStartY)
-		{
-			Console.SetCursorPosition(positionOnLine % Console.WindowWidth, lineStartY + positionOnLine / Console.WindowWidth);
+			console.CursorPosition = current;
 		}
 
 		private void RerenderLine(List<char> input, int lineStartY, int formerInputLength = -1)
 		{
-			SetCursorPosition(prompt.Length, lineStartY);
+			console.CursorPosition = (prompt.Length, lineStartY);
 			var lengthToBlank = formerInputLength == -1 ? input.Count : formerInputLength;
 			Console.Write(string.Join("", Enumerable.Range(0, lengthToBlank).Select(i => " ")));
-			SetCursorPosition(prompt.Length, lineStartY);
+			console.CursorPosition = (prompt.Length, lineStartY);
 			Console.Write(string.Join("", input));
 		}
 
 		public string Read()
 		{
-			Console.ForegroundColor = ConsoleColor.Green;
-			Console.Write(prompt);
-			Console.ForegroundColor = ConsoleColor.White;
+			console.Write(prompt);
 			var input = new List<char>();
 			var lineStartY = Console.CursorTop;
 			var position = 0;
@@ -89,7 +80,7 @@ namespace REPL
 			{
 				ShowDebug(InputStr(), position);
 
-				var key = Console.ReadKey(true);
+				var key = console.ReadKey(true);
 
 				//Note: Ctrl+V is handled as if text was coming one keystroke at a time (ie multiple ReadKey's)
 
@@ -129,13 +120,13 @@ namespace REPL
 						}
 						RerenderLine(input, lineStartY, formerLength);
 						position = input.Count;
-						SetCursorPosition(prompt.Length + position, lineStartY);
+						console.CursorPositionWrapped = (prompt.Length + position, lineStartY);
 					}
 				}
 				else if (key.Key == ConsoleKey.LeftArrow || key.Key == ConsoleKey.RightArrow)
 				{
 					position = Math.Max(0, Math.Min(position + (key.Key == ConsoleKey.LeftArrow ? -1 : 1), input.Count));
-					SetCursorPosition(prompt.Length + position, lineStartY);
+					console.CursorPositionWrapped = (prompt.Length + position, lineStartY);
 				}
 				else if (key.Key == ConsoleKey.Backspace)
 				{
@@ -144,7 +135,7 @@ namespace REPL
 						position--;
 						input.RemoveAt(position);
 						RerenderLine(input, lineStartY, input.Count + 1);
-						SetCursorPosition(prompt.Length + position, lineStartY);
+						console.CursorPositionWrapped = (prompt.Length + position, lineStartY);
 					}
 					continue;
 				}
@@ -155,19 +146,19 @@ namespace REPL
 				// Add character:
 				if (position >= input.Count)
 				{
-					Console.Write(key.KeyChar);
+					console.Write(key.KeyChar);
 					input.Add(key.KeyChar);
 				}
 				else
 				{
 					input.Insert(position, key.KeyChar);
-					Console.CursorLeft = prompt.Length;
-					Console.Write(InputStr());
-					SetCursorPosition(prompt.Length + position + 1, lineStartY);
+					console.CursorX = prompt.Length;
+					console.Write(InputStr());
+					console.CursorPositionWrapped = (prompt.Length + position + 1, lineStartY);
 				}
 				position++;
 			}
-			Console.WriteLine("");
+			console.WriteLine("");
 
 			return InputStr();
 		}
