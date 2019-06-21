@@ -340,7 +340,19 @@ namespace SBCScan.REPL
 			if (parms.FirstOrDefault() is IEnumerable<InvoiceSummary> input)
 				summaries = input.ToList();
 			else
-				summaries = await main.LoadInvoices(false); // MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2010, 1, 1));
+			{
+				//summaries = await main.LoadInvoices(false); // MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2010, 1, 1));
+
+				var startTime = DateTime.Now;
+				Console.WriteLine("0");
+				var task = Task.Run(() => main.LoadInvoices(false));
+				while (!task.IsCompleted)
+				{
+					Console.RewriteLine($"{(int)(DateTime.Now - startTime).TotalSeconds}");
+					Task.WaitAny(Task.Delay(100), task);
+				}
+				summaries = task.Result;
+			}
 
 			var accountDescriptionsWithDups = summaries.Select(s => new { s.AccountId, s.AccountName }).Distinct();
 			//We may have competing AccountNames (depending on source)

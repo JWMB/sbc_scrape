@@ -7,6 +7,7 @@ using Scrape.IO;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SBCScan
@@ -45,7 +46,8 @@ namespace SBCScan
 					};
 				cmds.Add(new ListCmd(cmds));
 
-				await Command.RunREPL(cmds);
+				var REPLRunner = new Runner(cmds);
+				await REPLRunner.RunREPL(CancellationToken.None);
 			}
 		}
 	}
