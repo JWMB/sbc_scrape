@@ -345,6 +345,7 @@ namespace SBCScan.REPL
 
 				var startTime = DateTime.Now;
 				Console.WriteLine("0");
+				//TODO: we'd like a stream so we know how many have been processed (and an initial estimate of the number to process)
 				var task = Task.Run(() => main.LoadInvoices(false));
 				while (!task.IsCompleted)
 				{
