@@ -60,34 +60,50 @@ namespace SBCScan
 			logger.LogInformation($"Logged in");
 		}
 
-		public async Task<List<InvoiceSummary>> LoadInvoices(bool includeOCRd)
+		public async Task<List<InvoiceSummary>> LoadInvoices(bool includeOCRd, Action<int, int> progressCallback = null)
 		{
-			var sbc = new sbc_scrape.SBC.InvoiceSource().ReadAll(GlobalSettings.AppSettings.StorageFolderSbcHtml)
-				.Select(o => o.ToSummary()).ToList();
-			var mediusFlow = await MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2001, 1, 1));
+			var pathToOCRed = GlobalSettings.AppSettings.StorageFolderDownloadedFiles;
+			var ocrFiles = new DirectoryInfo(pathToOCRed).GetFiles("*.txt");
 
-			if (includeOCRd)
+			var mediusToLoad = await MediusFlow.GetAvailableInvoiceFiles();
+			var processIndex = 0;
+			var fromMediusFlow = await MediusFlow.LoadAndTransformInvoices(CreateSummary).ToListAsync();
+
+			var fromSbc = new List<InvoiceSummary>();
+			processIndex = 0;
+			await foreach(var sbcRows in new sbc_scrape.SBC.InvoiceSource().ReadAllAsync(GlobalSettings.AppSettings.StorageFolderSbcHtml))
 			{
-				var pathToOCRed = GlobalSettings.AppSettings.StorageFolderDownloadedFiles;
-				var ocrFiles = new DirectoryInfo(pathToOCRed).GetFiles("*.txt");
-				foreach (var summary in mediusFlow)
-				{
-					var found = summary.InvoiceImageIds?.Select(v => new { Guid = v, File = ocrFiles.SingleOrDefault(f => f.Name.Contains(v)) })
-						.Where(f => f.File != null).Select(f => new { Guid = f.Guid, Content = File.ReadAllText(f.File.FullName) });
-					summary.InvoiceTexts = string.Join("\n", found.Select(f =>
-						$"{f.Guid}: {string.Join('\n', f.Content.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0))}")
-						);
-				}
-				// TODO: SBC also has images
+				progressCallback?.Invoke(++processIndex, processIndex);
+				fromSbc.AddRange(sbcRows.Select(o => o.ToSummary()));
 			}
 
-			var mismatched = sbc_scrape.SBC.Invoice.GetMismatchedEntries(mediusFlow, sbc);
+			// TODO: SBC also has images
+
+			var mismatched = sbc_scrape.SBC.Invoice.GetMismatchedEntries(fromMediusFlow, fromSbc);
 			var tmp = string.Join("\n", mismatched.OrderByDescending(s => s.Summary.InvoiceDate)
 	.Select(s => $"{(s.Summary.InvoiceDate?.ToString("yyyy-MM-dd"))} {s.Type} {s.Source} {s.Summary.AccountId} {s.Summary.Supplier} {s.Summary.GrossAmount}"));
 
-			return sbc_scrape.SBC.Invoice.Join(mediusFlow, sbc);
-		}
+			return sbc_scrape.SBC.Invoice.Join(fromMediusFlow, fromSbc);
 
+			InvoiceSummary CreateSummary(InvoiceFull invoice)
+			{
+				var summary = InvoiceSummary.Summarize(invoice);
+				if (includeOCRd)
+				{
+					var found = summary.InvoiceImageIds?.Select(v => new { Guid = v, File = ocrFiles.SingleOrDefault(f => f.Name.Contains(v)) })
+		.Where(f => f.File != null).Select(f => new { Guid = f.Guid, Content = File.ReadAllText(f.File.FullName) });
+					if (found.Any())
+					{
+						summary.InvoiceTexts = string.Join("\n", found.Select(f =>
+							$"{f.Guid}: {string.Join('\n', f.Content.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0))}")
+							);
+					}
+				}
+				progressCallback?.Invoke(++processIndex, mediusToLoad.Count);
+				return summary;
+			}
+		}
+		
 		static RemoteWebDriver SetupDriver(string downloadFolder)
 		{
 			var options = new ChromeOptions();

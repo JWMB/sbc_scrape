@@ -160,32 +160,49 @@ namespace SBCScan
 
 		public async Task<List<InvoiceFull>> LoadInvoices(Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
 		{
-			return await LoadAndTransformInvoices(o => o, quickFilter);
+			return await LoadAndTransformInvoices(o => o, quickFilter).ToListAsync();
 		}
 
-		public async Task<List<T>> LoadAndTransformInvoices<T>(Func<InvoiceFull, T> selector, Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
+		public async Task<List<InvoiceFull.FilenameFormat>> GetAvailableInvoiceFiles(Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
+		{
+			var all = (await store.GetAllKeys()).Select(o => InvoiceFull.FilenameFormat.Parse(o));
+			if (quickFilter != null)
+				all = all.Where(o => quickFilter(o));
+			return all.ToList();
+		}
+		public async IAsyncEnumerable<T> LoadAndTransformInvoices<T>(Func<InvoiceFull, T> selector, Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
 		{
 			var files = (await store.GetAllKeys()).ToList();
-			var result = new List<T>();
 			foreach (var file in files)
 			{
 				if (quickFilter != null && quickFilter(InvoiceFull.FilenameFormat.Parse(file)) == false)
 					continue;
+				InvoiceFull invoice = null;
 				try
 				{
-					var invoice = JsonConvert.DeserializeObject<InvoiceFull>((await store.Get(file)).ToString());
-					result.Add(selector(invoice));
+					invoice = JsonConvert.DeserializeObject<InvoiceFull>((await store.Get(file)).ToString());
 				}
 				catch (Exception ex)
 				{
 					throw new Exception($"Deserialization of {file} failed");
 				}
+				yield return selector(invoice);
 			}
-			return result;
 		}
 		public async Task<List<InvoiceSummary>> LoadInvoiceSummaries(Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
 		{
-			return await LoadAndTransformInvoices(quickFilter: quickFilter, selector: invoice => InvoiceSummary.Summarize(invoice));
+			return await LoadAndTransformInvoices(quickFilter: quickFilter, selector: invoice => InvoiceSummary.Summarize(invoice)).ToListAsync();
+		}
+		public async Task<List<T>> LoadAndTransformInvoicesCallback<T>(Func<InvoiceFull, T> selector, Action<int, int> callback, Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
+		{
+			var result = new List<T>();
+			var toLoad = await GetAvailableInvoiceFiles(quickFilter);
+			await foreach (var o in LoadAndTransformInvoices(selector))
+			{
+				result.Add(o);
+				callback(result.Count, toLoad.Count);
+			}
+			return result;
 		}
 
 		public class TimeSpanAndFuncAggregate<TGroupBy, TAggregate>

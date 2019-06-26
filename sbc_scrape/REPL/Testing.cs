@@ -32,7 +32,10 @@ namespace SBCScan.REPL
 		public override string Id => "convii";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var summaries = await main.MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2001, 1, 1));
+			Console.WriteLine("0%");
+			var summaries = await main.MediusFlow.LoadAndTransformInvoicesCallback(o => InvoiceSummary.Summarize(o),
+				(index, total) => { if (index % 10 == 0) { Console.RewriteLine($"{100 * index / total}%"); } });
+
 			var dir = new DirectoryInfo(GlobalSettings.AppSettings.StorageFolderDownloadedFiles);
 			foreach (var ext in new string[] { ".png", ".txt" })
 			{

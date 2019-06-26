@@ -46,7 +46,14 @@ namespace SBCScan.REPL
 		public override string Id => "createindex";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			return (await main.LoadInvoices(false)).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+			Console.WriteLine("0");
+			//var x = await Task.Run(() => {
+			//	return (main.LoadInvoices(true, (i, l) => Console.RewriteLine($"{i}/{l}")).Result)
+			//	.OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+			//});
+			//return x;
+			return (await main.LoadInvoices(true, (i, l) => Console.RewriteLine($"{i}/{l}"))).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+			//return (await main.LoadInvoices(true)).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 		}
 	}
 
@@ -341,18 +348,10 @@ namespace SBCScan.REPL
 				summaries = input.ToList();
 			else
 			{
-				//summaries = await main.LoadInvoices(false); // MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2010, 1, 1));
-
-				var startTime = DateTime.Now;
+				//summaries = await main.LoadInvoices(false);
 				Console.WriteLine("0");
-				//TODO: we'd like a stream so we know how many have been processed (and an initial estimate of the number to process)
-				var task = Task.Run(() => main.LoadInvoices(false));
-				while (!task.IsCompleted)
-				{
-					Console.RewriteLine($"{(int)(DateTime.Now - startTime).TotalSeconds}");
-					Task.WaitAny(Task.Delay(100), task);
-				}
-				summaries = task.Result;
+				summaries = await main.MediusFlow.LoadAndTransformInvoicesCallback(o => InvoiceSummary.Summarize(o),
+					(index, total) => { if (index % 50 == 0 || index > total - 10) { Console.RewriteLine($"{index}/{total}"); } });
 			}
 
 			var accountDescriptionsWithDups = summaries.Select(s => new { s.AccountId, s.AccountName }).Distinct();

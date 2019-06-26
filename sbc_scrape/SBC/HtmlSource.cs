@@ -51,9 +51,8 @@ namespace sbc_scrape.SBC
 
 		public List<TRow> ReadAll(string folder)
 		{
-			return new System.IO.DirectoryInfo(folder).GetFiles(string.Format(FilenamePattern, "*")).OrderByDescending(o => o.Name)
-				.SelectMany(file =>
-				{
+			var files = new System.IO.DirectoryInfo(folder).GetFiles(string.Format(FilenamePattern, "*")).OrderByDescending(o => o.Name);
+			return files.SelectMany(file => {
 					try
 					{
 						return Parse(System.IO.File.ReadAllText(file.FullName));
@@ -64,5 +63,23 @@ namespace sbc_scrape.SBC
 					}
 				}).ToList();
 		}
+		public async IAsyncEnumerable<List<TRow>> ReadAllAsync(string folder)
+		{
+			var files = new System.IO.DirectoryInfo(folder).GetFiles(string.Format(FilenamePattern, "*")).OrderByDescending(o => o.Name);
+			foreach (var file in files)
+			{
+				List<TRow> rows;
+				try
+				{
+					rows = Parse(await System.IO.File.ReadAllTextAsync(file.FullName));
+				}
+				catch (Exception ex)
+				{
+					throw new FormatException($"{ex.Message} for '{file.FullName}'", ex);
+				}
+				yield return rows;
+			}
+		}
+
 	}
 }
