@@ -52,7 +52,7 @@ namespace SBCScan.REPL
 			//	.OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 			//});
 			//return x;
-			return (await main.LoadInvoices(true, (i, l) => Console.RewriteLine($"{i}/{l}"))).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+			return (await main.LoadInvoices(includeOCRd: false, (i, l) => Console.RewriteLine($"{i}/{l}"))).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 			//return (await main.LoadInvoices(true)).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 		}
 	}
@@ -293,16 +293,23 @@ namespace SBCScan.REPL
 		public override string Id => "updateinvoices";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
+			{
+				//MediusFlow
+				//var mediusExisting = await main.MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate.Year == year);
+				var scraped = await main.MediusFlow.Scrape();
+				//TODO: check diff with existing files and return what was updated/added
+			}
+
+			//TODO: start from latest year in downloaded data and continue to current year
 			var year = DateTime.Today.Year;
 
-			var src = new InvoiceSource();
-			var html = await main.SBC.FetchHtmlSource(src.UrlPath, year);
-			File.WriteAllText(Path.Combine(
-				GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(src.FilenamePattern, year)), html);
-
-			var scraped = await main.MediusFlow.Scrape();
-
-			//TODO: check diff with existing files and return what was updated/added
+			{
+				//SBC invoices
+				var src = new InvoiceSource();
+				var html = await main.SBC.FetchHtmlSource(src.UrlPath, year);
+				File.WriteAllText(Path.Combine(
+					GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(src.FilenamePattern, year)), html);
+			}
 
 			return "";
 		}
