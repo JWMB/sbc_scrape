@@ -4,6 +4,7 @@ using OpenQA.Selenium.Support.UI;
 using Scrape.IO.Selenium;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -55,17 +56,34 @@ namespace SBCScan.SBC
 			driver.NavigateAndWaitReadyIfNotThere("https://varbrf.sbc.se/" + urlPath);
 			//var accountSelect = driver.FindElement(By.XPath("//select[contains(@id,'_DDKonto')]"));
 
+			List<IWebElement> FindXPathAndPredicate(string xpath, Func<IWebElement, bool> predicate)
+			{
+				var elOptions = driver.FindElements(By.XPath(xpath));
+				var matches = new List<IWebElement>();
+				foreach (var el in elOptions)
+					if (predicate(el))
+						matches.Add(el);
+				return matches;
+			}
+
 			void ClickSelectOption(string selectIdContains, string optionText)
 			{
 				var xpath = $"//select[contains(@id,'{selectIdContains}')]/option[text() = '{optionText}']";
-				var elOption = driver.FindElement(By.XPath(xpath));
-				if (elOption != null)
-					elOption.Click();
+				try
+				{
+					var elOption = driver.FindElement(By.XPath(xpath));
+					if (elOption != null)
+						elOption.Click();
+				}
+				catch (Exception ex)
+				{ }
 			}
 
 			ClickSelectOption("PeriodFrom", monthFrom.ToString());
 			ClickSelectOption("PeriodTom", monthTo.ToString());
-			ClickSelectOption("Ar", year.ToString());
+			//ClickSelectOption("Ar", year.ToString());
+			var found = FindXPathAndPredicate($"//select[contains(@id,'Ar')]/option", el => el.Text.StartsWith(year.ToString())).FirstOrDefault();
+			found?.Click();
 
 			driver.FindElement(By.XPath("//input[@type='submit']")).Click();
 			driver.WaitUntilDocumentReady();
