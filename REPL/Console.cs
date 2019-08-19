@@ -19,6 +19,7 @@ namespace REPL
 
 	public class MyConsole : ConsoleBase
 	{
+		//TODO: do we need a "virtual dom" and flush changes (not too often, e.g. with progress updates)? System.Console is very slow...
 		public override ConsoleKeyInfo ReadKey(bool intercept) => Console.ReadKey(intercept);
 
 		public override (int X, int Y) CursorPosition
@@ -29,6 +30,7 @@ namespace REPL
 
 		public override (int Top, int Width, int Height) Window => (Console.WindowTop, Console.WindowWidth, Console.WindowHeight);
 
+		//TODO: we need to know how long the line currently is so we can space out the rest of the line
 		public override void RewriteLine(string text, ConsoleColor? foreColor = null, ConsoleColor? backColor = null) =>
 			Write(() => {
 				CursorPosition = (0, CursorPosition.Y - 1);
@@ -43,25 +45,25 @@ namespace REPL
 
 		private void Write(Action writer, ConsoleColor? foreColor = null, ConsoleColor? backColor = null)
 		{
-			ConsoleColor? orgFore = null;
+			ConsoleColor? orgFg = null;
 			if (foreColor != null)
 			{
-				orgFore = Console.ForegroundColor;
+				orgFg = Console.ForegroundColor;
 				Console.ForegroundColor = foreColor.Value;
 			}
-			ConsoleColor? orgBack = null;
+			ConsoleColor? orgBg = null;
 			if (backColor != null)
 			{
-				orgBack = Console.BackgroundColor;
+				orgBg = Console.BackgroundColor;
 				Console.BackgroundColor = backColor.Value;
 			}
 
 			writer();
 
-			if (orgFore != null)
-				Console.ForegroundColor = orgFore.Value;
-			if (orgBack != null)
-				Console.BackgroundColor = orgBack.Value;
+			if (orgFg != null)
+				Console.ForegroundColor = orgFg.Value;
+			if (orgBg != null)
+				Console.BackgroundColor = orgBg.Value;
 		}
 	}
 }
