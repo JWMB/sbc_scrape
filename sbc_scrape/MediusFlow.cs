@@ -81,8 +81,13 @@ namespace SBCScan
 			else
 			{
 				//We need to revisit invoices - those with TaskState = 1 were not finished
+				var nonFinished = alreadyScraped.Where(iv => iv.State == 1);
+				if (nonFinished.Any())
+					start = nonFinished.Min(iv => iv.InvoiceDate);
+				else
+					start = alreadyScraped.Max(iv => iv.InvoiceDate);
 				//Also comments may have been updated, so add an additional 15 days back
-				start = alreadyScraped.Where(iv => iv.State == 1).Min(iv => iv.InvoiceDate).AddDays(-15);
+				start = start.AddDays(-15);
 				end = start.Add(timespan);
 			}
 
@@ -113,16 +118,16 @@ namespace SBCScan
 
 				foreach (var invoice in ordered)
 				{
-					if (skipAlreadyArchived && alreadyScrapedIds.Contains(invoice.Id))
-					{
-						if (alreadyScraped.First(s => s.Id == invoice.Id).State == 2)
-						{
-							//TODO: we really should download, in case comments/history have changed (or include that info in filename)
-							skippedIds.Add(invoice.Id);
-							logger.LogInformation($"Skipping {invoice.Id} {invoice.InvoiceDate?.FromMediusDate()}");
-							continue;
-						}
-					}
+					//Nope... we really should download, in case comments/history have changed (or include that info in filename)
+					//if (skipAlreadyArchived && alreadyScrapedIds.Contains(invoice.Id))
+					//{
+					//	if (alreadyScraped.First(s => s.Id == invoice.Id).State == 2)
+					//	{
+					//		skippedIds.Add(invoice.Id);
+					//		logger.LogInformation($"Skipping {invoice.Id} {invoice.InvoiceDate?.FromMediusDate()}");
+					//		continue;
+					//	}
+					//}
 
 					try
 					{
