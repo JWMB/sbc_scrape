@@ -36,6 +36,7 @@ namespace SBCScan
 					new JoinDataSources(GlobalSettings.AppSettings.StorageFolderSbcHtml, main),
 					new ConvertInvoiceImageFilenameCmd(main),
 					new ObjectToFilenameAndObject(),
+					new GetAccountsListCmd(main),
 
 					new QuitCmd(),
 					new CSVCmd(),
