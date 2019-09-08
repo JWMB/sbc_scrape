@@ -59,7 +59,7 @@ namespace Scrape.IO.Storage
 		public async Task<List<string>> GetAllKeys()
 		{
 			var files = new DirectoryInfo(rootPath).GetFiles();
-			return files.Select(f => Path.GetFileNameWithoutExtension(f.Name)).ToList();
+			return files.Where(o => o.Name.EndsWith(extension)).Select(f => Path.GetFileNameWithoutExtension(f.Name)).ToList();
 		}
 	}
 }
