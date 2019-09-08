@@ -22,7 +22,9 @@ namespace SBCScan.REPL
 		public override string Id => "join";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var invoices = (await main.LoadInvoices(false)).Where(o => o.DueDate.HasValue).ToList();
+			Console.WriteLine("0");
+			var invoices = (await main.LoadInvoices(includeOCRd: false, (i, l) => Console.RewriteLine($"{i}/{l}"))).Where(o => o.DueDate.HasValue).ToList();
+			//var invoices = (await main.LoadInvoices(false)).Where(o => o.DueDate.HasValue).ToList();
 			var receipts = new ReceiptsSource().ReadAll(defaultFolder);
 			var transactions = new BankTransactionSource().ReadAll(defaultFolder);
 
