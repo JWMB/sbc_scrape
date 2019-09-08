@@ -40,7 +40,7 @@ namespace sbc_scrape
 				new Comparable.EqualityComparer(2, false, new Dictionary<string, string>{ { "SBC SVERIGES BOSTADSRÄTTSCENTRUM AB", "SBC Sv Bostadsrättscentrum" } }),
 			};
 
-			var allJoined = new List<InvoiceAndOrReceipt> ();
+			var allJoined = new List<InvoiceAndOrReceipt>();
 			foreach (var comparer in passes)
 			{
 				var joined = compInvoices.Join(compReceipts, i => i, r => r, (i, r) =>
@@ -96,13 +96,19 @@ namespace sbc_scrape
 				})
 			);
 
-			//SKATTEVERKET are always separate transactions
-			PerformSearch((searchTx, invrecByDateX) => 
+			//SKATTEVERKET are always separate transactions, often Handelsbanken/STADSHYPOTEK AB as well
+			PerformSearch((searchTx, invrecByDateX) =>
 				searchTx.Where(o => o.Reference == "6091 LB32").Select(tx => {
 					if (invrecByDateX.TryGetValue(tx.AccountingDate, out var invrecsForDate)) {
-						var found = invrecsForDate.Where(o => o.Supplier == "SKATTEVERKET");
-						if (found.Any() && found.Sum(o => o.Amount) == -tx.Amount)
-							return new MatchedTransaction { Transaction = tx, InvRecs = found.ToList() };
+						var found = invrecsForDate.Where(o => o.Supplier == "SKATTEVERKET" || o.Supplier == "Handelsbanken"); //TODO: often both Handelsbanken AND STADSHYPOTEK AB..?
+						if (found.Any())
+						{
+							if (found.Sum(o => o.Amount) == -tx.Amount)
+								return new MatchedTransaction { Transaction = tx, InvRecs = found.ToList() };
+							found = found.Where(o => o.Amount == -tx.Amount); //Find single one
+							if (found.Any())
+								return new MatchedTransaction { Transaction = tx, InvRecs = found.Take(1).ToList() };
+						}
 					}
 					return null;
 				})
