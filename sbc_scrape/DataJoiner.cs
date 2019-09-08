@@ -71,7 +71,7 @@ namespace sbc_scrape
 			void PerformSearch(Func<List<BankTransaction>, Dictionary<DateTime, List<InvoiceAndOrReceipt>>, IEnumerable<MatchedTransaction>> f)
 			{
 				var invrecByDateX = searchInvRecs.GroupBy(o => o.Date).ToDictionary(g => g.Key, g => g.ToList());
-				var matchedTransactionsX = f(searchTransactions, invrecByDateX).Where(o => o != null);
+				var matchedTransactionsX = f(searchTransactions, invrecByDateX).Where(o => o != null).ToList();
 				allMatchedTransactions.AddRange(matchedTransactionsX);
 
 				searchTransactions = searchTransactions.Except(matchedTransactionsX.Select(o => o.Transaction)).ToList();
