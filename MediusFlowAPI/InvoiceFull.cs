@@ -98,7 +98,8 @@ namespace MediusFlowAPI
 			public static FilenameFormat Parse(string filename)
 			{
 				var split = filename.Split('_');
-				var invoiceDate = DateTime.Parse(split[0]);
+				if (!DateTime.TryParse(split[0], out var invoiceDate))
+					throw new FormatException($"Incorrect date format in {split[0]} (filename {filename}");
 				var status = 0;
 				var lastIndex = split.Length - 1;
 				if (split.Length > 4)
