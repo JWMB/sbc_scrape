@@ -46,8 +46,6 @@ namespace SBCScan.REPL
 
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var src = GetHtmlSourceInstance(parms[0] as string);
-
 			var start = new DateTime(DateTime.Today.Year, 1, 1);
 			var end = new DateTime(start.Year, 12, 1);
 			if (parms.Count > 1)
@@ -58,6 +56,13 @@ namespace SBCScan.REPL
 					end = ParseDate(parms[2].ToString()) ?? end;
 			}
 
+			var src = GetHtmlSourceInstance(parms[0] as string);
+
+			return await Execute(main, src, start, end);
+		}
+
+		public static async Task<List<object>> Execute(Main main, HtmlSource src, DateTime start, DateTime end)
+		{
 			var result = new List<object>();
 			for (var year = start.Year; year <= end.Year; year++)
 			{

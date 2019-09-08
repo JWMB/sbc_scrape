@@ -34,6 +34,7 @@ namespace SBCScan.REPL
 						new FetchSBCHtml(main),
 						//new FetchSBCInvoices(main),
 						new UpdateInvoices(main),
+						new UpdateAll(main),
 					});
 			return currentCommandList.Concat(new Command[] { new ListCmd(currentCommandList) });
 		}
@@ -113,7 +114,40 @@ namespace SBCScan.REPL
 		}
 	}
 
+	class UpdateAll : Command
+	{
+		private readonly Main main;
+		public UpdateAll(Main main) => this.main = main;
+		public override string Id => "update";
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			await Execute(main, new HtmlSource[] { new BankTransactionSource(), new ReceiptsSource(), new InvoiceSource() });
+			return null;
+		}
 
+		public static async Task Execute(Main main, IEnumerable<HtmlSource> htmlSources)
+		{
+			{
+				//MediusFlow
+				//var mediusExisting = await main.MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate.Year == year);
+				//var scraped = await main.MediusFlow.Scrape();
+				//TODO: check diff with existing files and return what was updated/added
+			}
+
+			//TODO: start from latest year in downloaded data and continue to current year
+			var year = DateTime.Today.Year;
+
+			foreach (var src in htmlSources)
+			{
+				//TODO: check latest locally stored record for each src - may need to fetch last year as well
+				//TODO: some requests to SBC time out, need to split year into two parts
+				var html = await main.SBC.FetchHtmlSource(src.UrlPath, year);
+				File.WriteAllText(Path.Combine(
+					GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(src.FilenamePattern, year)), html);
+			}
+		}
+
+	}
 
 	class UpdateInvoices : Command
 	{
@@ -122,25 +156,8 @@ namespace SBCScan.REPL
 		public override string Id => "updateinvoices";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			{
-				//MediusFlow
-				//var mediusExisting = await main.MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate.Year == year);
-				var scraped = await main.MediusFlow.Scrape();
-				//TODO: check diff with existing files and return what was updated/added
-			}
-
-			//TODO: start from latest year in downloaded data and continue to current year
-			var year = DateTime.Today.Year;
-
-			{
-				//SBC invoices
-				var src = new InvoiceSource();
-				var html = await main.SBC.FetchHtmlSource(src.UrlPath, year);
-				File.WriteAllText(Path.Combine(
-					GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(src.FilenamePattern, year)), html);
-			}
-
-			return "";
+			await UpdateAll.Execute(main, new HtmlSource[] { new InvoiceSource() });
+			return null;
 		}
 	}
 
