@@ -29,7 +29,7 @@
 		public long Id { get; set; }
 
 		[JsonProperty("CompanyName")]
-		public CompanyName CompanyName { get; set; }
+		public string CompanyName { get; set; }
 
 		[JsonProperty("Supplier")]
 		public Supplier Supplier { get; set; }
@@ -160,7 +160,7 @@
 		public string Value { get; set; }
 	}
 
-	public enum CompanyName { Riksrådsvägen6297 };
+	//public enum CompanyName { Riksrådsvägen6297 };
 
 	//public enum CurrencyCode { Sek };
 
@@ -170,7 +170,7 @@
 
 	public enum TypeEnum { MediusCoreDtOsAmountDtoMediusCoreCommon };
 
-	public enum InvoiceTypeName { MediusExpenseInvoiceEntitiesExpenseInvoice };
+	public enum InvoiceTypeName { MediusExpenseInvoiceEntitiesExpenseInvoice, Omkostnadsfaktura };
 
 	public partial class Response
 	{
@@ -190,7 +190,7 @@
 			DateParseHandling = DateParseHandling.None,
 			Converters =
 			{
-				CompanyNameConverter.Singleton,
+				//CompanyNameConverter.Singleton,
 				//CurrencyCodeConverter.Singleton,
 				//CurrentHandlersConverter.Singleton,
 				//CurrentTaskConverter.Singleton,
@@ -201,39 +201,39 @@
 		};
 	}
 
-	internal class CompanyNameConverter : JsonConverter
-	{
-		public override bool CanConvert(Type t) => t == typeof(CompanyName) || t == typeof(CompanyName?);
+	//internal class CompanyNameConverter : JsonConverter
+	//{
+	//	public override bool CanConvert(Type t) => t == typeof(CompanyName) || t == typeof(CompanyName?);
 
-		public override object ReadJson(JsonReader reader, Type t, object existingValue, JsonSerializer serializer)
-		{
-			if (reader.TokenType == JsonToken.Null) return null;
-			var value = serializer.Deserialize<string>(reader);
-			if (value == "Riksrådsvägen(6297)")
-			{
-				return CompanyName.Riksrådsvägen6297;
-			}
-			throw new Exception("Cannot unmarshal type CompanyName");
-		}
+	//	public override object ReadJson(JsonReader reader, Type t, object existingValue, JsonSerializer serializer)
+	//	{
+	//		if (reader.TokenType == JsonToken.Null) return null;
+	//		var value = serializer.Deserialize<string>(reader);
+	//		if (value == "Riksrådsvägen(6297)")
+	//		{
+	//			return CompanyName.Riksrådsvägen6297;
+	//		}
+	//		throw new Exception("Cannot unmarshal type CompanyName");
+	//	}
 
-		public override void WriteJson(JsonWriter writer, object untypedValue, JsonSerializer serializer)
-		{
-			if (untypedValue == null)
-			{
-				serializer.Serialize(writer, null);
-				return;
-			}
-			var value = (CompanyName)untypedValue;
-			if (value == CompanyName.Riksrådsvägen6297)
-			{
-				serializer.Serialize(writer, "Riksrådsvägen(6297)");
-				return;
-			}
-			throw new Exception("Cannot marshal type CompanyName");
-		}
+	//	public override void WriteJson(JsonWriter writer, object untypedValue, JsonSerializer serializer)
+	//	{
+	//		if (untypedValue == null)
+	//		{
+	//			serializer.Serialize(writer, null);
+	//			return;
+	//		}
+	//		var value = (CompanyName)untypedValue;
+	//		if (value == CompanyName.Riksrådsvägen6297)
+	//		{
+	//			serializer.Serialize(writer, "Riksrådsvägen(6297)");
+	//			return;
+	//		}
+	//		throw new Exception("Cannot marshal type CompanyName");
+	//	}
 
-		public static readonly CompanyNameConverter Singleton = new CompanyNameConverter();
-	}
+	//	public static readonly CompanyNameConverter Singleton = new CompanyNameConverter();
+	//}
 
 	//internal class CurrencyCodeConverter : JsonConverter
 	//{
@@ -429,9 +429,9 @@
 			if (reader.TokenType == JsonToken.Null) return null;
 			var value = serializer.Deserialize<string>(reader);
 			if (value == "Medius.ExpenseInvoice.Entities.ExpenseInvoice")
-			{
 				return InvoiceTypeName.MediusExpenseInvoiceEntitiesExpenseInvoice;
-			}
+			if (value == "Omkostnadsfaktura")
+				return InvoiceTypeName.Omkostnadsfaktura;
 			throw new Exception("Cannot unmarshal type InvoiceTypeName");
 		}
 
