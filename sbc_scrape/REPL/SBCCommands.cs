@@ -66,11 +66,6 @@ namespace SBCScan.REPL
 		public override async Task<object> Evaluate(List<object> parms)
 		{
 			Console.WriteLine("0");
-			//var x = await Task.Run(() => {
-			//	return (main.LoadInvoices(true, (i, l) => Console.RewriteLine($"{i}/{l}")).Result)
-			//	.OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
-			//});
-			//return x;
 			return (await main.LoadInvoices(includeOCRd: false, (i, l) => Console.RewriteLine($"{i}/{l}"))).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 			//return (await main.LoadInvoices(true)).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 		}
@@ -130,7 +125,7 @@ namespace SBCScan.REPL
 			{
 				//MediusFlow
 				//var mediusExisting = await main.MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate.Year == year);
-				//var scraped = await main.MediusFlow.Scrape();
+				var scraped = await main.MediusFlow.Scrape();
 				//TODO: check diff with existing files and return what was updated/added
 			}
 
@@ -196,14 +191,12 @@ namespace SBCScan.REPL
 		public override string Id => "scrape";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var defaultDates = new List<DateTime> { DateTime.Today.AddMonths(-1), DateTime.Today };
-			var dates = parms.Select((p, i) => ParseArgument(parms, i, DateTime.MinValue)).ToList();
+			var dates = parms.Select((p, i) => ParseArgument(parms, i, DateTime.MinValue)).Cast<DateTime?>().ToList();
 			for (int i = dates.Count; i < 2; i++)
-				dates.Add(defaultDates[i]);
+				dates.Add(null);
 
 			var scraped = await main.MediusFlow.Scrape(dates[0], dates[1], saveToDisk: false, goBackwards: false);
-			return scraped.Select(iv =>
-			$"{iv.Id} {iv.TaskId} {iv.InvoiceDate} {iv.Supplier} {iv.GrossAmount} {iv.AccountId} {iv.AccountName}");
+			return scraped.Select(iv => $"{iv.Id} {iv.TaskId} {iv.InvoiceDate} {iv.Supplier} {iv.GrossAmount} {iv.AccountId} {iv.AccountName}");
 		}
 	}
 
