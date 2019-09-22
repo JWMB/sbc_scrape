@@ -1,8 +1,6 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json.Linq;
 using Shouldly;
-using System;
-using System.IO;
 using System.Linq;
 
 namespace MediusFlowAPI.Tests
@@ -13,61 +11,13 @@ namespace MediusFlowAPI.Tests
 		[TestInitialize]
 		public void Init()
 		{
-			AnonymizeFilesInFolder("*.json");
+			//AnonymizeFilesInFolder("TestData", "*.json");
 		}
-		private string GetTestDataFolder()
+
+		private T LoadJsonFromFile<T>(string file) where T : JToken
 		{
-			var folder = Environment.CurrentDirectory;
-			var bin = $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}";
-			if (folder.Contains(bin))
-				folder = folder.Remove(folder.LastIndexOf(bin));
-			return Path.Combine(folder, "TestData");
+			return TestUtils.LoadJsonFromFile<T>("TestData", file);
 		}
-
-		private T LoadJsonFromFile<T>(string path) where T : JToken 
-		{
-			path = Path.Combine(GetTestDataFolder(), path);
-			if (!File.Exists(path))
-				throw new FileNotFoundException(path);
-			var json = File.ReadAllText(path);
-			if (json.Length == 0)
-				throw new FileLoadException($"File empty: {path}");
-			var token = JToken.Parse(json);
-			if (token is T)
-				return token as T;
-			throw new Exception($"JSON in '{path}' is not a {typeof(T).Name}");
-		}
-
-		private JToken GetAnonymized(string path)
-		{
-			var jToken = LoadJsonFromFile<JToken>(path);
-
-			var valuesToReplace = new[] {
-				"$..Supplier.Name", "$..AuthorizerName", "$..OnBehalfOfUserName", "$..Company.Name",
-				"$..OrganizationNumber", "$..author", "$..CompanyId", "$..CompanyName" };
-			valuesToReplace.ToList().ForEach(selector => {
-				var found = jToken.SelectTokens(selector).Where(o => o is JValue).Cast<JValue>().ToList();
-				found.ForEach(o => {
-					//Replace with anonymous value
-					o.Value = o.Type == JTokenType.String
-						? (object)$"Anon"
-						: (object)12345;
-				});
-			});
-			//ExternalSystemId
-
-			return jToken;
-		}
-
-		private void AnonymizeFilesInFolder(string filePattern)
-		{
-			var files = new DirectoryInfo(GetTestDataFolder()).GetFiles(filePattern).ToList();
-			files.ForEach(file => {
-				var anon = GetAnonymized(file.Name);
-				File.WriteAllText(file.FullName, anon.ToString());
-			});
-		}
-
 
 		[TestMethod]
 		public void SupplierInvoiceGadgetData()
@@ -97,10 +47,8 @@ namespace MediusFlowAPI.Tests
 		public void GetComments()
 		{
 			var jArr = LoadJsonFromFile<JArray>(@"comments.json");
-			//Models.Comment2.Response[] response = null;
-			var response = Models.Comment2.Response.FromJson(jArr.ToString());
+			Models.Comment2.Response.FromJson(jArr.ToString());
 		}
-
 	}
 	/*
 https://webbattestxi.sbc.se/Mediusflow/Backend/Rpc/TabManager/GetTaskTabsForId
