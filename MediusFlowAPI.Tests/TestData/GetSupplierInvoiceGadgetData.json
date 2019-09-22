@@ -1,0 +1,1243 @@
+{
+  "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierInvoiceGadgetResult, Medius.PurchaseToPay.Common",
+  "Invoices": [
+    {
+      "$type": "Medius.PurchaseToPay.DTO.Gadget.GadgetInvoiceDto, Medius.PurchaseToPay.Common",
+      "Id": 5394744,
+      "CompanyName": "Anon",
+      "Supplier": {
+        "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto, Medius.PurchaseToPay.Common",
+        "Name": "Anon",
+        "SupplierId": "1655752",
+        "Identifiers": [
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "VIR;1655752"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "1655752"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "165-5752"
+          }
+        ],
+        "Id": 1101,
+        "Type": "Medius.Enterprise.Entities.Supplier, Medius.Enterprise.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "DisplayName": "",
+        "HasAccess": true
+      },
+      "InvoiceNumber": "1931811309",
+      "OrderNumber": "",
+      "DeliveryNote": "",
+      "CustomFields": {
+        "$type": "Medius.Enterprise.Entities.CustomFields.CustomFieldsContainer, Medius.Enterprise.Common",
+        "Perspective": null,
+        "TextCustomField1": "382",
+        "TextCustomField2": "",
+        "TextCustomField3": "slliho",
+        "TextCustomField4": "",
+        "TextCustomField5": "",
+        "NumericCustomField1": 857.54,
+        "NumericCustomField2": 0,
+        "NumericCustomField3": 0,
+        "NumericCustomField4": 0,
+        "NumericCustomField5": 0,
+        "BooleanCustomField1": false,
+        "BooleanCustomField2": false,
+        "BooleanCustomField3": false,
+        "BooleanCustomField4": false,
+        "BooleanCustomField5": false,
+        "DateTimeCustomField1": null,
+        "DateTimeCustomField2": null,
+        "DateTimeCustomField3": null,
+        "DateTimeCustomField4": null,
+        "DateTimeCustomField5": null,
+        "InternalIdentifier": "1"
+      },
+      "InvoiceDate": "2019-08-06T00:00:00Z",
+      "DueDate": "2019-09-06T00:00:00Z",
+      "PreferredPaymentDate": "2019-09-06T00:00:00Z",
+      "PreliminaryBookingDate": "2019-08-06T00:00:00Z",
+      "FinalBookingDate": "2019-08-06T00:00:00Z",
+      "ActualPaymentDate": null,
+      "PaymentReference": "",
+      "PreliminaryVoucherNumber": null,
+      "FinalVoucherNumber": "239",
+      "GrossAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "4288.00",
+        "CurrencyCode": "SEK"
+      },
+      "NetAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "4288.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0.00",
+        "CurrencyCode": "SEK"
+      },
+      "CurrencyCode": "SEK",
+      "CurrencyRate": 1,
+      "NetAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "4288.00",
+        "CurrencyCode": "SEK"
+      },
+      "GrossAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "4288.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0",
+        "CurrencyCode": "SEK"
+      },
+      "InvoiceTypeName": "Omkostnadsfaktura",
+      "CurrentTask": "Arkiverad",
+      "CurrentHandlers": "",
+      "ContractNumber": "",
+      "LabelsString": "",
+      "AssignedLabelsIds": []
+    },
+    {
+      "$type": "Medius.PurchaseToPay.DTO.Gadget.GadgetInvoiceDto, Medius.PurchaseToPay.Common",
+      "Id": 5390338,
+      "CompanyName": "Anon",
+      "Supplier": {
+        "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto, Medius.PurchaseToPay.Common",
+        "Name": "Anon",
+        "SupplierId": "56473812",
+        "Identifiers": [
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "VIR;56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "5647-3812"
+          }
+        ],
+        "Id": 26667,
+        "Type": "Medius.Enterprise.Entities.Supplier, Medius.Enterprise.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "DisplayName": "",
+        "HasAccess": true
+      },
+      "InvoiceNumber": "10433031019",
+      "OrderNumber": "",
+      "DeliveryNote": "",
+      "CustomFields": {
+        "$type": "Medius.Enterprise.Entities.CustomFields.CustomFieldsContainer, Medius.Enterprise.Common",
+        "Perspective": null,
+        "TextCustomField1": "382",
+        "TextCustomField2": "",
+        "TextCustomField3": "slliho",
+        "TextCustomField4": "",
+        "TextCustomField5": "",
+        "NumericCustomField1": 154.99,
+        "NumericCustomField2": 0,
+        "NumericCustomField3": 0,
+        "NumericCustomField4": 0,
+        "NumericCustomField5": 0,
+        "BooleanCustomField1": false,
+        "BooleanCustomField2": false,
+        "BooleanCustomField3": false,
+        "BooleanCustomField4": false,
+        "BooleanCustomField5": false,
+        "DateTimeCustomField1": null,
+        "DateTimeCustomField2": null,
+        "DateTimeCustomField3": null,
+        "DateTimeCustomField4": null,
+        "DateTimeCustomField5": null,
+        "InternalIdentifier": "1"
+      },
+      "InvoiceDate": "2019-08-06T00:00:00Z",
+      "DueDate": "2019-09-06T00:00:00Z",
+      "PreferredPaymentDate": "2019-09-06T00:00:00Z",
+      "PreliminaryBookingDate": "2019-08-06T00:00:00Z",
+      "FinalBookingDate": "2019-08-06T00:00:00Z",
+      "ActualPaymentDate": null,
+      "PaymentReference": "",
+      "PreliminaryVoucherNumber": null,
+      "FinalVoucherNumber": "234",
+      "GrossAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "775.00",
+        "CurrencyCode": "SEK"
+      },
+      "NetAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "775.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0.00",
+        "CurrencyCode": "SEK"
+      },
+      "CurrencyCode": "SEK",
+      "CurrencyRate": 1,
+      "NetAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "775.00",
+        "CurrencyCode": "SEK"
+      },
+      "GrossAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "775.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0",
+        "CurrencyCode": "SEK"
+      },
+      "InvoiceTypeName": "Omkostnadsfaktura",
+      "CurrentTask": "Arkiverad",
+      "CurrentHandlers": "",
+      "ContractNumber": "",
+      "LabelsString": "",
+      "AssignedLabelsIds": []
+    },
+    {
+      "$type": "Medius.PurchaseToPay.DTO.Gadget.GadgetInvoiceDto, Medius.PurchaseToPay.Common",
+      "Id": 5389088,
+      "CompanyName": "Anon",
+      "Supplier": {
+        "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto, Medius.PurchaseToPay.Common",
+        "Name": "Anon",
+        "SupplierId": "56473812",
+        "Identifiers": [
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "VIR;56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "5647-3812"
+          }
+        ],
+        "Id": 26667,
+        "Type": "Medius.Enterprise.Entities.Supplier, Medius.Enterprise.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "DisplayName": "",
+        "HasAccess": true
+      },
+      "InvoiceNumber": "10432956117",
+      "OrderNumber": "",
+      "DeliveryNote": "",
+      "CustomFields": {
+        "$type": "Medius.Enterprise.Entities.CustomFields.CustomFieldsContainer, Medius.Enterprise.Common",
+        "Perspective": null,
+        "TextCustomField1": "382",
+        "TextCustomField2": "",
+        "TextCustomField3": "slliho",
+        "TextCustomField4": "",
+        "TextCustomField5": "",
+        "NumericCustomField1": 121.72,
+        "NumericCustomField2": 0,
+        "NumericCustomField3": 0,
+        "NumericCustomField4": 0,
+        "NumericCustomField5": 0,
+        "BooleanCustomField1": false,
+        "BooleanCustomField2": false,
+        "BooleanCustomField3": false,
+        "BooleanCustomField4": false,
+        "BooleanCustomField5": false,
+        "DateTimeCustomField1": null,
+        "DateTimeCustomField2": null,
+        "DateTimeCustomField3": null,
+        "DateTimeCustomField4": null,
+        "DateTimeCustomField5": null,
+        "InternalIdentifier": "1"
+      },
+      "InvoiceDate": "2019-08-06T00:00:00Z",
+      "DueDate": "2019-09-06T00:00:00Z",
+      "PreferredPaymentDate": "2019-09-06T00:00:00Z",
+      "PreliminaryBookingDate": "2019-08-06T00:00:00Z",
+      "FinalBookingDate": "2019-08-06T00:00:00Z",
+      "ActualPaymentDate": null,
+      "PaymentReference": "",
+      "PreliminaryVoucherNumber": null,
+      "FinalVoucherNumber": "233",
+      "GrossAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "609.00",
+        "CurrencyCode": "SEK"
+      },
+      "NetAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "609.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0.00",
+        "CurrencyCode": "SEK"
+      },
+      "CurrencyCode": "SEK",
+      "CurrencyRate": 1,
+      "NetAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "609.00",
+        "CurrencyCode": "SEK"
+      },
+      "GrossAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "609.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0",
+        "CurrencyCode": "SEK"
+      },
+      "InvoiceTypeName": "Omkostnadsfaktura",
+      "CurrentTask": "Arkiverad",
+      "CurrentHandlers": "",
+      "ContractNumber": "",
+      "LabelsString": "",
+      "AssignedLabelsIds": []
+    },
+    {
+      "$type": "Medius.PurchaseToPay.DTO.Gadget.GadgetInvoiceDto, Medius.PurchaseToPay.Common",
+      "Id": 5388463,
+      "CompanyName": "Anon",
+      "Supplier": {
+        "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto, Medius.PurchaseToPay.Common",
+        "Name": "Anon",
+        "SupplierId": "56473812",
+        "Identifiers": [
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "VIR;56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "5647-3812"
+          }
+        ],
+        "Id": 26667,
+        "Type": "Medius.Enterprise.Entities.Supplier, Medius.Enterprise.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "DisplayName": "",
+        "HasAccess": true
+      },
+      "InvoiceNumber": "10433059010",
+      "OrderNumber": "",
+      "DeliveryNote": "",
+      "CustomFields": {
+        "$type": "Medius.Enterprise.Entities.CustomFields.CustomFieldsContainer, Medius.Enterprise.Common",
+        "Perspective": null,
+        "TextCustomField1": "382",
+        "TextCustomField2": "",
+        "TextCustomField3": "slliho",
+        "TextCustomField4": "",
+        "TextCustomField5": "",
+        "NumericCustomField1": 154.6,
+        "NumericCustomField2": 0,
+        "NumericCustomField3": 0,
+        "NumericCustomField4": 0,
+        "NumericCustomField5": 0,
+        "BooleanCustomField1": false,
+        "BooleanCustomField2": false,
+        "BooleanCustomField3": false,
+        "BooleanCustomField4": false,
+        "BooleanCustomField5": false,
+        "DateTimeCustomField1": null,
+        "DateTimeCustomField2": null,
+        "DateTimeCustomField3": null,
+        "DateTimeCustomField4": null,
+        "DateTimeCustomField5": null,
+        "InternalIdentifier": "1"
+      },
+      "InvoiceDate": "2019-08-06T00:00:00Z",
+      "DueDate": "2019-09-06T00:00:00Z",
+      "PreferredPaymentDate": "2019-09-06T00:00:00Z",
+      "PreliminaryBookingDate": "2019-08-06T00:00:00Z",
+      "FinalBookingDate": "2019-08-06T00:00:00Z",
+      "ActualPaymentDate": null,
+      "PaymentReference": "",
+      "PreliminaryVoucherNumber": null,
+      "FinalVoucherNumber": "232",
+      "GrossAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "773.00",
+        "CurrencyCode": "SEK"
+      },
+      "NetAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "773.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0.00",
+        "CurrencyCode": "SEK"
+      },
+      "CurrencyCode": "SEK",
+      "CurrencyRate": 1,
+      "NetAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "773.00",
+        "CurrencyCode": "SEK"
+      },
+      "GrossAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "773.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0",
+        "CurrencyCode": "SEK"
+      },
+      "InvoiceTypeName": "Omkostnadsfaktura",
+      "CurrentTask": "Arkiverad",
+      "CurrentHandlers": "",
+      "ContractNumber": "",
+      "LabelsString": "",
+      "AssignedLabelsIds": []
+    },
+    {
+      "$type": "Medius.PurchaseToPay.DTO.Gadget.GadgetInvoiceDto, Medius.PurchaseToPay.Common",
+      "Id": 5388292,
+      "CompanyName": "Anon",
+      "Supplier": {
+        "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto, Medius.PurchaseToPay.Common",
+        "Name": "Anon",
+        "SupplierId": "56473812",
+        "Identifiers": [
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "VIR;56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "5647-3812"
+          }
+        ],
+        "Id": 26667,
+        "Type": "Medius.Enterprise.Entities.Supplier, Medius.Enterprise.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "DisplayName": "",
+        "HasAccess": true
+      },
+      "InvoiceNumber": "10433009411",
+      "OrderNumber": "",
+      "DeliveryNote": "",
+      "CustomFields": {
+        "$type": "Medius.Enterprise.Entities.CustomFields.CustomFieldsContainer, Medius.Enterprise.Common",
+        "Perspective": null,
+        "TextCustomField1": "382",
+        "TextCustomField2": "",
+        "TextCustomField3": "slliho",
+        "TextCustomField4": "",
+        "TextCustomField5": "",
+        "NumericCustomField1": 19.34,
+        "NumericCustomField2": 0,
+        "NumericCustomField3": 0,
+        "NumericCustomField4": 0,
+        "NumericCustomField5": 0,
+        "BooleanCustomField1": false,
+        "BooleanCustomField2": false,
+        "BooleanCustomField3": false,
+        "BooleanCustomField4": false,
+        "BooleanCustomField5": false,
+        "DateTimeCustomField1": null,
+        "DateTimeCustomField2": null,
+        "DateTimeCustomField3": null,
+        "DateTimeCustomField4": null,
+        "DateTimeCustomField5": null,
+        "InternalIdentifier": "1"
+      },
+      "InvoiceDate": "2019-08-06T00:00:00Z",
+      "DueDate": "2019-09-06T00:00:00Z",
+      "PreferredPaymentDate": "2019-09-06T00:00:00Z",
+      "PreliminaryBookingDate": "2019-08-06T00:00:00Z",
+      "FinalBookingDate": "2019-08-06T00:00:00Z",
+      "ActualPaymentDate": null,
+      "PaymentReference": "",
+      "PreliminaryVoucherNumber": null,
+      "FinalVoucherNumber": "231",
+      "GrossAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "97.00",
+        "CurrencyCode": "SEK"
+      },
+      "NetAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "97.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0.00",
+        "CurrencyCode": "SEK"
+      },
+      "CurrencyCode": "SEK",
+      "CurrencyRate": 1,
+      "NetAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "97.00",
+        "CurrencyCode": "SEK"
+      },
+      "GrossAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "97.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0",
+        "CurrencyCode": "SEK"
+      },
+      "InvoiceTypeName": "Omkostnadsfaktura",
+      "CurrentTask": "Arkiverad",
+      "CurrentHandlers": "",
+      "ContractNumber": "",
+      "LabelsString": "",
+      "AssignedLabelsIds": []
+    },
+    {
+      "$type": "Medius.PurchaseToPay.DTO.Gadget.GadgetInvoiceDto, Medius.PurchaseToPay.Common",
+      "Id": 5387640,
+      "CompanyName": "Anon",
+      "Supplier": {
+        "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto, Medius.PurchaseToPay.Common",
+        "Name": "Anon",
+        "SupplierId": "56473812",
+        "Identifiers": [
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "VIR;56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "5647-3812"
+          }
+        ],
+        "Id": 26667,
+        "Type": "Medius.Enterprise.Entities.Supplier, Medius.Enterprise.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "DisplayName": "",
+        "HasAccess": true
+      },
+      "InvoiceNumber": "10433053716",
+      "OrderNumber": "",
+      "DeliveryNote": "",
+      "CustomFields": {
+        "$type": "Medius.Enterprise.Entities.CustomFields.CustomFieldsContainer, Medius.Enterprise.Common",
+        "Perspective": null,
+        "TextCustomField1": "382",
+        "TextCustomField2": "",
+        "TextCustomField3": "slliho",
+        "TextCustomField4": "",
+        "TextCustomField5": "",
+        "NumericCustomField1": 54.93,
+        "NumericCustomField2": 0,
+        "NumericCustomField3": 0,
+        "NumericCustomField4": 0,
+        "NumericCustomField5": 0,
+        "BooleanCustomField1": false,
+        "BooleanCustomField2": false,
+        "BooleanCustomField3": false,
+        "BooleanCustomField4": false,
+        "BooleanCustomField5": false,
+        "DateTimeCustomField1": null,
+        "DateTimeCustomField2": null,
+        "DateTimeCustomField3": null,
+        "DateTimeCustomField4": null,
+        "DateTimeCustomField5": null,
+        "InternalIdentifier": "1"
+      },
+      "InvoiceDate": "2019-08-06T00:00:00Z",
+      "DueDate": "2019-09-06T00:00:00Z",
+      "PreferredPaymentDate": "2019-09-06T00:00:00Z",
+      "PreliminaryBookingDate": "2019-08-06T00:00:00Z",
+      "FinalBookingDate": "2019-08-06T00:00:00Z",
+      "ActualPaymentDate": null,
+      "PaymentReference": "",
+      "PreliminaryVoucherNumber": null,
+      "FinalVoucherNumber": "230",
+      "GrossAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "275.00",
+        "CurrencyCode": "SEK"
+      },
+      "NetAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "275.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0.00",
+        "CurrencyCode": "SEK"
+      },
+      "CurrencyCode": "SEK",
+      "CurrencyRate": 1,
+      "NetAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "275.00",
+        "CurrencyCode": "SEK"
+      },
+      "GrossAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "275.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0",
+        "CurrencyCode": "SEK"
+      },
+      "InvoiceTypeName": "Omkostnadsfaktura",
+      "CurrentTask": "Arkiverad",
+      "CurrentHandlers": "",
+      "ContractNumber": "",
+      "LabelsString": "",
+      "AssignedLabelsIds": []
+    },
+    {
+      "$type": "Medius.PurchaseToPay.DTO.Gadget.GadgetInvoiceDto, Medius.PurchaseToPay.Common",
+      "Id": 5387468,
+      "CompanyName": "Anon",
+      "Supplier": {
+        "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto, Medius.PurchaseToPay.Common",
+        "Name": "Anon",
+        "SupplierId": "56473812",
+        "Identifiers": [
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "VIR;56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "5647-3812"
+          }
+        ],
+        "Id": 26667,
+        "Type": "Medius.Enterprise.Entities.Supplier, Medius.Enterprise.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "DisplayName": "",
+        "HasAccess": true
+      },
+      "InvoiceNumber": "10433180311",
+      "OrderNumber": "",
+      "DeliveryNote": "",
+      "CustomFields": {
+        "$type": "Medius.Enterprise.Entities.CustomFields.CustomFieldsContainer, Medius.Enterprise.Common",
+        "Perspective": null,
+        "TextCustomField1": "382",
+        "TextCustomField2": "",
+        "TextCustomField3": "slliho",
+        "TextCustomField4": "",
+        "TextCustomField5": "",
+        "NumericCustomField1": 28.11,
+        "NumericCustomField2": 0,
+        "NumericCustomField3": 0,
+        "NumericCustomField4": 0,
+        "NumericCustomField5": 0,
+        "BooleanCustomField1": false,
+        "BooleanCustomField2": false,
+        "BooleanCustomField3": false,
+        "BooleanCustomField4": false,
+        "BooleanCustomField5": false,
+        "DateTimeCustomField1": null,
+        "DateTimeCustomField2": null,
+        "DateTimeCustomField3": null,
+        "DateTimeCustomField4": null,
+        "DateTimeCustomField5": null,
+        "InternalIdentifier": "1"
+      },
+      "InvoiceDate": "2019-08-06T00:00:00Z",
+      "DueDate": "2019-09-06T00:00:00Z",
+      "PreferredPaymentDate": "2019-09-06T00:00:00Z",
+      "PreliminaryBookingDate": "2019-08-06T00:00:00Z",
+      "FinalBookingDate": "2019-08-06T00:00:00Z",
+      "ActualPaymentDate": null,
+      "PaymentReference": "",
+      "PreliminaryVoucherNumber": null,
+      "FinalVoucherNumber": "229",
+      "GrossAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "141.00",
+        "CurrencyCode": "SEK"
+      },
+      "NetAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "141.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0.00",
+        "CurrencyCode": "SEK"
+      },
+      "CurrencyCode": "SEK",
+      "CurrencyRate": 1,
+      "NetAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "141.00",
+        "CurrencyCode": "SEK"
+      },
+      "GrossAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "141.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0",
+        "CurrencyCode": "SEK"
+      },
+      "InvoiceTypeName": "Omkostnadsfaktura",
+      "CurrentTask": "Arkiverad",
+      "CurrentHandlers": "",
+      "ContractNumber": "",
+      "LabelsString": "",
+      "AssignedLabelsIds": []
+    },
+    {
+      "$type": "Medius.PurchaseToPay.DTO.Gadget.GadgetInvoiceDto, Medius.PurchaseToPay.Common",
+      "Id": 5387463,
+      "CompanyName": "Anon",
+      "Supplier": {
+        "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto, Medius.PurchaseToPay.Common",
+        "Name": "Anon",
+        "SupplierId": "56473812",
+        "Identifiers": [
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "VIR;56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "56473812"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "5647-3812"
+          }
+        ],
+        "Id": 26667,
+        "Type": "Medius.Enterprise.Entities.Supplier, Medius.Enterprise.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "DisplayName": "",
+        "HasAccess": true
+      },
+      "InvoiceNumber": "10432889912",
+      "OrderNumber": "",
+      "DeliveryNote": "",
+      "CustomFields": {
+        "$type": "Medius.Enterprise.Entities.CustomFields.CustomFieldsContainer, Medius.Enterprise.Common",
+        "Perspective": null,
+        "TextCustomField1": "382",
+        "TextCustomField2": "",
+        "TextCustomField3": "slliho",
+        "TextCustomField4": "",
+        "TextCustomField5": "",
+        "NumericCustomField1": 25.96,
+        "NumericCustomField2": 0,
+        "NumericCustomField3": 0,
+        "NumericCustomField4": 0,
+        "NumericCustomField5": 0,
+        "BooleanCustomField1": false,
+        "BooleanCustomField2": false,
+        "BooleanCustomField3": false,
+        "BooleanCustomField4": false,
+        "BooleanCustomField5": false,
+        "DateTimeCustomField1": null,
+        "DateTimeCustomField2": null,
+        "DateTimeCustomField3": null,
+        "DateTimeCustomField4": null,
+        "DateTimeCustomField5": null,
+        "InternalIdentifier": "1"
+      },
+      "InvoiceDate": "2019-08-06T00:00:00Z",
+      "DueDate": "2019-09-06T00:00:00Z",
+      "PreferredPaymentDate": "2019-09-06T00:00:00Z",
+      "PreliminaryBookingDate": "2019-08-06T00:00:00Z",
+      "FinalBookingDate": "2019-08-06T00:00:00Z",
+      "ActualPaymentDate": null,
+      "PaymentReference": "",
+      "PreliminaryVoucherNumber": null,
+      "FinalVoucherNumber": "228",
+      "GrossAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "130.00",
+        "CurrencyCode": "SEK"
+      },
+      "NetAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "130.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0.00",
+        "CurrencyCode": "SEK"
+      },
+      "CurrencyCode": "SEK",
+      "CurrencyRate": 1,
+      "NetAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "130.00",
+        "CurrencyCode": "SEK"
+      },
+      "GrossAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "130.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0",
+        "CurrencyCode": "SEK"
+      },
+      "InvoiceTypeName": "Omkostnadsfaktura",
+      "CurrentTask": "Arkiverad",
+      "CurrentHandlers": "",
+      "ContractNumber": "",
+      "LabelsString": "",
+      "AssignedLabelsIds": []
+    },
+    {
+      "$type": "Medius.PurchaseToPay.DTO.Gadget.GadgetInvoiceDto, Medius.PurchaseToPay.Common",
+      "Id": 5385076,
+      "CompanyName": "Anon",
+      "Supplier": {
+        "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto, Medius.PurchaseToPay.Common",
+        "Name": "Anon",
+        "SupplierId": "52339330",
+        "Identifiers": [
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "VIR;52339330"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "52339330"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "5233-9330"
+          }
+        ],
+        "Id": 16437,
+        "Type": "Medius.Enterprise.Entities.Supplier, Medius.Enterprise.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "DisplayName": "",
+        "HasAccess": true
+      },
+      "InvoiceNumber": "499945310625",
+      "OrderNumber": "",
+      "DeliveryNote": "",
+      "CustomFields": {
+        "$type": "Medius.Enterprise.Entities.CustomFields.CustomFieldsContainer, Medius.Enterprise.Common",
+        "Perspective": null,
+        "TextCustomField1": "382",
+        "TextCustomField2": "",
+        "TextCustomField3": "slliho",
+        "TextCustomField4": "",
+        "TextCustomField5": "",
+        "NumericCustomField1": 573.41,
+        "NumericCustomField2": 0,
+        "NumericCustomField3": 0,
+        "NumericCustomField4": 0,
+        "NumericCustomField5": 0,
+        "BooleanCustomField1": false,
+        "BooleanCustomField2": false,
+        "BooleanCustomField3": false,
+        "BooleanCustomField4": false,
+        "BooleanCustomField5": false,
+        "DateTimeCustomField1": null,
+        "DateTimeCustomField2": null,
+        "DateTimeCustomField3": null,
+        "DateTimeCustomField4": null,
+        "DateTimeCustomField5": null,
+        "InternalIdentifier": "1"
+      },
+      "InvoiceDate": "2019-08-05T00:00:00Z",
+      "DueDate": "2019-09-04T00:00:00Z",
+      "PreferredPaymentDate": "2019-09-04T00:00:00Z",
+      "PreliminaryBookingDate": "2019-08-05T00:00:00Z",
+      "FinalBookingDate": "2019-08-05T00:00:00Z",
+      "ActualPaymentDate": null,
+      "PaymentReference": "",
+      "PreliminaryVoucherNumber": null,
+      "FinalVoucherNumber": "224",
+      "GrossAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "2867.00",
+        "CurrencyCode": "SEK"
+      },
+      "NetAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "2867.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0.00",
+        "CurrencyCode": "SEK"
+      },
+      "CurrencyCode": "SEK",
+      "CurrencyRate": 1,
+      "NetAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "2867.00",
+        "CurrencyCode": "SEK"
+      },
+      "GrossAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "2867.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0",
+        "CurrencyCode": "SEK"
+      },
+      "InvoiceTypeName": "Omkostnadsfaktura",
+      "CurrentTask": "Arkiverad",
+      "CurrentHandlers": "",
+      "ContractNumber": "",
+      "LabelsString": "",
+      "AssignedLabelsIds": []
+    },
+    {
+      "$type": "Medius.PurchaseToPay.DTO.Gadget.GadgetInvoiceDto, Medius.PurchaseToPay.Common",
+      "Id": 5374301,
+      "CompanyName": "Anon",
+      "Supplier": {
+        "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto, Medius.PurchaseToPay.Common",
+        "Name": "Anon",
+        "SupplierId": "52339330",
+        "Identifiers": [
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "VIR;52339330"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "52339330"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "5233-9330"
+          }
+        ],
+        "Id": 16437,
+        "Type": "Medius.Enterprise.Entities.Supplier, Medius.Enterprise.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "DisplayName": "",
+        "HasAccess": true
+      },
+      "InvoiceNumber": "499927724520",
+      "OrderNumber": "",
+      "DeliveryNote": "",
+      "CustomFields": {
+        "$type": "Medius.Enterprise.Entities.CustomFields.CustomFieldsContainer, Medius.Enterprise.Common",
+        "Perspective": null,
+        "TextCustomField1": "",
+        "TextCustomField2": "",
+        "TextCustomField3": "slliho",
+        "TextCustomField4": "",
+        "TextCustomField5": "",
+        "NumericCustomField1": 76.27,
+        "NumericCustomField2": 0,
+        "NumericCustomField3": 0,
+        "NumericCustomField4": 0,
+        "NumericCustomField5": 0,
+        "BooleanCustomField1": false,
+        "BooleanCustomField2": false,
+        "BooleanCustomField3": false,
+        "BooleanCustomField4": false,
+        "BooleanCustomField5": false,
+        "DateTimeCustomField1": null,
+        "DateTimeCustomField2": null,
+        "DateTimeCustomField3": null,
+        "DateTimeCustomField4": null,
+        "DateTimeCustomField5": null,
+        "InternalIdentifier": "1"
+      },
+      "InvoiceDate": "2019-08-02T00:00:00Z",
+      "DueDate": "2019-09-02T00:00:00Z",
+      "PreferredPaymentDate": "2019-09-02T00:00:00Z",
+      "PreliminaryBookingDate": "2019-08-02T00:00:00Z",
+      "FinalBookingDate": "2019-08-02T00:00:00Z",
+      "ActualPaymentDate": null,
+      "PaymentReference": "",
+      "PreliminaryVoucherNumber": null,
+      "FinalVoucherNumber": "225",
+      "GrossAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "381.00",
+        "CurrencyCode": "SEK"
+      },
+      "NetAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "381.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0.00",
+        "CurrencyCode": "SEK"
+      },
+      "CurrencyCode": "SEK",
+      "CurrencyRate": 1,
+      "NetAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "381.00",
+        "CurrencyCode": "SEK"
+      },
+      "GrossAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "381.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0",
+        "CurrencyCode": "SEK"
+      },
+      "InvoiceTypeName": "Omkostnadsfaktura",
+      "CurrentTask": "Arkiverad",
+      "CurrentHandlers": "",
+      "ContractNumber": "",
+      "LabelsString": "",
+      "AssignedLabelsIds": []
+    },
+    {
+      "$type": "Medius.PurchaseToPay.DTO.Gadget.GadgetInvoiceDto, Medius.PurchaseToPay.Common",
+      "Id": 5373453,
+      "CompanyName": "Anon",
+      "Supplier": {
+        "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto, Medius.PurchaseToPay.Common",
+        "Name": "Anon",
+        "SupplierId": "53072807",
+        "Identifiers": [
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "VIR;53072807"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "53072807"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "5307-2807"
+          }
+        ],
+        "Id": 38474,
+        "Type": "Medius.Enterprise.Entities.Supplier, Medius.Enterprise.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "DisplayName": "",
+        "HasAccess": true
+      },
+      "InvoiceNumber": "1432478301",
+      "OrderNumber": "",
+      "DeliveryNote": "",
+      "CustomFields": {
+        "$type": "Medius.Enterprise.Entities.CustomFields.CustomFieldsContainer, Medius.Enterprise.Common",
+        "Perspective": null,
+        "TextCustomField1": "",
+        "TextCustomField2": "",
+        "TextCustomField3": "slliho",
+        "TextCustomField4": "",
+        "TextCustomField5": "",
+        "NumericCustomField1": 17359.11,
+        "NumericCustomField2": 0,
+        "NumericCustomField3": 0,
+        "NumericCustomField4": 0,
+        "NumericCustomField5": 0,
+        "BooleanCustomField1": false,
+        "BooleanCustomField2": false,
+        "BooleanCustomField3": false,
+        "BooleanCustomField4": false,
+        "BooleanCustomField5": false,
+        "DateTimeCustomField1": null,
+        "DateTimeCustomField2": null,
+        "DateTimeCustomField3": null,
+        "DateTimeCustomField4": null,
+        "DateTimeCustomField5": null,
+        "InternalIdentifier": "1"
+      },
+      "InvoiceDate": "2019-08-04T00:00:00Z",
+      "DueDate": "2019-09-03T00:00:00Z",
+      "PreferredPaymentDate": "2019-09-03T00:00:00Z",
+      "PreliminaryBookingDate": "2019-08-04T00:00:00Z",
+      "FinalBookingDate": "2019-08-04T00:00:00Z",
+      "ActualPaymentDate": null,
+      "PaymentReference": "",
+      "PreliminaryVoucherNumber": null,
+      "FinalVoucherNumber": "227",
+      "GrossAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "86796.00",
+        "CurrencyCode": "SEK"
+      },
+      "NetAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "86796.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0.00",
+        "CurrencyCode": "SEK"
+      },
+      "CurrencyCode": "SEK",
+      "CurrencyRate": 1,
+      "NetAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "86796.00",
+        "CurrencyCode": "SEK"
+      },
+      "GrossAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "86796.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0",
+        "CurrencyCode": "SEK"
+      },
+      "InvoiceTypeName": "Omkostnadsfaktura",
+      "CurrentTask": "Arkiverad",
+      "CurrentHandlers": "",
+      "ContractNumber": "",
+      "LabelsString": "",
+      "AssignedLabelsIds": []
+    },
+    {
+      "$type": "Medius.PurchaseToPay.DTO.Gadget.GadgetInvoiceDto, Medius.PurchaseToPay.Common",
+      "Id": 5371096,
+      "CompanyName": "Anon",
+      "Supplier": {
+        "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto, Medius.PurchaseToPay.Common",
+        "Name": "Anon",
+        "SupplierId": "52339330",
+        "Identifiers": [
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "VIR;52339330"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "52339330"
+          },
+          {
+            "$type": "Medius.PurchaseToPay.DTO.Gadget.SupplierGadgetDto+SupplierIdentifierDto, Medius.PurchaseToPay.Common",
+            "Value": "5233-9330"
+          }
+        ],
+        "Id": 16437,
+        "Type": "Medius.Enterprise.Entities.Supplier, Medius.Enterprise.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+        "DisplayName": "",
+        "HasAccess": true
+      },
+      "InvoiceNumber": "499927464523",
+      "OrderNumber": "",
+      "DeliveryNote": "",
+      "CustomFields": {
+        "$type": "Medius.Enterprise.Entities.CustomFields.CustomFieldsContainer, Medius.Enterprise.Common",
+        "Perspective": null,
+        "TextCustomField1": "",
+        "TextCustomField2": "",
+        "TextCustomField3": "slliho",
+        "TextCustomField4": "",
+        "TextCustomField5": "",
+        "NumericCustomField1": 412.75,
+        "NumericCustomField2": 0,
+        "NumericCustomField3": 0,
+        "NumericCustomField4": 0,
+        "NumericCustomField5": 0,
+        "BooleanCustomField1": false,
+        "BooleanCustomField2": false,
+        "BooleanCustomField3": false,
+        "BooleanCustomField4": false,
+        "BooleanCustomField5": false,
+        "DateTimeCustomField1": null,
+        "DateTimeCustomField2": null,
+        "DateTimeCustomField3": null,
+        "DateTimeCustomField4": null,
+        "DateTimeCustomField5": null,
+        "InternalIdentifier": "1"
+      },
+      "InvoiceDate": "2019-08-02T00:00:00Z",
+      "DueDate": "2019-09-02T00:00:00Z",
+      "PreferredPaymentDate": "2019-09-02T00:00:00Z",
+      "PreliminaryBookingDate": "2019-08-02T00:00:00Z",
+      "FinalBookingDate": "2019-08-02T00:00:00Z",
+      "ActualPaymentDate": null,
+      "PaymentReference": "",
+      "PreliminaryVoucherNumber": null,
+      "FinalVoucherNumber": "226",
+      "GrossAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "2064.00",
+        "CurrencyCode": "SEK"
+      },
+      "NetAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "2064.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmount": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0.00",
+        "CurrencyCode": "SEK"
+      },
+      "CurrencyCode": "SEK",
+      "CurrencyRate": 1,
+      "NetAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "2064.00",
+        "CurrencyCode": "SEK"
+      },
+      "GrossAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "2064.00",
+        "CurrencyCode": "SEK"
+      },
+      "TaxAmountInAccountingCurrency": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0",
+        "CurrencyCode": "SEK"
+      },
+      "InvoiceTypeName": "Omkostnadsfaktura",
+      "CurrentTask": "Arkiverad",
+      "CurrentHandlers": "",
+      "ContractNumber": "",
+      "LabelsString": "",
+      "AssignedLabelsIds": []
+    }
+  ],
+  "RowCount": 12,
+  "IsOverLimit": false
+}

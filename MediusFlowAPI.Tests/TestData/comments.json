@@ -1,0 +1,17 @@
+[
+  {
+    "id": 401090,
+    "tokenizedText": [
+      {
+        "tokenType": "TEXT",
+        "tokenValue": {
+          "value": "Ventilläckage?"
+        }
+      }
+    ],
+    "author": "Anon",
+    "createdDate": "2019-09-21T07:58:17.363+02:00",
+    "isCarriedOver": false,
+    "hash": "e51f3fa5-1a6d-4097-9c0b-9042b93b8323"
+  }
+]

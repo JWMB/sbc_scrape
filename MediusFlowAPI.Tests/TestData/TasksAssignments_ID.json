@@ -1,0 +1,8 @@
+[
+  {
+    "$type": "Medius.Core.Services.TaskAssignmentInfo, Medius.Core.Common",
+    "TaskId": 11229317,
+    "TaskDescription": "Arkiverad",
+    "Assignee": null
+  }
+]

@@ -1,0 +1,15 @@
+{
+  "$type": "Medius.Enterprise.DTO.Accounting.LatestTemplateAccountingObjectDto, Medius.Enterprise.Common",
+  "Id": 13914,
+  "Name": "bf4bcfde-b970-4212-8b12-3ef1e15c8d7e",
+  "Description": "70130124012, 242159.00 SEK",
+  "CreatedDate": "2019-09-17T15:46:02.58Z",
+  "Lines": null,
+  "InvoiceLink": {
+    "$type": "Medius.Enterprise.DTO.NamedReferenceDto, Medius.Enterprise.Common",
+    "Id": 5419589,
+    "Type": "Medius.ExpenseInvoice.Entities.ExpenseInvoice, Medius.ExpenseInvoice.Common, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "DisplayName": "70130124012",
+    "HasAccess": true
+  }
+}

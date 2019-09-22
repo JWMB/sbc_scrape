@@ -1,0 +1,24 @@
+[
+  {
+    "$type": "Medius.Core.Services.WorkflowHistoryItem, Medius.Core.Common",
+    "Topic": "Integration - slutligbokning",
+    "Date": "2019-08-20T18:21:31.173Z",
+    "Description": "Svara utfördes av System User  (SYSTEM)",
+    "Level": "Info",
+    "CategoryName": "Workflow",
+    "Category": "Workflow",
+    "IsDetail": false,
+    "IsCarriedOver": false
+  },
+  {
+    "$type": "Medius.Core.Services.WorkflowHistoryItem, Medius.Core.Common",
+    "Topic": "Attestera",
+    "Date": "2019-08-20T18:16:39.287Z",
+    "Description": "Fakturan attesterades av XX XXX (1111111)",
+    "Level": "Info",
+    "CategoryName": "Workflow",
+    "Category": "Workflow",
+    "IsDetail": false,
+    "IsCarriedOver": false
+  }
+]

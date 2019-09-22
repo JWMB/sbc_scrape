@@ -1,0 +1,61 @@
+[
+  {
+    "$type": "Medius.PurchaseToPay.Entities.SupplierInvoiceLine, Medius.PurchaseToPay.Common",
+    "OrderIdentifier": null,
+    "OrderIdentifier2": null,
+    "DeliveryNote": null,
+    "LineNumber": 1,
+    "ItemNumber": null,
+    "ItemDescription": null,
+    "Amount": {
+      "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+      "DisplayValue": "6440.00",
+      "CurrencyCode": "SEK"
+    },
+    "Quantity": {
+      "$type": "Medius.Core.DTOs.QuantityDto, Medius.Core.Common",
+      "DisplayValue": "1.00",
+      "UnitDescription": "-",
+      "UnitId": 1
+    },
+    "UnitPrice": {
+      "$type": "Medius.Core.DTOs.UnitPriceDto, Medius.Core.Common",
+      "DisplayValue": "6440.00",
+      "CurrencyCode": "SEK"
+    },
+    "IsSystemGenerated": true,
+    "DimensionStrings": [],
+    "CustomFields": {
+      "$type": "Medius.Core.Entities.CustomFields.CustomFieldsContainer, Medius.Core.Common",
+      "Perspective": null,
+      "TextCustomField1": null,
+      "TextCustomField2": null,
+      "TextCustomField3": null,
+      "TextCustomField4": null,
+      "TextCustomField5": null,
+      "NumericCustomField1": null,
+      "NumericCustomField2": null,
+      "NumericCustomField3": null,
+      "NumericCustomField4": null,
+      "NumericCustomField5": null,
+      "BooleanCustomField1": null,
+      "BooleanCustomField2": null,
+      "BooleanCustomField3": null,
+      "BooleanCustomField4": null,
+      "BooleanCustomField5": null,
+      "DateTimeCustomField1": null,
+      "DateTimeCustomField2": null,
+      "DateTimeCustomField3": null,
+      "DateTimeCustomField4": null,
+      "DateTimeCustomField5": null,
+      "InternalIdentifier": "1"
+    },
+    "EntityVersion": 1,
+    "Id": 1815832,
+    "ViewId": "f6c9eff3-bfdd-4e77-9deb-cf8084ae4462",
+    "CreatedTimestamp": "2019-09-18T06:41:26.993Z",
+    "HashFiles": [],
+    "IsDeleted": false,
+    "ReferencedFilesCount": 0
+  }
+]

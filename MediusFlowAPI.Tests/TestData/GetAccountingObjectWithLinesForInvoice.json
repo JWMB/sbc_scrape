@@ -1,0 +1,448 @@
+{
+  "$type": "Medius.Enterprise.DTO.Accounting.AccountingObjectDto, Medius.Enterprise.Common",
+  "BalanceCodeString": {
+    "$type": "Medius.Enterprise.DTO.Accounting.DimensionAmountStringDto, Medius.Enterprise.Common",
+    "Id": 10989724,
+    "AmountInfo": {
+      "$type": "Medius.Enterprise.DTO.Accounting.TaxInfoWithoutCodesDto, Medius.Enterprise.Common",
+      "Lines": [
+        {
+          "$type": "Medius.Enterprise.DTO.Accounting.TaxInfoLineDto, Medius.Enterprise.Common",
+          "Tax": {
+            "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+            "DisplayValue": "0.00",
+            "CurrencyCode": "SEK"
+          },
+          "Dimensions": {
+            "$type": "Medius.Enterprise.DTO.Accounting.CodingDimensionsDto, Medius.Enterprise.Common",
+            "Dimension1": {
+              "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+              "Value": {
+                "$type": "Medius.Enterprise.DTO.Accounting.DimensionValueDto, Medius.Enterprise.Common",
+                "Id": 1278,
+                "Value": "26410",
+                "Description": "Ingående moms Moms och särskilda punktskatter"
+              },
+              "IsFixed": false,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": []
+            },
+            "Dimension2": {
+              "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsFixed": false,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": []
+            },
+            "Dimension3": {
+              "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsFixed": false,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": []
+            },
+            "Dimension4": {
+              "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsFixed": false,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": []
+            },
+            "Dimension5": {
+              "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsFixed": false,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": []
+            },
+            "Dimension6": {
+              "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsFixed": false,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": []
+            },
+            "Dimension7": {
+              "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsFixed": false,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": []
+            },
+            "Dimension8": {
+              "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsFixed": false,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": []
+            },
+            "Dimension9": {
+              "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsFixed": false,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": []
+            },
+            "Dimension10": {
+              "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsFixed": false,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": []
+            },
+            "Dimension11": {
+              "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsFixed": false,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": []
+            },
+            "Dimension12": {
+              "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsFixed": false,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": []
+            },
+            "FreeTextDimension1": {
+              "$type": "Medius.Enterprise.DTO.Accounting.FreeTextPerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": null
+            },
+            "FreeTextDimension2": {
+              "$type": "Medius.Enterprise.DTO.Accounting.FreeTextPerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": null
+            },
+            "FreeTextDimension3": {
+              "$type": "Medius.Enterprise.DTO.Accounting.FreeTextPerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": null
+            },
+            "FreeTextDimension4": {
+              "$type": "Medius.Enterprise.DTO.Accounting.FreeTextPerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": null
+            },
+            "FreeTextDimension5": {
+              "$type": "Medius.Enterprise.DTO.Accounting.FreeTextPerspectiveDto, Medius.Enterprise.Common",
+              "Value": null,
+              "IsReadOnly": false,
+              "Errors": [],
+              "Messages": null
+            }
+          },
+          "Id": 3855669,
+          "EntityVersion": 1,
+          "ViewId": "e8acad28-ed79-4926-baf8-982cb07effcd"
+        }
+      ],
+      "Net": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "381.00",
+        "CurrencyCode": "SEK"
+      },
+      "Tax": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "0.00",
+        "CurrencyCode": "SEK"
+      },
+      "Gross": {
+        "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+        "DisplayValue": "381.00",
+        "CurrencyCode": "SEK"
+      },
+      "IsAmountEditable": true,
+      "IsTaxEditable": true,
+      "Id": 11241596,
+      "EntityVersion": 2,
+      "ViewId": "cff9f589-4ab7-4f69-b159-47aaab13aa4b"
+    }
+  },
+  "DimensionStrings": [
+    {
+      "$type": "Medius.Enterprise.DTO.Accounting.CodeStringDto, Medius.Enterprise.Common",
+      "AmountInfo": {
+        "$type": "Medius.Enterprise.DTO.Accounting.AmountInfoDto, Medius.Enterprise.Common",
+        "Net": {
+          "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+          "DisplayValue": "381.00",
+          "CurrencyCode": "SEK"
+        },
+        "Tax": {
+          "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+          "DisplayValue": "0",
+          "CurrencyCode": "SEK"
+        },
+        "Gross": {
+          "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+          "DisplayValue": "381.00",
+          "CurrencyCode": "SEK"
+        },
+        "IsAmountEditable": true,
+        "IsTaxEditable": true,
+        "Id": 11241620,
+        "EntityVersion": 1,
+        "ViewId": "5199c06f-62e9-44fa-a2f3-ce7586710e78"
+      },
+      "InvoiceLineNumber": 1,
+      "LineNumber": 1,
+      "Dimensions": {
+        "$type": "Medius.Enterprise.DTO.Accounting.CodingDimensionsDto, Medius.Enterprise.Common",
+        "Dimension1": {
+          "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+          "Value": {
+            "$type": "Medius.Enterprise.DTO.Accounting.DimensionValueDto, Medius.Enterprise.Common",
+            "Id": 3814,
+            "Value": "46100",
+            "Description": "El Taxebundna kostnader -E-"
+          },
+          "IsFixed": false,
+          "IsReadOnly": false,
+          "Errors": [],
+          "Messages": []
+        },
+        "Dimension2": {
+          "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+          "Value": null,
+          "IsFixed": false,
+          "IsReadOnly": false,
+          "Errors": [],
+          "Messages": []
+        },
+        "Dimension3": {
+          "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+          "Value": null,
+          "IsFixed": false,
+          "IsReadOnly": false,
+          "Errors": [],
+          "Messages": []
+        },
+        "Dimension4": {
+          "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+          "Value": null,
+          "IsFixed": true,
+          "IsReadOnly": true,
+          "Errors": [],
+          "Messages": []
+        },
+        "Dimension5": {
+          "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+          "Value": null,
+          "IsFixed": true,
+          "IsReadOnly": true,
+          "Errors": [],
+          "Messages": []
+        },
+        "Dimension6": {
+          "$type": "Medius.Enterprise.DTO.Accounting.DimensionValuePerspectiveDto, Medius.Enterprise.Common",
+          "Value": null,
+          "IsFixed": true,
+          "IsReadOnly": true,
+          "Errors": [],
+          "Messages": []
+        },
+        "Dimension7": null,
+        "Dimension8": null,
+        "Dimension9": null,
+        "Dimension10": null,
+        "Dimension11": null,
+        "Dimension12": null,
+        "FreeTextDimension1": {
+          "$type": "Medius.Enterprise.DTO.Accounting.FreeTextPerspectiveDto, Medius.Enterprise.Common",
+          "Value": null,
+          "IsReadOnly": false,
+          "Errors": [],
+          "Messages": null
+        },
+        "FreeTextDimension2": {
+          "$type": "Medius.Enterprise.DTO.Accounting.FreeTextPerspectiveDto, Medius.Enterprise.Common",
+          "Value": null,
+          "IsReadOnly": false,
+          "Errors": [],
+          "Messages": null
+        },
+        "FreeTextDimension3": {
+          "$type": "Medius.Enterprise.DTO.Accounting.FreeTextPerspectiveDto, Medius.Enterprise.Common",
+          "Value": null,
+          "IsReadOnly": false,
+          "Errors": [],
+          "Messages": null
+        },
+        "FreeTextDimension4": {
+          "$type": "Medius.Enterprise.DTO.Accounting.FreeTextPerspectiveDto, Medius.Enterprise.Common",
+          "Value": null,
+          "IsReadOnly": false,
+          "Errors": [],
+          "Messages": null
+        },
+        "FreeTextDimension5": {
+          "$type": "Medius.Enterprise.DTO.Accounting.FreeTextPerspectiveDto, Medius.Enterprise.Common",
+          "Value": null,
+          "IsReadOnly": false,
+          "Errors": [],
+          "Messages": null
+        }
+      },
+      "IsEditable": true,
+      "IsEnabled": true,
+      "CanRedistributeManually": false,
+      "IsEditApprovedLinesAllowed": false,
+      "AccrualInfo": null,
+      "Tag": null,
+      "TaskItems": [
+        {
+          "$type": "Medius.Enterprise.DTO.Accounting.CodeStringAuthorizationTaskItemPerspectiveDto, Medius.Enterprise.Common",
+          "Id": 2373081,
+          "EntityVersion": 5,
+          "IsApproved": true,
+          "AuthorizedTimestamp": "2019-08-20T18:16:38.803Z",
+          "AuthorizerId": 27929,
+          "AuthorizerName": "Anon",
+          "OnBehalfOfUserId": 0,
+          "OnBehalfOfUserName": "Anon",
+          "IsActive": true,
+          "IsRejected": false,
+          "DistributeTo": {
+            "$type": "Medius.Enterprise.DTO.Accounting.DistributionItemDto, Medius.Enterprise.Common",
+            "Id": 16,
+            "Name": "Slutattestant",
+            "Username": null,
+            "IsRole": true
+          },
+          "ReceivingRole": {
+            "$type": "Medius.Core.DTOs.RoleDto, Medius.Core.Common",
+            "Id": 16,
+            "OwnerId": null,
+            "AssigneeName": "Slutattestant"
+          },
+          "CanApprove": true,
+          "CanReject": true,
+          "CanRedistribute": true,
+          "CanRedistributeApprovedOrRejectedCodeStrings": false,
+          "NoAuthorizerChangesAllowed": false,
+          "CanRemove": true,
+          "TaskItemErrors": [],
+          "CodingErrors": [],
+          "ExceedsLimit": false,
+          "ViewId": "23181301-70dd-48f3-83c9-72076a20ff44",
+          "Amount": {
+            "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+            "DisplayValue": "381.00",
+            "CurrencyCode": "SEK"
+          },
+          "ShouldSkipInHistory": false,
+          "IsDistributedOrDelegatedToCurrentUser": true,
+          "IsLimitApprovedBySystem": false
+        }
+      ],
+      "DeviationViewId": null,
+      "DeliveryLines": [],
+      "Id": 10989725,
+      "EntityVersion": 3,
+      "ViewId": "7f755db3-ba69-4355-949d-da01d6a30404"
+    }
+  ],
+  "CompanyId": 12345,
+  "TransactionCurrencyId": 2,
+  "UseTaxCodes": false,
+  "UseTaxCodesOnHead": false,
+  "UseTwoTaxIndicators": false,
+  "RemainingAmounts": {
+    "$type": "Medius.Enterprise.DTO.Accounting.RemainingAmountsDto, Medius.Enterprise.Common",
+    "CodedNet": {
+      "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+      "DisplayValue": "381.00",
+      "CurrencyCode": "SEK"
+    },
+    "CodedTax": {
+      "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+      "DisplayValue": "0.00",
+      "CurrencyCode": "SEK"
+    },
+    "CodedGross": {
+      "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+      "DisplayValue": "381.00",
+      "CurrencyCode": "SEK"
+    },
+    "RemainingGross": {
+      "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+      "DisplayValue": "0.00",
+      "CurrencyCode": "SEK"
+    },
+    "IsBalanced": true,
+    "TotalRemainingNet": {
+      "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+      "DisplayValue": "0.00",
+      "CurrencyCode": "SEK"
+    },
+    "TotalRemainingTax": {
+      "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+      "DisplayValue": "0.00",
+      "CurrencyCode": "SEK"
+    },
+    "TotalTax": {
+      "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+      "DisplayValue": "0.00",
+      "CurrencyCode": "SEK"
+    },
+    "TotalEnteredTax": {
+      "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+      "DisplayValue": "0.00",
+      "CurrencyCode": "SEK"
+    },
+    "IsTaxBalanced": true,
+    "IsWithinTaxTolerance": false
+  },
+  "IsAuthorizerVisible": true,
+  "IsActionsVisible": true,
+  "IsInvoiceLineNumberVisible": false,
+  "IsApproveAndRejectVisible": true,
+  "IsEditApprovedLinesAllowed": false,
+  "IsRedistributionVisible": false,
+  "NoCodingChangesAllowed": false,
+  "NoTaxCodesChangesAllowed": false,
+  "NoAuthorizerChangesAllowed": false,
+  "TransactionCurrencyCode": "SEK",
+  "TotalRounding": {
+    "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+    "DisplayValue": "0.00",
+    "CurrencyCode": "SEK"
+  },
+  "TotalTax": {
+    "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+    "DisplayValue": "0.00",
+    "CurrencyCode": "SEK"
+  },
+  "TotalNet": {
+    "$type": "Medius.Core.DTOs.AmountDto, Medius.Core.Common",
+    "DisplayValue": "381.00",
+    "CurrencyCode": "SEK"
+  },
+  "TaxTolerance": null,
+  "IsWithinTaxTolerance": false,
+  "SkipCodingRightsDelegation": false,
+  "Id": 3855553,
+  "EntityVersion": 2,
+  "ViewId": "56815e1e-d0cf-4173-919f-c27d7c64b626"
+}
