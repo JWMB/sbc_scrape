@@ -123,7 +123,13 @@ status: res.status,
 body: {bodyConversion}
 }})))
 ";
-
+			if (config.Method.Value == MethodMode.Get.Value && config.Body != null)
+			{
+				var parms = config.Body.GetType().GetProperties().Select(p => new { Key = p.Name, Value = p.GetValue(config.Body, new object[] { }) });
+				if (parms.Any())
+					url += (url.Contains("?") ? "&" : "?") + string.Join("&", parms.Select(o => $"{System.Net.WebUtility.UrlEncode(o.Key)}={System.Net.WebUtility.UrlEncode(o.Value?.ToString() ?? "")}"));
+				config.Body = null;
+			}
 			var body = config.Body == null ? null : JsonConvert.SerializeObject(config.Body);
 
 			string NullOrQuoted(string str) => str == null ? "null" : $"'{str}'";
@@ -180,7 +186,7 @@ fetch('{url}',
 				{ }
 				return new FetchResponse {
 					Body = evaluatedBody != null ? evaluatedBody : dict.GetOrDefault("body", null),
-					Status = dict.GetOrDefault("status", null).ToString(),
+					Status = dict.GetOrDefault("status", null)?.ToString() ?? "N/A",
 					Headers = headers
 				};
 			}
