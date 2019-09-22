@@ -66,10 +66,11 @@ namespace MediusFlowAPI.Models.Comment2
 		{
 			return new Comment.Response
 			{
+				Type = "Medius.Core.Services.Comment, Medius.Core.Common",
 				Author = Author,
 				CreatedDate = CreatedDate,
 				Id = Id,
-				Text = string.Join("\n", TokenizedText.Select(t => t.TokenValue))
+				Text = string.Join("\n", TokenizedText.Select(t => t.TokenValue?.Value))
 			};
 		}
 	}
