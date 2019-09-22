@@ -84,7 +84,7 @@ namespace REPL
 
 			var quitting = false;
 
-			IReadConsole readConsole = new ReadConsoleByChar("> ", new List<string> { "l older", "l old" }); //ReadConsoleSimple("> "); // 
+			IReadConsole readConsole = new ReadConsoleByChar("> ", new List<string> { "l older", "l old" });
 
 			while (!quitting)
 			{
@@ -95,7 +95,7 @@ namespace REPL
 				{
 					var split = line.Split(' ').Cast<object>().ToList();
 					var result = await Evaluate(split, cmds);
-					console.WriteLine(result.Item2.ToString());
+					console.WriteLine(result.Item2?.ToString() ?? "No result.Item2!");
 
 					//Special commands that modify flow:
 					if (result.Item1 is IUpdateCommandList updateCmd)

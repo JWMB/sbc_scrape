@@ -73,22 +73,30 @@ namespace SBCScan
 			var maxNumPeriods = 26;
 
 			DateTime start, end;
-			if (goBackwards)
+			if (minDate != null && maxDate != null)
 			{
-				start = earliest.Add(timespan);
-				end = earliest;
+				start = minDate.Value;
+				end = maxDate.Value;
 			}
 			else
 			{
-				//We need to revisit invoices - those with TaskState = 1 were not finished
-				var nonFinished = alreadyScraped.Where(iv => iv.State == 1);
-				if (nonFinished.Any())
-					start = nonFinished.Min(iv => iv.InvoiceDate);
+				if (goBackwards)
+				{
+					start = earliest.Add(timespan);
+					end = earliest;
+				}
 				else
-					start = alreadyScraped.Max(iv => iv.InvoiceDate);
-				//Also comments may have been updated, so add an additional 15 days back
-				start = start.AddDays(-15);
-				end = start.Add(timespan);
+				{
+					//We need to revisit invoices - those with TaskState = 1 were not finished
+					var nonFinished = alreadyScraped.Where(iv => iv.State == 1);
+					if (nonFinished.Any())
+						start = nonFinished.Min(iv => iv.InvoiceDate);
+					else
+						start = alreadyScraped.Max(iv => iv.InvoiceDate);
+					//Also comments may have been updated, so add an additional 15 days back
+					start = start.AddDays(-15);
+					end = start.Add(timespan);
+				}
 			}
 
 			var skippedIds = new List<long>();

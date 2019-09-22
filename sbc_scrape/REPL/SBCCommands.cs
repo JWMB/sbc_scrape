@@ -195,7 +195,7 @@ namespace SBCScan.REPL
 			for (int i = dates.Count; i < 2; i++)
 				dates.Add(null);
 
-			var scraped = await main.MediusFlow.Scrape(dates[0], dates[1], saveToDisk: false, goBackwards: false);
+			var scraped = await main.MediusFlow.Scrape(dates[0], dates[1], saveToDisk: true, goBackwards: false);
 			return scraped.Select(iv => $"{iv.Id} {iv.TaskId} {iv.InvoiceDate} {iv.Supplier} {iv.GrossAmount} {iv.AccountId} {iv.AccountName}");
 		}
 	}
