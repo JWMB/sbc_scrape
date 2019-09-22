@@ -74,10 +74,16 @@ namespace MediusFlowAPI
 			var body = new
 			{
 				entityType = "Medius.ExpenseInvoice.Entities.ExpenseInvoice",
-				entityViewId = guid.ToString()
+				entityViewId = guid.ToString(),
+				_ = DateTime.Now.ToUnixTimestamp()
 			};
-			var result = await Request(baseAddress + "Rpc/CommentsManager/GetComments", "POST", body);
-			return Models.Comment.Response.FromJson(JsonConvert.SerializeObject(result.Body));
+			//var result = await Request(baseAddress + "Rpc/CommentsManager/GetComments", "POST", body);
+			//return Models.Comment.Response.FromJson(JsonConvert.SerializeObject(result.Body));
+			//Backend/Rest/comments/?entityViewId=1b48d5d8-6788-456a-9397-ab9643a5640e&entityType=Medius.ExpenseInvoice.Entities.ExpenseInvoice&_=1569073939309
+			var result = await Request(baseAddress + "Rest/comments/?", "GET", body);
+
+			var comments2 =  Models.Comment2.Response.FromJson(JsonConvert.SerializeObject(result.Body));
+			return comments2.Select(o => o.ToCommentResponse()).ToArray();
 		}
 
 		public async Task<Models.TaskHistory.Response[]> GetTaskHistoryForViewId(Guid guid)

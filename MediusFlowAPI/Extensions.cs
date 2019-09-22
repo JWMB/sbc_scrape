@@ -17,5 +17,10 @@ namespace MediusFlowAPI
 			var m = rxMediusDate.Match(str);
 			return m.Success && m.Groups.Count > 1 ? (DateTime?)new DateTime(1970, 1, 1).AddMilliseconds(ulong.Parse(m.Groups[1].Value)) : null;
 		}
+
+		public static long ToUnixTimestamp(this DateTime datetime)
+		{
+			return (long)(datetime - new DateTime(1970, 1, 1)).TotalMilliseconds;
+		}
 	}
 }
