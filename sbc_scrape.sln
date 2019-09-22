@@ -17,6 +17,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediusFlowAPI.TestsOld", "M
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediusFlowAPI.Tests", "MediusFlowAPI.Tests\MediusFlowAPI.Tests.csproj", "{5288786A-A04A-4AA8-910D-E882077305E9}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scrape.Main.Tests", "Scrape.Main.Tests\Scrape.Main.Tests.csproj", "{2E456260-38A8-4422-A5B4-DB6103428C53}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -51,6 +53,10 @@ Global
 		{5288786A-A04A-4AA8-910D-E882077305E9}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{5288786A-A04A-4AA8-910D-E882077305E9}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{5288786A-A04A-4AA8-910D-E882077305E9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2E456260-38A8-4422-A5B4-DB6103428C53}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2E456260-38A8-4422-A5B4-DB6103428C53}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2E456260-38A8-4422-A5B4-DB6103428C53}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2E456260-38A8-4422-A5B4-DB6103428C53}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
