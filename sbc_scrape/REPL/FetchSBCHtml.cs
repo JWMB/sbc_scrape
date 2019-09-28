@@ -4,6 +4,7 @@ using SBCScan;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -56,9 +57,30 @@ namespace SBCScan.REPL
 					end = ParseDate(parms[2].ToString()) ?? end;
 			}
 
-			var src = GetHtmlSourceInstance(parms[0] as string);
+			var sources = new List<HtmlSource>();
+			if (parms.Count > 0)
+				sources.Add(GetHtmlSourceInstance(parms[0] as string));
+			else
+				sources.AddRange(new HtmlSource[] { new BankTransactionSource(), new ReceiptsSource(), new InvoiceSource() });
 
-			return await Execute(main, src, start, end);
+			var exceptions = new List<Exception>();
+			var result = new List<List<object>>();
+			foreach (var src in sources)
+			{
+				try
+				{
+					result.Add(await Execute(main, src, start, end));
+				}
+				catch (Exception ex)
+				{
+					exceptions.Add(ex);
+				}
+			}
+
+			if (exceptions.Any())
+				throw new AggregateException(exceptions);
+
+			return result;
 		}
 
 		public static async Task<List<object>> Execute(Main main, HtmlSource src, DateTime start, DateTime end)

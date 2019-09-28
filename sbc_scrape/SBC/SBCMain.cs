@@ -76,7 +76,9 @@ namespace SBCScan.SBC
 						elOption.Click();
 				}
 				catch (Exception ex)
-				{ }
+				{
+					throw new Exception($"Unable to locate Select/Option {optionText} ({selectIdContains} for {urlPath})", ex);
+				}
 			}
 
 			ClickSelectOption("PeriodFrom", monthFrom.ToString());
