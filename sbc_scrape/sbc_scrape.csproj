@@ -25,6 +25,7 @@
     <ProjectReference Include="..\REPL\REPL.csproj" />
     <ProjectReference Include="..\Scrape.IO\Scrape.IO.csproj" />
     <ProjectReference Include="..\Scraper.IO.Selenium\Scrape.IO.Selenium.csproj" />
+    <ProjectReference Include="..\SIE\SIE.csproj" />
   </ItemGroup>
 
   <ItemGroup>

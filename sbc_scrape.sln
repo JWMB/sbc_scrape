@@ -15,9 +15,13 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Scrape.IO.Selenium", "Scrap
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediusFlowAPI.TestsOld", "MediusFlowAPI.Tests\MediusFlowAPI.TestsOld.csproj", "{1439F807-CE53-440B-AEF9-A1D67A33B2C7}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "MediusFlowAPI.Tests", "MediusFlowAPI.Tests\MediusFlowAPI.Tests.csproj", "{5288786A-A04A-4AA8-910D-E882077305E9}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "MediusFlowAPI.Tests", "MediusFlowAPI.Tests\MediusFlowAPI.Tests.csproj", "{5288786A-A04A-4AA8-910D-E882077305E9}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Scrape.Main.Tests", "Scrape.Main.Tests\Scrape.Main.Tests.csproj", "{2E456260-38A8-4422-A5B4-DB6103428C53}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Scrape.Main.Tests", "Scrape.Main.Tests\Scrape.Main.Tests.csproj", "{2E456260-38A8-4422-A5B4-DB6103428C53}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SIE", "SIE\SIE.csproj", "{39228676-ACDC-43E1-853F-1486A0EC6493}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SIE.Tests", "SIE.Tests\SIE.Tests.csproj", "{E55799E1-011B-455D-B0D3-33EED75D1E68}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -57,6 +61,14 @@ Global
 		{2E456260-38A8-4422-A5B4-DB6103428C53}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{2E456260-38A8-4422-A5B4-DB6103428C53}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{2E456260-38A8-4422-A5B4-DB6103428C53}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39228676-ACDC-43E1-853F-1486A0EC6493}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39228676-ACDC-43E1-853F-1486A0EC6493}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39228676-ACDC-43E1-853F-1486A0EC6493}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39228676-ACDC-43E1-853F-1486A0EC6493}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E55799E1-011B-455D-B0D3-33EED75D1E68}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E55799E1-011B-455D-B0D3-33EED75D1E68}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E55799E1-011B-455D-B0D3-33EED75D1E68}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E55799E1-011B-455D-B0D3-33EED75D1E68}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
