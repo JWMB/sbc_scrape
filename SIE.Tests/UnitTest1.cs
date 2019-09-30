@@ -16,8 +16,9 @@ namespace SIE.Tests
 			var filterVoucherTypes = "AV BS FAS".Split(' ').ToList();
 			var vouchers = root.Children.Where(o => o is VoucherRecord vr && !filterVoucherTypes.Contains(vr.VoucherTypeCode))
 				.Cast<VoucherRecord>().ToList();
-			bool filterAccountIds(int accountId) => (accountId / 10000 != 1) || accountId == 19420 || accountId == 16300;
-			var str1 = string.Join("\n", vouchers.OrderBy(o => o.Date).Select(o => o.ToHierarchicalString()));
+			bool filterAccountIds(int accountId) => ((accountId / 10000 != 1) || accountId == 19420 || accountId == 16300) && accountId != 27180 && accountId != 27300;
+			var str1 = string.Join("\n", vouchers.OrderBy(o => o.Date)
+				.Select(o => o.ToString() + "\n" + string.Join("\n", o.Transactions.Where(t => filterAccountIds(t.AccountId)).Select(t => t.ToString()))));
 			var str = root.ToHierarchicalString();
 		}
 

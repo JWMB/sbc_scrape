@@ -208,16 +208,25 @@ namespace SIE
 		public string Unknown { get; set; }
 		public decimal Amount { get; set; }
 		public LocalDate Date { get; set; }
-		public string Company { get; set; }
+		public string CompanyName { get; set; }
+		public string CompanyId { get; set; }
 		public override void Read(string[] cells)
 		{
 			AccountId = int.Parse(cells[1]);
 			Unknown = cells[2];
 			Amount = ParseDecimal(cells[3]);
 			Date = ParseDate(cells[4]);
-			Company = cells[5].Trim('"');
+			CompanyName = cells[5].Trim('"');
+			var rx = new Regex(@"(\d+)(?::)(.+)"); //"12345:abcde"
+			var m = rx.Match(CompanyName);
+			if (m.Success)
+			{
+				CompanyId = m.Groups[1].Value;
+				CompanyName = m.Groups[2].Value;
+			}
+
 		}
-		public override string ToString() => $"{Tag} {AccountId} {Unknown} {Amount} {FormatDate(Date)} {Company}";
+		public override string ToString() => $"{Tag} {AccountId} {Unknown} {Amount} {FormatDate(Date)} {CompanyId}{(string.IsNullOrEmpty(CompanyId) ? "" : ":")}{CompanyName}";
 	}
 
 
