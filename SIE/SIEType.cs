@@ -4,11 +4,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace SIE
 {
-	public abstract class SIEType
+	public abstract class SIERecord
 	{
 		public abstract string Tag { get; }
 		public abstract void Read(string[] cells);
@@ -36,7 +37,7 @@ namespace SIE
 			return split.ToArray();
 		}
 
-		public static async Task<Root> Read(string path)
+		public static async Task<RootRecord> Read(string path)
 		{
 			Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 			var encoding = Encoding.GetEncoding(865); // "IBM865");
@@ -46,19 +47,19 @@ namespace SIE
 			}
 		}
 
-		public static async Task<Root> Read(StreamReader sr)
+		public static async Task<RootRecord> Read(StreamReader sr)
 		{
-			var types = typeof(SIEType).Assembly.GetTypes().Where(t => typeof(SIEType).IsAssignableFrom(t)).ToList();
-			var excludeTypes = new[] { typeof(SIEType), typeof(Root), typeof(Unknown) };
+			var types = typeof(SIERecord).Assembly.GetTypes().Where(t => typeof(SIERecord).IsAssignableFrom(t)).ToList();
+			var excludeTypes = new[] { typeof(SIERecord), typeof(RootRecord), typeof(UnknownRecord) };
 			types = types.Except(excludeTypes).ToList();
 
-			SIEType Construct(Type type) => type.GetConstructor(new Type[] { }).Invoke(new object[] { }) as SIEType;
+			SIERecord Construct(Type type) => type.GetConstructor(new Type[] { }).Invoke(new object[] { }) as SIERecord;
 			var tagMap = types.Select(o => new { Tag = Construct(o).Tag, Type = o }).ToDictionary(o => o.Tag, o => o.Type);
 
-			var hierarchy = new Stack<SIEType>();
-			var root = new Root();
+			var hierarchy = new Stack<SIERecord>();
+			var root = new RootRecord();
 			hierarchy.Push(root);
-			SIEType current = null;
+			SIERecord current = null;
 			while (!sr.EndOfStream)
 			{
 				var line = (await sr.ReadLineAsync()).Trim();
@@ -78,7 +79,7 @@ namespace SIE
 					{
 						var tag = cells[0].Substring(1);
 						if (!tagMap.TryGetValue(tag, out var type))
-							type = typeof(Unknown);
+							type = typeof(UnknownRecord);
 						var instance = Construct(type);
 						try
 						{
@@ -101,9 +102,9 @@ namespace SIE
 			var sbResult = new StringBuilder();
 			RecBuild(this, sbResult, "");
 
-			void RecBuild(SIEType item, StringBuilder sb, string indent)
+			void RecBuild(SIERecord item, StringBuilder sb, string indent)
 			{
-				if (!(item is Root))
+				if (!(item is RootRecord))
 				{
 					sb.Append(indent);
 					sb.Append(item.ToString());
@@ -126,19 +127,19 @@ namespace SIE
 
 	public interface IWithChildren
 	{
-		List<SIEType> Children { get; }
+		List<SIERecord> Children { get; }
 	}
 
-	public class Root : SIEType, IWithChildren
+	public class RootRecord : SIERecord, IWithChildren
 	{
-		public List<SIEType> Children { get; set; } = new List<SIEType>();
+		public List<SIERecord> Children { get; set; } = new List<SIERecord>();
 		public override string Tag => "ROOT";
 		public override void Read(string[] cells)
 		{
 		}
 	}
 
-	public class Unknown : SIEType
+	public class UnknownRecord : SIERecord
 	{
 		public string[] Data { get; set; }
 		public override string Tag { get => ""; }
@@ -152,39 +153,56 @@ namespace SIE
 		}
 	}
 
-	public class Voucher : SIEType, IWithChildren
+	public class VoucherRecord : SIERecord, IWithChildren
 	{
 		//#VER AR6297 1 20190210 ""
 		//{
 		//	#TRANS 27180 {} -2047.00 20190210 "Skatteverket"
 		//}
+		private static Regex rxType = new Regex(@"(\D+)(\d+)");
+		private static Dictionary<string, string> codeToName = new Dictionary<string, string> {
+			{ "AR", "AR" },
+			{ "AV", "AV" },
+			{ "BS", "BS" },
+			{ "CR", "CR" },
+			{ "FAS", "FAS" },
+			{ "LON", "Salary" },
+			{ "LR", "LR" },
+			{ "MA", "Anulled" },
+			{ "PE", "Accrual" },
+			{ "SLR", "SLR" },
+		};
 
-		public string Id { get; set; }
+
+		public string VoucherTypeCode { get; set; }
+		public string VoucherForId { get; set; }
 		public int Unknown1 { get; set; }
 		public LocalDate Date { get; set; }
 		public string Unknown2 { get; set; }
 
 		public override string Tag { get => "VER"; }
 
-		public List<SIEType> Children { get; set; } = new List<SIEType>();
+		public List<SIERecord> Children { get; set; } = new List<SIERecord>();
 
+		public List<TransactionRecord> Transactions { get => Children.Where(o => o is TransactionRecord).Cast<TransactionRecord>().ToList(); }
 		public override void Read(string[] cells)
 		{
-			Id = cells[1];
+			var match = rxType.Match(cells[1]);
+			VoucherTypeCode = match?.Groups[1].Value ?? "N/A";
+			VoucherForId = match?.Groups[2].Value ?? "";
 			Unknown1 = int.Parse(cells[2]);
 			Date = ParseDate(cells[3]);
 			Unknown2 = cells[4].Trim('"');
 		}
 		public override string ToString()
 		{
-			return $"{Tag} {Id} {Unknown1} {FormatDate(Date)} {Unknown2}";
+			return $"{Tag} {VoucherTypeCode}{VoucherForId} {Unknown1} {FormatDate(Date)} {Unknown2}";
 		}
 	}
 
-	public class Transaction : SIEType
+	public class TransactionRecord : SIERecord
 	{
 		// #TRANS 27180 {} -2047.00 20190210 "Skatteverket"
-
 		public override string Tag { get => "TRANS"; }
 		public int AccountId { get; set; }
 		public string Unknown { get; set; }
@@ -199,11 +217,11 @@ namespace SIE
 			Date = ParseDate(cells[4]);
 			Company = cells[5].Trim('"');
 		}
-		public override string ToString() => $"{Tag }{AccountId} {Unknown} {Amount} {FormatDate(Date)} {Company}";
+		public override string ToString() => $"{Tag} {AccountId} {Unknown} {Amount} {FormatDate(Date)} {Company}";
 	}
 
 
-	public class Account : SIEType
+	public class Account : SIERecord
 	{
 		// #KONTO 84710 "Räntebidrag"
 		public override string Tag { get => "KONTO"; }
