@@ -139,25 +139,60 @@ namespace sbc_scrape
 				})
 			);
 
-			//Expensive permutations last (with less data)
-			PerformSearch((searchTx, invrecByDateX) =>
-				searchTx.Where(o => o.Reference == "6091 LB32").Select(tx => {
-					if (invrecByDateX.TryGetValue(tx.AccountingDate, out var invrecsForDate)) {
-						if (invrecsForDate.Count > 1)
+
+			var backup = new List<InvoiceAndOrReceipt>();
+			for (int pass = 0; pass < 3; pass++)
+			{
+				//Expensive permutations last (with less data)
+				PerformSearch((searchTx, invrecByDateX) =>
+					searchTx.Where(o => o.Reference == "6091 LB32").Select(tx =>
+					{
+						if (invrecByDateX.TryGetValue(tx.AccountingDate, out var invrecsForDate))
 						{
-							//Remove (some) combination of invoices/receipts to see if we get a match
-							for (int numToRemove = 0; numToRemove <= Math.Min(4, invrecsForDate.Count - 2); numToRemove++)
-								foreach (var list in GenerateCombos(invrecsForDate, numToRemove))
-								{
-									var tmp = invrecsForDate.Except(list);
-									if (tmp.Sum(o => o.Amount) == -tx.Amount)
-										return new MatchedTransaction { Transaction = tx, InvRecs = tmp.ToList() };
-								}
+							if (invrecsForDate.Count > 1)
+							{
+								//Remove (some) combination of invoices/receipts to see if we get a match
+								for (int numToRemove = 0; numToRemove <= Math.Min(4, invrecsForDate.Count - 2); numToRemove++)
+									foreach (var list in GenerateCombos(invrecsForDate, numToRemove))
+									{
+										var tmp = invrecsForDate.Except(list);
+										if (tmp.Sum(o => o.Amount) == -tx.Amount)
+											return new MatchedTransaction { Transaction = tx, InvRecs = tmp.ToList() };
+									}
+							}
 						}
-					}
-					return null;
-				})
-			);
+						return null;
+					})
+				);
+				//TODO: this is sooooo ugly! Refactor!
+				if (pass == 0)
+				{
+					//NOTE: modifying searchInvRecs here, uses Invoices only
+					//(we have many duplicated Receipts/Invoices b/c Supplier name formatting can be very different
+					//restored after second pass
+					backup = searchInvRecs.ToList(); //.Where(o => o.Invoice == null).ToList();
+					searchInvRecs = searchInvRecs.Where(o => o.Invoice != null).Select(o => new InvoiceAndOrReceipt(o.Invoice, null)).ToList();
+					//backup = searchInvRecs.Where(o => o.Receipt == null).ToList();
+					//searchInvRecs = searchInvRecs.Where(o => o.Receipt != null).Select(o => new InvoiceAndOrReceipt(null, o.Receipt)).ToList();
+				}
+				else if (pass == 1)
+				{
+					var remainingAfterMatch = searchInvRecs.Select(o => o.Invoice).ToList();
+					var notMatched = backup.Where(o => o.Invoice == null || remainingAfterMatch.Contains(o.Invoice));
+					searchInvRecs = notMatched.ToList();
+
+					backup = searchInvRecs.ToList();
+					searchInvRecs = searchInvRecs.Where(o => o.Receipt != null).Select(o => new InvoiceAndOrReceipt(null, o.Receipt)).ToList();
+				}
+				else
+				{
+					var remainingAfterMatch = searchInvRecs.Select(o => o.Receipt).ToList();
+					var notMatched = backup.Where(o => o.Receipt == null || remainingAfterMatch.Contains(o.Receipt));
+					searchInvRecs = notMatched.ToList();
+
+				}
+			}
+
 			unmatched = (transactions: searchTransactions, invoicesAndReceipts: searchInvRecs);
 
 			return allMatchedTransactions;
