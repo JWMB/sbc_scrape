@@ -103,7 +103,7 @@ namespace SBCScan.REPL
 				.Concat(unmatched.transactions.Select(o => new JoinedRow
 				{
 					Date = o.AccountingDate,
-					Missing = "I/R",
+					Missing = o.Amount > 0 ? "" : "I/R", //When incoming (amount > 0), there is no invoice/receipt
 					Amount = o.Amount,
 					Supplier = null,
 					InvoiceId = null,

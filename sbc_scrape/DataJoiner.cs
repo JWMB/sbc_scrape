@@ -40,6 +40,7 @@ namespace sbc_scrape
 				new Comparable.EqualityComparer(2, false, new Dictionary<string, string>{ { "SBC SVERIGES BOSTADSRÄTTSCENTRUM AB", "SBC Sv Bostadsrättscentrum" } }),
 			};
 
+			//First try to match single invoices with transactions:
 			var allJoined = new List<InvoiceAndOrReceipt>();
 			foreach (var comparer in passes)
 			{
@@ -78,7 +79,7 @@ namespace sbc_scrape
 				searchInvRecs = searchInvRecs.Except(matchedTransactionsX.SelectMany(o => o.InvRecs)).ToList();
 			}
 
-			//Match LB32 transactions with receipts/invoices for that date:
+			//Match LB32 transactions with multiple receipts/invoices for that date:
 			PerformSearch((searchTx, invrecByDateX) =>
 				searchTx.Where(o => o.Reference == "6091 LB32").Select(tx => {
 					if (invrecByDateX.TryGetValue(tx.AccountingDate, out var invrecsForDate)) {
@@ -142,10 +143,10 @@ namespace sbc_scrape
 			PerformSearch((searchTx, invrecByDateX) =>
 				searchTx.Where(o => o.Reference == "6091 LB32").Select(tx => {
 					if (invrecByDateX.TryGetValue(tx.AccountingDate, out var invrecsForDate)) {
-						if (invrecsForDate.Count > 2)
+						if (invrecsForDate.Count > 1)
 						{
 							//Remove (some) combination of invoices/receipts to see if we get a match
-							for (int numToRemove = 2; numToRemove < Math.Min(4, invrecsForDate.Count); numToRemove++)
+							for (int numToRemove = 0; numToRemove <= Math.Min(4, invrecsForDate.Count - 2); numToRemove++)
 								foreach (var list in GenerateCombos(invrecsForDate, numToRemove))
 								{
 									var tmp = invrecsForDate.Except(list);
@@ -164,32 +165,47 @@ namespace sbc_scrape
 
 		public static IEnumerable<List<T>> GenerateCombos<T>(List<T> items, int numItems)
 		{
-			var indices = new List<int>();
-			for (int i = 0; i < numItems; i++)
-				indices.Add(i);
-			var lastIndex = numItems - 1;
-			while (true)
+			if (numItems < 1)
 			{
-				yield return indices.Select(i => items[i]).ToList();
-				if (indices[lastIndex] < items.Count - 1)
-					indices[lastIndex]++;
-				else
+				yield return new List<T>();
+			}
+			else if (numItems == items.Count)
+			{
+				yield return items;
+			}
+			else
+			{
+				var indices = new List<int>();
+				for (int i = 0; i < numItems; i++)
+					indices.Add(i);
+				var lastIndex = numItems - 1;
+				while (true)
 				{
-					var indexToMove = lastIndex;
-					while (true) //Find which index to reset to:
+					yield return indices.Select(i => items[i]).ToList();
+					if (indices[lastIndex] < items.Count - 1)
+						indices[lastIndex]++;
+					else
 					{
-						indexToMove--;
-						var start = indices[indexToMove];
-						if (start < indices[indexToMove + 1] - 1)
+						var indexToMove = lastIndex;
+						while (true) //Find which index to reset to:
+						{
+							indexToMove--;
+							if (indexToMove < 0)
+								break;
+							var start = indices[indexToMove];
+							if (start < indices[indexToMove + 1] - 1)
+								break;
+						}
+						if (indexToMove < 0)
 							break;
-					}
-					var startX = indices[indexToMove];
-					for (int i = indexToMove; i < numItems; i++)
-						indices[i] = startX + i - indexToMove + 1;
-					if (indices[0] == items.Count - numItems)
-					{
-						yield return indices.Select(i => items[i]).ToList();
-						break;
+						var startX = indices[indexToMove];
+						for (int i = indexToMove; i < numItems; i++)
+							indices[i] = startX + i - indexToMove + 1;
+						if (indices[0] == items.Count - numItems)
+						{
+							yield return indices.Select(i => items[i]).ToList();
+							break;
+						}
 					}
 				}
 			}
