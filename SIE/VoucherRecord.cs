@@ -160,21 +160,23 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 
 		public class MatchSLRResult
 		{
-			public List<(VoucherRecord slr, VoucherRecord other)> Matched { get; set; }
-			public List<string> Ambiguous { get; set; }
-			public List<VoucherRecord> Unmatched { get; set; }
+			public List<(VoucherRecord slr, VoucherRecord other)> Matched { get; set; } = new List<(VoucherRecord slr, VoucherRecord other)>();
+			public List<string> Ambiguous { get; set; } = new List<string>();
+			public List<VoucherRecord> UnmatchedSLR { get; set; } = new List<VoucherRecord>();
+			public List<VoucherRecord> UnmatchedOther { get; set; } = new List<VoucherRecord>();
 		}
 
-		public static MatchSLRResult MatchSLRVouchers(IEnumerable<VoucherRecord> vouchers)
+		public static VoucherType[] DefaultIgnoreVoucherTypes = new VoucherType[] { VoucherType.AV, VoucherType.BS, VoucherType.FAS, VoucherType.Anulled };
+		public static MatchSLRResult MatchSLRVouchers(IEnumerable<VoucherRecord> vouchers, IEnumerable<VoucherType> filterVoucherTypes = null)
 		{
-			VoucherRecord.NormalizeCompanyNames(vouchers);
-			var groupedByCompany = vouchers.GroupBy(o => o.Transactions.First().CompanyName).ToDictionary(o => o.Key, o => o.ToList());
-			//var sortedNames = grouped.Keys.OrderBy(o => o).ToList();
-			var matchedVouchers = new List<(VoucherRecord slr, VoucherRecord other)>();
-			var dbg = "";
-			var ambiguousMatches = new List<string>();
-			var unmatched = new List<VoucherRecord>();
+			if (filterVoucherTypes != null)
+				vouchers = vouchers.Where(vr => !filterVoucherTypes.Contains(vr.VoucherType));
 
+			var result = new MatchSLRResult();
+
+			NormalizeCompanyNames(vouchers);
+			var groupedByCompany = vouchers.GroupBy(o => o.Transactions.First().CompanyName).ToDictionary(o => o.Key, o => o.ToList());
+			//var dbg = "";
 			foreach (var kv in groupedByCompany)
 			{
 				var slrs = kv.Value.Where(o => o.VoucherType == VoucherType.SLR);
@@ -194,41 +196,20 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 								.OrderBy(o => o.Date).ToList();
 							if (hits.Count() == 0)
 							{
-								unmatched.Add(slr);
+								result.UnmatchedSLR.Add(slr);
 								continue;
 							}
 							else if (hits.Count() > 1)
 							{
-								ambiguousMatches.Add(slr.ToHierarchicalString() + " " + string.Join("\n", hits.Select(o => o.ToHierarchicalString())));
+								result.Ambiguous.Add(slr.ToHierarchicalString() + " " + string.Join("\n", hits.Select(o => o.ToHierarchicalString())));
 								hits = hits.Take(1);
 							}
 						}
-						//if (hits.Count() > 1)
-						//{
-						//	//TODO: something strange here
-						//	hits = hits.Take(1);
-						//	ambiguousMatches.Add(slr.ToHierarchicalString() + " " + string.Join("\n", hits.Select(o => o.ToHierarchicalString())));
-						//}
-						//else //Look for those registered later on:
-						//{
-						//	hits = list.Where(o => o.Date > slr.Date && Period.Between(slr.Date, o.Date, PeriodUnits.Days).Days < 35).ToList();
-						//	if (hits.Count() > 1)
-						//	{
-
-						//		ambiguousMatches.Add(slr.ToHierarchicalString() + " " + string.Join("\n", hits.Select(o => o.ToHierarchicalString())));
-						//		continue;
-						//	}
-						//	else if (hits.Count() == 0)
-						//	{
-						//		unmatched.Add(slr);
-						//		continue;
-						//	}
-						//}
 						if (list.Count == 0 || hits.Count() > 1)
 						{ }
 						var hit = hits.Single();
 						list.Remove(hit);
-						matchedVouchers.Add((slr, hit));
+						result.Matched.Add((slr, hit));
 					}
 				}
 
@@ -236,9 +217,7 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 				//{
 				//	dbg += $"-- {kv.Key}\n";
 				//	foreach (var grp in byAmount)
-				//	{
 				//		dbg += $"- {grp.Key}\n" + string.Join("\n", grp.Value.Select(o => PrintVoucher(o))) + "\n";
-				//	}
 				//	dbg += $"\n\n";
 				//}
 				decimal FindRelevantAmount(IEnumerable<TransactionRecord> txs)
@@ -246,8 +225,9 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 					return txs.Select(o => Math.Abs(o.Amount)).Max();
 				}
 			}
+			result.UnmatchedOther = vouchers.Where(o => o.VoucherType != VoucherType.SLR).Except(result.Matched.Select(o => o.other)).ToList();
 
-			return new MatchSLRResult { Matched = matchedVouchers, Unmatched = unmatched, Ambiguous = ambiguousMatches };
+			return result;
 		}
 	}
 

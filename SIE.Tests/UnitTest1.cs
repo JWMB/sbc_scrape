@@ -15,11 +15,7 @@ namespace SIE.Tests
 		{
 			var path = @"C:\Users\jonas\source\repos\sbc_scrape\sbc_scrape\scraped\SIE\output_2016.se"; //output_20190929
 			var root = await SIERecord.Read(path);
-			var filterVoucherTypes = "AV BS FAS MA".Split(' ').ToList();
-			var vouchers = root.Children.Where(o => o is VoucherRecord vr && !filterVoucherTypes.Contains(vr.VoucherTypeCode))
-				.Cast<VoucherRecord>().ToList();
-
-			var matchResult = VoucherRecord.MatchSLRVouchers(vouchers);
+			var matchResult = VoucherRecord.MatchSLRVouchers(root.Children.Where(o => o is VoucherRecord).Cast<VoucherRecord>(), VoucherRecord.DefaultIgnoreVoucherTypes);
 
 			var annoyingAccountIds = new[] { 24400, 26410 }.ToList();
 			Func<IEnumerable<TransactionRecord>, IEnumerable<TransactionRecord>> txFilter = txs =>
@@ -27,9 +23,20 @@ namespace SIE.Tests
 
 			var multiAccount = matchResult.Matched.Where(mv => txFilter(mv.slr.Transactions).Count() > 1);
 			//var multiAccount = matchedVouchers.Where(mv => TransactionRecord.PruneCorrections(mv.slr.Transactions).Select(t => t.AccountId).Except(new[] { 24400, 26410 }).Count() > 1);
-			var dbg2 = string.Join("\n\n", matchResult.Matched.Select(mv =>
-				$"{PrintVoucher(mv.slr, txFilter)}\n{PrintVoucher(mv.other, txFilter)}"));
+			var dbg2 = string.Join("\n\n", matchResult.Matched.OrderBy(o => o.other.Date)
+				.Select(mv => $"{PrintVoucher(mv.slr, txFilter)}\n{PrintVoucher(mv.other, txFilter)}"));
 
+			var cc = matchResult.Matched
+				.Select(o => new {
+					o.other.Date,
+					txFilter(o.slr.Transactions).First().Amount,
+					txFilter(o.slr.Transactions).First().AccountId,
+					txFilter(o.slr.Transactions).First().CompanyName,
+				})
+				.Concat(matchResult.UnmatchedOther
+				.Select(o => new { o.Date, txFilter(o.Transactions).First().Amount, AccountId = 0, txFilter(o.Transactions).First().CompanyName }));
+			cc = cc.OrderBy(o => o.Date);
+			var dbg3 = string.Join("\n", cc.Select(o => $"{o.Date.AtMidnight().ToDateTimeUnspecified().ToString("yyyy-MM-dd")}\t{o.Amount}\t{o.AccountId}\t{o.CompanyName}"));
 			//bool filterAccountIds(int accountId) => ((accountId / 10000 != 1) || accountId == 19420 || accountId == 16300) && accountId != 27180 && accountId != 27300;
 			var str = root.ToHierarchicalString();
 
@@ -41,14 +48,11 @@ namespace SIE.Tests
 			}
 		}
 
-
-
 		[Fact]
-		public void Test2()
+		public void ParseLine()
 		{
 			var items = SIERecord.ParseLine("1 2 \"string num 1\" asdd \"string num 2 !\" item");
 			Assert.Equal(6, items.Length);
 		}
-
 	}
 }
