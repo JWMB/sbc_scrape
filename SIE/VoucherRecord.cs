@@ -157,6 +157,98 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 					o.CompanyName = longest;
 			});
 		}
+
+		public class MatchSLRResult
+		{
+			public List<(VoucherRecord slr, VoucherRecord other)> Matched { get; set; }
+			public List<string> Ambiguous { get; set; }
+			public List<VoucherRecord> Unmatched { get; set; }
+		}
+
+		public static MatchSLRResult MatchSLRVouchers(IEnumerable<VoucherRecord> vouchers)
+		{
+			VoucherRecord.NormalizeCompanyNames(vouchers);
+			var groupedByCompany = vouchers.GroupBy(o => o.Transactions.First().CompanyName).ToDictionary(o => o.Key, o => o.ToList());
+			//var sortedNames = grouped.Keys.OrderBy(o => o).ToList();
+			var matchedVouchers = new List<(VoucherRecord slr, VoucherRecord other)>();
+			var dbg = "";
+			var ambiguousMatches = new List<string>();
+			var unmatched = new List<VoucherRecord>();
+
+			foreach (var kv in groupedByCompany)
+			{
+				var slrs = kv.Value.Where(o => o.VoucherType == VoucherType.SLR);
+				var byAmount = kv.Value.Where(o => o.VoucherType != VoucherType.SLR)
+					.GroupBy(o => FindRelevantAmount(o.Transactions)).ToDictionary(o => o.Key, o => o.ToList());
+
+				foreach (var slr in slrs)
+				{
+					var amount = FindRelevantAmount(slr.Transactions);
+					if (byAmount.TryGetValue(amount, out var list))
+					{
+						//First look by exact date
+						var hits = list.Where(o => o.Date == slr.Date);
+						if (hits.Count() != 1)
+						{
+							hits = list.Where(o => o.Date > slr.Date && Period.Between(slr.Date, o.Date, PeriodUnits.Days).Days < 35)
+								.OrderBy(o => o.Date).ToList();
+							if (hits.Count() == 0)
+							{
+								unmatched.Add(slr);
+								continue;
+							}
+							else if (hits.Count() > 1)
+							{
+								ambiguousMatches.Add(slr.ToHierarchicalString() + " " + string.Join("\n", hits.Select(o => o.ToHierarchicalString())));
+								hits = hits.Take(1);
+							}
+						}
+						//if (hits.Count() > 1)
+						//{
+						//	//TODO: something strange here
+						//	hits = hits.Take(1);
+						//	ambiguousMatches.Add(slr.ToHierarchicalString() + " " + string.Join("\n", hits.Select(o => o.ToHierarchicalString())));
+						//}
+						//else //Look for those registered later on:
+						//{
+						//	hits = list.Where(o => o.Date > slr.Date && Period.Between(slr.Date, o.Date, PeriodUnits.Days).Days < 35).ToList();
+						//	if (hits.Count() > 1)
+						//	{
+
+						//		ambiguousMatches.Add(slr.ToHierarchicalString() + " " + string.Join("\n", hits.Select(o => o.ToHierarchicalString())));
+						//		continue;
+						//	}
+						//	else if (hits.Count() == 0)
+						//	{
+						//		unmatched.Add(slr);
+						//		continue;
+						//	}
+						//}
+						if (list.Count == 0 || hits.Count() > 1)
+						{ }
+						var hit = hits.Single();
+						list.Remove(hit);
+						matchedVouchers.Add((slr, hit));
+					}
+				}
+
+				//if (byAmount.Count() > 1)
+				//{
+				//	dbg += $"-- {kv.Key}\n";
+				//	foreach (var grp in byAmount)
+				//	{
+				//		dbg += $"- {grp.Key}\n" + string.Join("\n", grp.Value.Select(o => PrintVoucher(o))) + "\n";
+				//	}
+				//	dbg += $"\n\n";
+				//}
+				decimal FindRelevantAmount(IEnumerable<TransactionRecord> txs)
+				{
+					return txs.Select(o => Math.Abs(o.Amount)).Max();
+				}
+			}
+
+			return new MatchSLRResult { Matched = matchedVouchers, Unmatched = unmatched, Ambiguous = ambiguousMatches };
+		}
 	}
 
 	public class TransactionRecord : SIERecord
@@ -201,5 +293,6 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 			var doubles = records.GroupBy(o => $"{o.AccountId}_{Math.Abs(o.Amount)}").Where(g => g.Sum(o => o.Amount) == 0);
 			return records.Except(doubles.SelectMany(o => o.ToList())).ToList();
 		}
+
 	}
 }

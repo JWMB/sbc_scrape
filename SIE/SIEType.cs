@@ -60,6 +60,7 @@ namespace SIE
 			var root = new RootRecord();
 			hierarchy.Push(root);
 			SIERecord current = null;
+			var errors = new List<(Exception exception, string line)>();
 			while (!sr.EndOfStream)
 			{
 				var line = (await sr.ReadLineAsync()).Trim();
@@ -87,13 +88,19 @@ namespace SIE
 						}
 						catch (Exception ex)
 						{
-
+							errors.Add((ex, line));
+						}
+						if (instance is UnknownRecord unknown && unknown.Tag == "SIETYP" && unknown.Data[1] != "4")
+						{
+							throw new NotImplementedException($"Only SIE v4 is supported (was {unknown.Data[1]})");
 						}
 						(hierarchy.Peek() as IWithChildren).Children.Add(instance);
 						current = instance;
 					}
 				}
 			}
+			if (errors.Any())
+				throw new AggregateException(string.Join("\n", errors.Select(o => $"{o.exception.Message}: {o.line}")));
 			return root;
 		}
 
@@ -142,10 +149,12 @@ namespace SIE
 	public class UnknownRecord : SIERecord
 	{
 		public string[] Data { get; set; }
-		public override string Tag { get => ""; }
+		private string tag = "";
+		public override string Tag => tag;
 		public override void Read(string[] cells)
 		{
 			Data = cells;
+			tag = (cells.FirstOrDefault() ?? "").StartsWith("#") ? cells[0].Substring(1) : "";
 		}
 		public override string ToString()
 		{
