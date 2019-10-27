@@ -77,13 +77,14 @@ namespace SBCScan.REPL
 				Supplier = i.Supplier,
 				AccountId = i.Invoice?.AccountId,
 				AccountName = i.Invoice?.AccountName,
+				Comments = i.Invoice?.Comments,
 				InvoiceId = i.Invoice?.Id,
 				ReceiptId = i.Receipt?.Information,
 				CurrencyDate = o.Transaction.CurrencyDate,
 				TransactionText = o.Transaction.Text,
 				TransactionRef = o.Transaction.Reference,
-				AmountAccFromTrx = o.Transaction.TotalAccountAmount,
-				OrderWithinDate = trxOrderWithinDate[o.Transaction.CurrencyDate].IndexOf(o.Transaction.TotalAccountAmount),
+				//AmountAccFromTrx = o.Transaction.TotalAccountAmount,
+				//OrderWithinDate = trxOrderWithinDate[o.Transaction.CurrencyDate].IndexOf(o.Transaction.TotalAccountAmount),
 			}))
 				.Concat(unmatched.invoicesAndReceipts.Select(o => new JoinedRow
 				{
@@ -94,11 +95,12 @@ namespace SBCScan.REPL
 					AccountId = o.Invoice?.AccountId,
 					AccountName = o.Invoice?.AccountName,
 					InvoiceId = o.Invoice?.Id,
+					Comments = o.Invoice?.Comments,
 					ReceiptId = o.Receipt?.Information,
 					CurrencyDate = null,
 					TransactionText = null,
 					TransactionRef = null,
-					OrderWithinDate = 0,
+					//OrderWithinDate = 0,
 				})
 				.Concat(unmatched.transactions.Select(o => new JoinedRow
 				{
@@ -111,20 +113,24 @@ namespace SBCScan.REPL
 					CurrencyDate = o.CurrencyDate,
 					TransactionText = o.Text,
 					TransactionRef = o.Reference,
-					AmountAccFromTrx = o.TotalAccountAmount,
-					OrderWithinDate = trxOrderWithinDate[o.CurrencyDate].IndexOf(o.TotalAccountAmount),
+					//AmountAccFromTrx = o.TotalAccountAmount,
+					//OrderWithinDate = trxOrderWithinDate[o.CurrencyDate].IndexOf(o.TotalAccountAmount),
 				}))
-				).OrderByDescending(o => o.CurrencyDate ?? o.Date).ThenBy(o => o.OrderWithinDate).ToList();
+				).OrderByDescending(o => o.CurrencyDate ?? o.Date).ToList(); //.ThenBy(o => o.OrderWithinDate).ToList();
 
 			//adjust incoming amountAcc to reflect that transactions include the total sum of the first transactions of first date in start value
 			//(which may reflect multiple invoices/receipts)
-			var amountAcc = transactions.Last().TotalAccountAmount - transactions.Last().Amount;
-			for (int i = byInvRec.Count - 1; i >= 0; i--)
-			{
-				var item = byInvRec[i];
-				amountAcc += string.IsNullOrEmpty(item.TransactionRef) ? 0 : item.Amount;
-				item.AmountAcc = amountAcc;
-			}
+			//var amountAcc = transactions.Last().TotalAccountAmount - transactions.Last().Amount;
+			//for (int i = byInvRec.Count - 1; i >= 0; i--)
+			//{
+			//	var item = byInvRec[i];
+			//	amountAcc += string.IsNullOrEmpty(item.TransactionRef) ? 0 : item.Amount;
+			//	item.AmountAcc = amountAcc;
+			//}
+			var rxReplace = new System.Text.RegularExpressions.Regex(@"\s\(\d*\)");
+			foreach (var row in byInvRec)
+				if (!string.IsNullOrEmpty(row.Comments))
+					row.Comments = rxReplace.Replace(row.Comments, "");
 			return byInvRec;
 		}
 
@@ -136,14 +142,15 @@ namespace SBCScan.REPL
 			public string Supplier { get; set; }
 			public long? AccountId { get; set; }
 			public string AccountName { get; set; }
+			public string Comments { get; set; }
 			public long? InvoiceId { get; set; }
 			public string ReceiptId { get; set; }
 			public DateTime? CurrencyDate { get; set; }
 			public string TransactionText { get; set; }
 			public string TransactionRef { get; set; }
-			public decimal AmountAcc { get; set; }
-			public decimal AmountAccFromTrx { get; set; }
-			public int OrderWithinDate { get; set; }
+			//public decimal AmountAcc { get; set; }
+			//public decimal AmountAccFromTrx { get; set; }
+			//public int OrderWithinDate { get; set; }
 		}
 	}
 }
