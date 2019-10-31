@@ -54,5 +54,16 @@ namespace SIE.Tests
 			var items = SIERecord.ParseLine("1 2 \"string num 1\" asdd \"string num 2 !\" item");
 			Assert.Equal(6, items.Length);
 		}
+
+		[Fact]
+		public void ParseAddress()
+		{
+			var items = SIERecord.ParseLine(@"#ADRESS ""SvenSvensson"" ""Box 21"" ""21120   MALMÖ"" ""040 - 12345""");
+			var record = new AddressRecord();
+			record.Read(items);
+			
+			Assert.Equal("040 - 12345", record.PhoneNumber);
+		}
+
 	}
 }
