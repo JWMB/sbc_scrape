@@ -134,8 +134,11 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 				{ }
 				if (name.StartsWith(shortName))
 				{
-					var list = new List<string>();
-					aliases.Add(shortName, list);
+					if (!aliases.TryGetValue(shortName, out var list))
+					{
+						list = new List<string>();
+						aliases.Add(shortName, list);
+					}
 					list.Add(name);
 				}
 				else

@@ -13,7 +13,7 @@ namespace SIE.Tests
 		[Fact]
 		public async Task Test1()
 		{
-			var path = @"C:\Users\jonas\source\repos\sbc_scrape\sbc_scrape\scraped\SIE\output_2016.se"; //output_20190929
+			var path = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE", "output_2018.se"); //output_20190929
 			var root = await SIERecord.Read(path);
 			var matchResult = VoucherRecord.MatchSLRVouchers(root.Children.Where(o => o is VoucherRecord).Cast<VoucherRecord>(), VoucherRecord.DefaultIgnoreVoucherTypes);
 
@@ -65,5 +65,12 @@ namespace SIE.Tests
 			Assert.Equal("040 - 12345", record.PhoneNumber);
 		}
 
+		string GetCurrentOrSolutionDirectory()
+		{
+			var sep = "\\" + Path.DirectorySeparatorChar;
+			var rx = new System.Text.RegularExpressions.Regex($@".*(?={sep}[^{sep}]+{sep}bin)");
+			var m = rx.Match(Directory.GetCurrentDirectory());
+			return m.Success ? m.Value : Directory.GetCurrentDirectory();
+		}
 	}
 }
