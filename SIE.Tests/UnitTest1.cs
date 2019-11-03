@@ -13,9 +13,14 @@ namespace SIE.Tests
 		[Fact]
 		public async Task Test1()
 		{
-			var path = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE", "output_2018.se"); //output_20190929
-			var root = await SIERecord.Read(path);
-			var matchResult = VoucherRecord.MatchSLRVouchers(root.Children.Where(o => o is VoucherRecord).Cast<VoucherRecord>(), VoucherRecord.DefaultIgnoreVoucherTypes);
+			var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
+			var files = new[] { "output_2016.se", "output_2017.se" };
+			var tasks = files.Select(async file => await SIERecord.Read(Path.Combine(sieDir, file)));
+			await Task.WhenAll(tasks);
+			//var root = await SIERecord.Read(path);
+			var roots = tasks.Select(o => o.Result).ToList();
+			var allVouchers = roots.SelectMany(o => o.Children).Where(o => o is VoucherRecord).Cast<VoucherRecord>();
+			var matchResult = VoucherRecord.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
 
 			var annoyingAccountIds = new[] { 24400, 26410 }.ToList();
 			Func<IEnumerable<TransactionRecord>, IEnumerable<TransactionRecord>> txFilter = txs =>
@@ -32,13 +37,28 @@ namespace SIE.Tests
 					txFilter(o.slr.Transactions).First().Amount,
 					txFilter(o.slr.Transactions).First().AccountId,
 					txFilter(o.slr.Transactions).First().CompanyName,
+					Comment = "",
 				})
 				.Concat(matchResult.UnmatchedOther
-				.Select(o => new { o.Date, txFilter(o.Transactions).First().Amount, AccountId = 0, txFilter(o.Transactions).First().CompanyName }));
+					.Select(o => new {
+						o.Date,
+						txFilter(o.Transactions).First().Amount,
+						AccountId = 0,
+						txFilter(o.Transactions).First().CompanyName,
+						Comment = o.VoucherTypeCode,
+					}))
+				.Concat(matchResult.UnmatchedSLR
+					.Select(o => new {
+						o.Date,
+						txFilter(o.Transactions).First().Amount,
+						AccountId = 0,
+						txFilter(o.Transactions).First().CompanyName,
+						Comment = o.VoucherTypeCode,
+					}));
 			cc = cc.OrderBy(o => o.Date);
-			var dbg3 = string.Join("\n", cc.Select(o => $"{o.Date.AtMidnight().ToDateTimeUnspecified().ToString("yyyy-MM-dd")}\t{o.Amount}\t{o.AccountId}\t{o.CompanyName}"));
+			var dbg = string.Join("\n", cc.Select(o => $"{o.Date.AtMidnight().ToDateTimeUnspecified().ToString("yyyy-MM-dd")}\t{o.Comment}\t{o.Amount}\t{o.AccountId}\t{o.CompanyName}"));
 			//bool filterAccountIds(int accountId) => ((accountId / 10000 != 1) || accountId == 19420 || accountId == 16300) && accountId != 27180 && accountId != 27300;
-			var str = root.ToHierarchicalString();
+
 
 			string PrintVoucher(VoucherRecord voucher, Func<IEnumerable<TransactionRecord>, IEnumerable<TransactionRecord>> funcModifyTransactions = null)
 			{
