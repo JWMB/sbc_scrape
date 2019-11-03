@@ -14,7 +14,7 @@ namespace SIE.Tests
 		public async Task Test1()
 		{
 			var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
-			var files = new[] { "output_2016.se", "output_2017.se" };
+			var files = new[] { "output_2016.se", "output_2017.se", "output_2018.se" };
 			var tasks = files.Select(async file => await SIERecord.Read(Path.Combine(sieDir, file)));
 			await Task.WhenAll(tasks);
 			//var root = await SIERecord.Read(path);
