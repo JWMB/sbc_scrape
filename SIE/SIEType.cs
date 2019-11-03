@@ -9,6 +9,11 @@ using System.Threading.Tasks;
 
 namespace SIE
 {
+	// http://www.sie.se/wp-content/uploads/2014/01/SIE_filformat_ver_4B_080930.pdf
+	/*
+	 * ADRESSAdressupgifter för det exporterade företagetFormat:
+	 * 
+	 */
 	public abstract class SIERecord
 	{
 		public abstract string Tag { get; }
@@ -130,6 +135,57 @@ namespace SIE
 
 			return sbResult.ToString();
 		}
+
+		public static T Parse<T>(string val, T defaultValueElseThrow = default(T))
+		{
+			var type = typeof(T);
+			return (T)Parse(typeof(T), val, defaultValueElseThrow);
+		}
+
+		public static object Parse(Type type, string val, object defaultValueElseThrow)
+		{
+			object converted;
+			try
+			{
+				if (type == typeof(int))
+					converted = int.Parse(val);
+				else if (type == typeof(decimal))
+					converted = decimal.Parse(val);
+				else if (type == typeof(decimal))
+					converted = ParseDecimal(val);
+				else if (type == typeof(LocalDate))
+					converted = ParseDate(val);
+				else if (type == typeof(bool))
+					converted = val.Length == 1 ? val == "1" : bool.Parse(val);
+				else if (type == typeof(string))
+					converted = val.Trim('"');
+				else
+					throw new NotImplementedException($"Parsing type {type.Name} not supported");
+				return Convert.ChangeType(converted, type);
+			}
+			catch (Exception ex)
+			{
+				if (defaultValueElseThrow == null) throw;
+				return defaultValueElseThrow;
+			}
+		}
+
+		protected void Populate(IEnumerable<string> cells, IEnumerable<string> propertyNames)
+		{
+			Populate(cells, propertyNames.Select(p => this.GetType().GetProperty(p)), this);
+		}
+
+		public static void Populate(IEnumerable<string> cells, IEnumerable<System.Reflection.PropertyInfo> properties, object targetObject)
+		{
+			for (int i = 0; i < Math.Min(cells.Count(), properties.Count()); i++)
+			{
+				var prop = properties.Skip(i).Take(1).Single();
+				var val = cells.Skip(i).Take(1).Single();
+				var converted = Parse(prop.PropertyType, val, null);
+				//throw new FormatException($"{val} is not of type {type.Name}");
+				prop.SetValue(targetObject, converted);
+			}
+		}
 	}
 
 	public interface IWithChildren
@@ -141,9 +197,7 @@ namespace SIE
 	{
 		public List<SIERecord> Children { get; set; } = new List<SIERecord>();
 		public override string Tag => "ROOT";
-		public override void Read(string[] cells)
-		{
-		}
+		public override void Read(string[] cells) { }
 	}
 
 	public class UnknownRecord : SIERecord
@@ -156,28 +210,98 @@ namespace SIE
 			Data = cells;
 			tag = (cells.FirstOrDefault() ?? "").StartsWith("#") ? cells[0].Substring(1) : "";
 		}
-		public override string ToString()
+		public override string ToString() => string.Join("\t", Data);
+	}
+
+	public class AddressRecord : SIERecord
+	{
+		// #ADRESS "SvenSvensson"  "Box 21""21120   MALMÖ"  "040-12345"
+		// kontakt utdelningsadr postadr tel
+		public override string Tag { get => "ADRESS"; }
+		public string Contact { get; set; }
+		public string Address { get; set; }
+		public string PostalAddress { get; set; }
+		public string PhoneNumber { get; set; }
+
+		public override void Read(string[] cells)
 		{
-			return string.Join("\t", Data);
+			Populate(cells.Skip(1), new[] { nameof(Contact), nameof(Address), nameof(PostalAddress), nameof(PhoneNumber) });
 		}
+		public override string ToString() => $"{Tag}: {Contact} ({Address})";
+	}
+
+	public class IndustryRecord : SIERecord
+	{
+		// #BKOD  SNI-kod
+		public override string Tag { get => "BKOD"; }
+		public string SNI { get; set; }
+		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(SNI) });
+		public override string ToString()=>  $"{Tag}: {SNI})";
+	}
+	public class DimensionRecord : SIERecord
+	{
+		//# DIM    dimensionsnr    namn  # DIM    1   "Avdelning"
+		public override string Tag { get => "DIM"; }
+		public int DimensionId { get; set; }
+		public string Name { get; set; }
+		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(DimensionId), nameof(Name) });
+		public override string ToString()=> $"{Tag}: {DimensionId} {Name})";
+	}
+
+	public class UnitRecord : SIERecord
+	{
+		//#ENHET  kontonr enhet
+		public override string Tag { get => "ENHET"; }
+		public int AccountId { get; set; }
+		public string Unit { get; set; }
+		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(AccountId), nameof(Unit) });
+		public override string ToString() => $"{Tag}: {AccountId} {Unit})";
+	}
+
+	public class FlagRecord : SIERecord
+	{
+		//#FLAGGA x
+		public override string Tag { get => "FLAGGA"; }
+		public bool Value { get; set; }
+		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(Value) });
+		public override string ToString() => $"{Tag}: {Value})";
+	}
+
+	public class CompanyNameRecord : SIERecord
+	{
+		//#FNAMN  företagsnamn
+		public override string Tag { get => "FNAMN"; }
+		public string Value { get; set; }
+		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(Value) });
+		public override string ToString() => $"{Tag}: {Value})";
+	}
+
+	public class CompanyIdRecord : SIERecord
+	{
+		//#FNR    företagsid
+		public override string Tag { get => "FNR"; }
+		public int Value { get; set; }
+		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(Value) });
+		public override string ToString() => $"{Tag}: {Value})";
+	}
+
+	public class FormatRecord : SIERecord
+	{
+		//#FORMAT PC8
+		public override string Tag { get => "FORMAT"; }
+		public string Value { get; set; }
+		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(Value) });
+		public override string ToString() => $"{Tag}: {Value})";
 	}
 
 
-
-	public class Account : SIERecord
+	public class AccountRecord : SIERecord
 	{
 		// #KONTO 84710 "Räntebidrag"
 		public override string Tag { get => "KONTO"; }
 		public int AccountId { get; set; }
 		public string AccountName { get; set; }
-		public override void Read(string[] cells)
-		{
-			AccountId = int.Parse(cells[1]);
-			AccountName = cells[2].Trim('"');
-		}
-		public override string ToString()
-		{
-			return $"{Tag}: {AccountId} ({AccountName})";
-		}
+		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(AccountId), nameof(AccountName) });
+		public override string ToString() => $"{Tag}: {AccountId} ({AccountName})";
 	}
 }

@@ -1,6 +1,7 @@
 ﻿using NodaTime;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -35,9 +36,12 @@ namespace SIE
 							new VoucherType("BS", nameof(BS)),
 							new VoucherType("CR", nameof(CR)),
 							new VoucherType("FAS", nameof(FAS)),
+							new VoucherType("KB", nameof(KB)),
+							new VoucherType("KR", nameof(KR)),
 							new VoucherType("SLR", nameof(SLR)),
 							new VoucherType("LON", nameof(Salary)),
 							new VoucherType("LR", nameof(TaxAndExpense)),
+							new VoucherType("LB", nameof(LB)),
 							new VoucherType("PE", nameof(Accrual)),
 							new VoucherType("MA", nameof(Anulled)),
 						}.ToDictionary(o => o.Code, o => o);
@@ -50,10 +54,13 @@ namespace SIE
 		public static VoucherType AV { get => Lookup["AV"]; }
 		public static VoucherType BS { get => Lookup["BS"]; }
 		public static VoucherType CR { get => Lookup["CR"]; }
+		public static VoucherType KB { get => Lookup["KB"]; } //Expense?
+		public static VoucherType KR { get => Lookup["KR"]; } //Expense?
 		public static VoucherType FAS { get => Lookup["FAS"]; }
 		public static VoucherType SLR { get => Lookup["SLR"]; }
 		public static VoucherType Salary { get => Lookup["LON"]; }
 		public static VoucherType TaxAndExpense { get => Lookup["LR"]; }
+		public static VoucherType LB { get => Lookup["LB"]; }
 		public static VoucherType Accrual { get => Lookup["PE"]; }
 		public static VoucherType Anulled { get => Lookup["MA"]; }
 
@@ -85,6 +92,8 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 
 */
 
+	//[DebuggerTypeProxy(typeof(VoucherRecordDebugView))]
+	[DebuggerDisplay("{Tag} {VoucherTypeCode} {FormatDate(Date)} {GetTransactionsMaxAmount()} {GetTransactionsCompanyName()}")]
 	public class VoucherRecord : SIERecord, IWithChildren
 	{
 		//#VER AR6297 1 20190210 ""
@@ -119,11 +128,15 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 			return $"{Tag} {VoucherTypeCode}{VoucherForId} {Unknown1} {FormatDate(Date)} {Unknown2}";
 		}
 
+		public string GetTransactionsCompanyName() => Transactions.FirstOrDefault()?.CompanyName;
+		public decimal GetTransactionsMaxAmount() => Transactions.Select(o => Math.Abs(o.Amount)).Max();
+
 		public static void NormalizeCompanyNames(IEnumerable<VoucherRecord> vouchers)
 		{
-			//Match SLR and LB entries
+			//Match SLR/LR and other entries
 			var grouped = vouchers.GroupBy(o => o.Transactions.First().CompanyName).ToDictionary(o => o.Key, o => o.ToList());
 			var sortedNames = grouped.Keys.OrderBy(o => o).ToList();
+			//Test: though I'd find some groupings with shortened names, but it's not obvious how... var countByLength = sortedNames.GroupBy(o => o.Length).ToDictionary(o => o.Key, o => o.ToList());
 
 			var aliases = new Dictionary<string, List<string>>();
 			var shortName = "-----------";
@@ -134,8 +147,11 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 				{ }
 				if (name.StartsWith(shortName))
 				{
-					var list = new List<string>();
-					aliases.Add(shortName, list);
+					if (!aliases.TryGetValue(shortName, out var list))
+					{
+						list = new List<string>();
+						aliases.Add(shortName, list);
+					}
 					list.Add(name);
 				}
 				else
@@ -166,69 +182,89 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 			public List<VoucherRecord> UnmatchedOther { get; set; } = new List<VoucherRecord>();
 		}
 
-		public static VoucherType[] DefaultIgnoreVoucherTypes = new VoucherType[] { VoucherType.AV, VoucherType.BS, VoucherType.FAS, VoucherType.Anulled };
+		public static VoucherType[] DefaultIgnoreVoucherTypes = new VoucherType[] { VoucherType.AV, VoucherType.BS, VoucherType.FAS, VoucherType.Anulled, VoucherType.Accrual, VoucherType.CR };
 		public static MatchSLRResult MatchSLRVouchers(IEnumerable<VoucherRecord> vouchers, IEnumerable<VoucherType> filterVoucherTypes = null)
 		{
 			if (filterVoucherTypes != null)
 				vouchers = vouchers.Where(vr => !filterVoucherTypes.Contains(vr.VoucherType));
 
 			var result = new MatchSLRResult();
-
+			var slrTypes = new[] { VoucherType.SLR, VoucherType.TaxAndExpense }.ToList();
 			NormalizeCompanyNames(vouchers);
 			var groupedByCompany = vouchers.GroupBy(o => o.Transactions.First().CompanyName).ToDictionary(o => o.Key, o => o.ToList());
 			//var dbg = "";
 			foreach (var kv in groupedByCompany)
 			{
-				var slrs = kv.Value.Where(o => o.VoucherType == VoucherType.SLR);
-				var byAmount = kv.Value.Where(o => o.VoucherType != VoucherType.SLR)
+				var slrs = kv.Value.Where(o => slrTypes.Contains(o.VoucherType)).OrderBy(o => o.Date).ToList();
+				var byAmount = kv.Value.Except(slrs) //Where(o => o.VoucherType != VoucherType.SLR)
 					.GroupBy(o => FindRelevantAmount(o.Transactions)).ToDictionary(o => o.Key, o => o.ToList());
 
-				foreach (var slr in slrs)
+				var maxDaysBetweenIterations = new[] { 0, 20, 35, 70, 100 };
+				foreach (var maxDays in maxDaysBetweenIterations)
 				{
-					var amount = FindRelevantAmount(slr.Transactions);
-					if (byAmount.TryGetValue(amount, out var list))
+					var slrToRemove = new List<VoucherRecord>();
+					foreach (var slr in slrs)
 					{
-						//First look by exact date
-						var hits = list.Where(o => o.Date == slr.Date);
-						if (hits.Count() != 1)
+						var amount = FindRelevantAmount(slr.Transactions);
+						if (byAmount.TryGetValue(amount, out var list))
 						{
-							hits = list.Where(o => o.Date > slr.Date && Period.Between(slr.Date, o.Date, PeriodUnits.Days).Days < 35)
+							var hits = list.Where(o => o.Date >= slr.Date && Period.Between(slr.Date, o.Date, PeriodUnits.Days).Days <= maxDays)
 								.OrderBy(o => o.Date).ToList();
-							if (hits.Count() == 0)
-							{
-								result.UnmatchedSLR.Add(slr);
+							if (!hits.Any())
 								continue;
-							}
-							else if (hits.Count() > 1)
+							if (hits.Count > 1)
 							{
 								result.Ambiguous.Add(slr.ToHierarchicalString() + " " + string.Join("\n", hits.Select(o => o.ToHierarchicalString())));
-								hits = hits.Take(1);
+								hits = hits.Take(1).ToList();
 							}
+							var hit = hits.Single();
+							list.Remove(hit);
+							if (!list.Any())
+								byAmount.Remove(amount);
+							result.Matched.Add((slr, hit));
+							slrToRemove.Add(slr);
 						}
-						if (list.Count == 0 || hits.Count() > 1)
-						{ }
-						var hit = hits.Single();
-						list.Remove(hit);
-						result.Matched.Add((slr, hit));
+					}
+					slrs = slrs.Except(slrToRemove).ToList();
+				}
+				result.UnmatchedSLR.AddRange(slrs);
+			}
+
+			result.UnmatchedOther = vouchers.Where(o => !slrTypes.Contains(o.VoucherType)).Except(result.Matched.Select(o => o.other)).ToList();
+
+			//Special handling: of LR vs LB - expenses don't have proper CompanyName. LB will have person name, LR will have description of outlay
+			var expenses = result.UnmatchedSLR.Where(o => o.VoucherType == VoucherType.TaxAndExpense);
+			var lbsByAmount = result.UnmatchedOther.Where(o => o.VoucherType == VoucherType.LB).GroupBy(o => FindRelevantAmount(o.Transactions)).ToDictionary(o => o.Key, o => o.ToList());
+			var maxNumDaysForProcessingExpense = 5;
+			var additionalMatches = result.Matched.Take(0).ToList();
+			foreach (var item in expenses)
+			{
+				var amount = FindRelevantAmount(item.Transactions);
+				if (lbsByAmount.TryGetValue(amount, out var list))
+				{
+					var latestDate = item.Date.PlusDays(maxNumDaysForProcessingExpense);
+					var found = list.Where(o => o.Date >= item.Date && o.Date <= latestDate);
+					if (found.Count() == 1)
+					{
+						additionalMatches.Add((item, found.Single()));
+						list.Remove(found.Single());
 					}
 				}
-
-				//if (byAmount.Count() > 1)
-				//{
-				//	dbg += $"-- {kv.Key}\n";
-				//	foreach (var grp in byAmount)
-				//		dbg += $"- {grp.Key}\n" + string.Join("\n", grp.Value.Select(o => PrintVoucher(o))) + "\n";
-				//	dbg += $"\n\n";
-				//}
-				decimal FindRelevantAmount(IEnumerable<TransactionRecord> txs)
-				{
-					return txs.Select(o => Math.Abs(o.Amount)).Max();
-				}
 			}
-			result.UnmatchedOther = vouchers.Where(o => o.VoucherType != VoucherType.SLR).Except(result.Matched.Select(o => o.other)).ToList();
+			result.Matched.AddRange(additionalMatches);
+			result.UnmatchedOther = result.UnmatchedOther.Except(additionalMatches.Select(o => o.other)).ToList();
+			result.UnmatchedSLR = result.UnmatchedSLR.Except(additionalMatches.Select(o => o.slr)).ToList();
 
 			return result;
+
+			decimal FindRelevantAmount(IEnumerable<TransactionRecord> txs)
+			{
+				return txs.Select(o => Math.Abs(o.Amount)).Max();
+			}
+
 		}
+
+		//internal class VoucherRecordDebugView { }
 	}
 
 	public class TransactionRecord : SIERecord

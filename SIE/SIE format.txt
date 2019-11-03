@@ -1,0 +1,139 @@
+#ADRESS kontakt utdelningsadr postadr tel
+Adressupgifter för det exporterade företaget
+
+#BKOD  SNI-kod
+Branschkod för det exporterade företagetFormat
+
+#DIM    dimensionsnr    namn
+#DIM    1   "Avdelning"
+Enkel dimensionFormat:
+Deklarerar en enkel dimension. Om den dimension man avser att deklarera är någon av de universella dimensionerna bör det reserverade dimensionsnumret användas. I annat fall anges ett dimensionsnummer inom det fritt disponibla området.
+
+#ENHET  kontonr enhet
+Enhet vid kvantitetsredovisningFormat
+Anger enhet för de kvantiteter som redovisas på angivet konto. Kontot måste ha deklarerats tidigare i filen med en post av typ #KONTO.
+
+#FLAGGA x
+Importflaggan
+Först i varje fil ligger en flaggpost som indikerar om filen blivit inläst eller ej. Den sätts till 0av det program som skriver filen. Vid lyckad inläsning skrivs en etta i nollans position. På detta sätt förhindras att samma fil importeras två gånger. Programmet som genererar importfiler kan på samma sätt kontrollera att föregående fil blivit inläst innan en ny skrivs. Detta är speciellt viktigt i försystem som genererar verifikationer(filer av typen 4I), eftersom dessa varken får glömmas bort eller importeras två gånger.
+
+#FNAMN  företagsnamn
+Fullständigt namn för det företag som exporterats.Format:
+Företagets juridiska namn.
+
+#FNR    företagsid
+Redovisningsprogrammets internkod för företaget som exporterats
+
+#FORMAT PC8
+Anger vilken teckenuppsättning som använts
+Tills vidare tillåter standarden endast IBM Extended 8-bit ASCII(PC8 -codepage 437). 
+
+#FTYP   Företagstyp
+Typ av företag
+Företagstypanvänds för att identifiera företagsformen.Används t ex av importerande program för att kunna veta vilken uppsättning SRU-koder som skall användas.
+AB=Aktiebolag.E=Enskild näringsidkare.HB=Handelsbolag.KB=Kommanditbolag.EK=Ekonomisk förening.KHF=Kooperativ hyresrättsförening.BRF=Bostadsrättsförening.BF=Bostadsförening.SF=Sambruksförening.I=Ideell förening som bedriver näring.S=Stiftelse som bedriver näring.
+FL=Filial till utländskt bolag.BAB=Bankaktiebolag.MB=Medlemsbank.SB=Sparbank.BFL=Utländsk banks filial.FAB=Försäkringsaktiebolag.OFB=Ömsesidigt försäkringsbolag.SE=Europabolag.SCE=Europakooperativ.TSF=Trossamfund.X=Annan företagsform.
+
+#GEN    datum   sign
+Anger när och av vem som filen genererats
+Datum anges på formen ÅÅÅÅMMDDoch är en obligatorisk uppgift. Signatur kan vara namn, signatur eller användarid för den person eller process som genererat utskriften. Signatur kan utelämnas.
+
+#IB årsnr   konto   saldo   kvantitet
+Ingående balans för balanskonto
+Kreditsaldo anges med negativt belopp. Årsnr anges med 0för innevarande år och -1 för föregående år. Om man önskar exportera ytterligare jämförelseår kan dessa läggas till som år -2, -3osv. Fältet för kvantitet är frivilligt. Kvantiteten ska normalt anges med samma tecken som beloppet för saldot, dvs plus för debet och minus för kredit.
+
+#KONTO  kontonr kontonamn
+Kontouppgifter
+Anger kontonamn för ett befintligt konto. Kontonummer skall vara numeriskt.
+
+#KPTYP  typ
+Typ av kontoplan
+Anger vilken kontoplanstyp somligger till grund för den exporterade kontoplanen. Posten är frivillig. Om denna post saknas bör ett inläsande program anta att kontoplanen följer BAS 95.2.Som typ kan anges BAS95, BAS96,EUBAS97eller NE2007.3.NE2007avser BAS 2007 för enskilda näringsidkare (K1).4.SIE-gruppen kommer att införa nya tillåtna kontoplanstyper endast om dessa i struktur avviker från någon av ovanstående. Om exempelvis BAS-gruppen publicerar en EU-BAS 98 som till sin struktur överensstämmer med EU-BAS 97 skall fortfarande EUBAS97anges i SIE-filen.5.Börjar kontoplanstypen på BAS2, t ex BAS2008, skall denna hanteras som en kontoplan av typen EUBAS97.
+
+#KTYP   kontonr kontotyp
+Kontotyp
+Kontotyp anges som T, S, K eller I (tillgång, skuld, kostnad eller intäkt). För att kontotyp ska få anges måste motsvarande kontopost ha förekommit tidigare i filen.2.Posttypen är frivillig. Om kontotyp ej anges antas att kontot har den typ som anges av BAS-standarden.
+
+#OBJEKT dimensionsnr    objektnr    objektnamn
+Objekt
+Används för export av befintliga objekt inom en dimension.2.Om ett objekt intefinns upplagt i det importerande programmet och inteär deklarerat under #OBJEKT men ändå förekommer på #TRANS-rader i importfilen (filer av typen 4I) kandet vara möjligt att det importerande programmet väljer att inte läsain/läggaupp objektet.
+
+#OIB    årsnr   konto   {dimensionsnr objektnr} saldo   kvantitet
+Ingående balans för objekt
+Kreditsaldo anges med negativt belopp.2.Årsnr anges med0för innevarande år och -1för föregående år.Om man önskar exportera ytterligare jämförelseår kan dessa läggas till som år -2, -3osv.3.Fältet för kvantitet är frivilligt. Kvantiteten ska normalt anges med samma tecken som beloppet för saldot, dvs plus för debet och minus för kredit.Enhet avseende kontot definieras under #ENHET
+
+#OMFATTN    datum
+Datum för periodsaldons omfattning
+Anger omfattningen (datumt o m) av de saldon som exporterats i filen. Detta anges för att informera den som läser filen om att filens saldon endast omfattar del av år. Normalt anges datum för senaste periodbokslut eller senast avslutade period. Posten måste förekomma vid export av periodsaldon.
+
+#ORGNR  orgnr   förvnr  verknr
+Anger organisationsnummer för det företag som exporterats
+Anger organisationsnummer för det exporterade företaget. Organisationsnumret ska innehålla ett bindestreck efter den sjätte siffran.2.Förvärvsnummer och verksamhetsnummer är ej obligatoriska utan anges endast då uppgiften finns till hands. Förvärvsnummer används för att särskilja företag då det förekommer flera företag med samma organisationsnummer (Uppstår bl a då en person driver flera enskilda firmor).3.Från och med 1995 års taxering görs i deklarationssammanhang inte indelning efter förvärvsnummer och verksamhetsnummer. Då flera företag förekommer med samma organisationsnummer får dessa ett löpnummer. Om detta löpnummer kan registreras i redovisningsprogrammet bör detta exporteras i fältet förvnr.
+
+#OUB    årsnr   konto   {dimensionsnr objektnr} saldo   kvantitet
+Utgående balans för objekt
+Kreditsaldo anges med negativt belopp.2.Årsnr anges med 0för innevarande år och -1för föregående år.Om man önskar exportera ytterligare jämförelseår kan dessa läggas till som år -2, -3osv.3.Fältet för kvantitet är frivilligt. Kvantiteten ska normalt anges med samma tecken som beloppet för saldot, dvs plus för debet och minus för kredit.Enhet avseende kontot definieras under #ENHET.
+
+#PBUDGET    årsnr   period  konto   {dimensionsnr objektnr} saldo   kvantitet
+Periodbudgetpost
+Posten anger periodens förändring på kontot. Kreditsaldo anges med negativt belopp.2.Årsnr anges med 0för innevarande år och -1för föregående år.Om man önskar exportera ytterligare jämförelseår kan dessa läggas till som år -2, -3osv. Räkenskapsårets omfattning definieras under #RAR.3.Period anges i formen ÅÅÅÅMM(där ÅÅÅÅavser kalenderår och MMavser kalendermånad).4.Objektspecifikation (dimensionsnroch objektnr) utelämnas vid export av periodsaldon enligt SIE typ 2. Program som läser SIE typ 2ska ignorera poster som har en objektspecifikation som ej är tom.5.Vid export enligt SIE typ 3skall poster anges både för kontot som helhet (dvs utan objektspecifikation) och för objekten.6.Fältet för kvantitet är frivilligt. Kvantiteten ska normalt anges med samma tecken som beloppet för saldot, dvs plus för debet och minus för kredit.
+
+#PROGRAM    programnamn version
+Anger program som exporterat filen
+Anger vilket program som exporterat filen.
+
+#PROSA  text
+Fri kommentartext kring filens innehåll.
+
+#PSALDO årsnr   period  konto   {dimensionsnr objektnr} saldo   kvantitet
+Periodsaldopost
+Posten anger periodens förändring på kontot. Kreditsaldo anges med negativt belopp.2.Årsnr anges med 0för innevarande år och -1 för föregående år.Om man önskar exportera ytterligare jämförelseår kan dessa läggas till som år -2, -3osv. Räkenskapsårets omfattning definieras under #RAR.3.Period anges i formen ÅÅÅÅMM(där ÅÅÅÅavser kalenderår och MMavser kalendermånad).4.Objektspecifikation (dimensionsnroch objektnr) utelämnas vid export av periodsaldon enligt SIE typ 2. Program som läser SIE typ 2ska ignorera poster som har en objektspecifikation som ej är tom.5.Vid export enligt SIE typ 3skall poster anges både för kontot som helhet (dvs utan objektspecifikation) och för objekten.6.Fältet för kvantitet är frivilligt. Kvantiteten ska normalt anges med samma tecken som beloppet för saldot, dvs plus för debet och minus för kredit.
+
+#RAR    årsnr   start   slut
+Räkenskapsår från vilket exporterade data hämtats
+Räkenskapsårets start och slutdatum anges i formatet ÅÅÅÅMMDD. Årsnr sätts till 0för innevarande år och -1för föregående år.2.Om man önskar exportera ytterligare jämförelseår kan dessa läggas som år –2, -3osv.3.Observera att SIE-filen endast innehåller en kontoplan (den som avser år 0). Alla data för jämförelseåren måste normaliseras till denna kontoplan.
+
+#RES    årsnr konto    saldo   kvantitet
+Saldo för resultatkonto
+Kreditsaldo anges med negativt belopp. Årsnr anges med 0för innevarande år och -1för föregående år.Om man önskar exportera ytterligare jämförelseår kan dessa läggas till som år -2, -3osv. Räkenskapsårets omfattning definieras under #RAR.2.Fältet för kvantitet är frivilligt. Kvantiteten ska normalt anges med samma tecken som beloppet för saldot, dvs plus för debet och minus för kredit.Enhet avseende kontot definieras under #ENHET.
+
+#SIETYP typnr
+Anger vilken filtyp inom SIE-formatet som filen följer
+Om filtyp ej angetts kan det importerande programmet anta att filen följer SIE typ 1.
+
+#SRU    konto   SRU-kod
+SRU-kod för överföringav kontosaldo till deklaration
+Anger för ett visst konto var på blanketten för standardiserat räkenskapsutdrag som kontots saldoska hamna. För vissa konton ska saldot samtidigt hamna under flera rubriker på blanketten eller på flera deklarationsblanketter. I detta fall ska filen innehålla flera poster med samma kontonummer (en för varje SRU-kod).2.I vissa fall skall belopp redovisas under olika SRU-koder beroende på beloppets tecken. I detta fall skall endast den ena SRU-koden anges i SIE-filen med posttyp #SRU(det är egalt vilken). Det mottagande programmet (deklarationsprogrammet) har redan kännedom om den alternativa koden och kan göra en förflyttning av beloppet till den kod som stämmer med beloppets tecken.
+
+#TAXAR  år
+Taxeringsår som SRU-koderna avser
+Då deklarationsblanketterna förändras inför varje taxeringsår kommer de SRU-koder som läggs i SIE-filen endast att vara relevanta för ett visst taxeringsår. Genom denna post anger det exporterande programmet vilket års deklarationsblankett SRU-koderna avser. Ett importerande program bör kontrollera denna post för att avgöra omSRU-koderna är relevanta för aktuell deklaration. År anges i formen ÅÅÅÅ.2.Posten är frivillig.
+
+#TRANS  kontonr {objektlista}   belopp  transdat    transtext   kvantitet   sign
+Transaktionspost
+Transdatoch transtextbehöver ej anges.2.Om transdatej anges antas att transaktionen avser det datum som angetts som verifikationsdatum.3.Transaktionsposter får endast förekomma som underposter till #VER.4.Inom en verifikation skall det råda balans. Summan av samtliga transaktionsbelopp inom en verifikation skall således vara noll.5.Fältet för kvantitet är frivilligt. Kvantiteten ska normalt anges med samma tecken som beloppet för transaktionen, dvs plus för debet och minus för kredit.6.Signkan vara namn, signatur eller användarid för den person eller process som genererat transaktionsposten. Signatur kan utelämnas.
+
+#RTRANS kontonr {objektlista}   belopp  transdat    transtext   kvantitet   sign
+Tillagd transaktionspost
+Transdatoch transtextbehöver ej anges.2.Om transdatej anges antas att transaktionen avser det datum som angetts som verifikationsdatum.3.Tillagda transaktionsposter får endast förekomma som underposter till #VER.4.Denna post är ett tillägg i SIE-standarden. För att bibehålla bakåtkompabiliteten med det gamla SIE-formatet skall alltid enrad av typen#RTRANSdirekt åtföljasav en likadan rad av typen #TRANS.Exempel:#RTRANS1910 { }200.00#TRANS1910 { }200.00Först kommer den tillagda raden. På raden omedelbart under den tillagda radenskall en exakt likadan rad av typen #TRANSkomma.5.Hanteras inte poster av typen #RTRANSoch #BTRANSskall dessa rader ignoreras vid import av en SIE-fil.6.Hanteras poster av typen #RTRANSskall den åtföljande raden av typen #TRANSignoreras vid import av en SIE-fil. 7.Fältet för kvantitet är frivilligt. Kvantiteten ska normalt anges med samma tecken som beloppet för transaktionen, dvs plus för debet och minus förkredit.8.Signatur kan vara namn, signatur eller användarid för den person eller process som lagt till transaktionsposten. Signatur kan utelämnas.
+
+#BTRANS kontonr {objektlista}   belopp  transdat    transtext   kvantitet   sign
+Borttagen transaktionspost
+Transdatoch transtextbehöver ej anges.2.Om transdatej anges antas att transaktionen avser det datum som angetts som verifikationsdatum.3.Borttagna transaktionsposter får endast förekomma som underposter till #VER.4.Hanteras inte poster av typen #BTRANSoch #RTRANSskall dessa rader ignoreras vid import av en SIE-fil.5.Fältet för kvantitet är frivilligt. Kvantiteten ska normalt anges med samma tecken som beloppet för transaktionen, dvs plus för debet och minus för kredit.6.Signkan vara namn, signatur eller användarid för den person eller process som tagit bort (strukit) transaktionsposten. Signatur kan utelämnas.
+
+#UB årsnr   konto   saldo   kvantitet
+Utgående balans för balanskonto
+Kreditsaldo anges med negativt belopp.2.Årsnr anges med 0för innevarande år och -1för föregående år.3.Fältet för kvantitet är frivilligt. Kvantiteten ska normalt anges med samma tecken som beloppet för saldot, dvs plus för debet och minus för kredit.
+
+#UNDERDIM   dimensionsnr    namn    superdimension
+Underdimension vid hierarkiska dimensioner
+Som #DIMovan. Dock anges även överliggande dimension.
+
+#VALUTA valutakod
+Redovisningsvaluta
+Valutakodenavser hela SIE-filens innehåll.2.Valutakod anges enligt ISO 4217.Posten är frivillig. Om denna post saknas bör ett inläsande program anta att valutakoden är SEK.Även om valutakod är angiven i en SIE-fil är det inte säkert att ett importerande program läser denna post då denna är frivillig.
+
+#VER    serie   vernr   verdatum    vertext regdatum    sign
+Verifikationspost
+Verifikationsposten ska alltid följas av ett antal #TRANS-poster inom klammer.2.Vertextbehöverej anges. 3.Regdatumavser det datum då verifikationen genererades/registrerades. Detta datum används framför allt inom behandlingshistoriken. Angivande av regdatum är frivilligt.4.Serie anges med bokstäverfrån Aoch framåt, alternativt med siffror från 1och framåt.Ett importerande program ska hantera båda varianter.5.Serie kan även anges som en alfanumerisk sträng, t ex LEV1.6.Då filformatet används för att läsa in transaktioner (med hjälp av filer av typen 4I) från ett försystem till ett redovisningsprogramkan serie och/eller vernr lämnas tomma. I detta fall åsätts serie resp verifikationsnummer av redovisningsprogrammet
+Alla numrerade verifikationer inom en och samma serie skall i SIE-filen läggas i stigande verifikatnummerordning.8.Signkan vara namn, signatur eller användarid för den person eller process som genererat eller senast redigerat transaktionsposten. Signatur kan utelämnas.
