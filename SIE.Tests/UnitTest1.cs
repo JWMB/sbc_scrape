@@ -13,12 +13,7 @@ namespace SIE.Tests
 		[Fact]
 		public async Task Test1()
 		{
-			var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
-			var files = new[] { "output_2016.se", "output_2017.se", "output_2018.se" };
-			var tasks = files.Select(async file => await SIERecord.Read(Path.Combine(sieDir, file)));
-			await Task.WhenAll(tasks);
-			//var root = await SIERecord.Read(path);
-			var roots = tasks.Select(o => o.Result).ToList();
+			var roots = await ReadSIEFiles(new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
 			var allVouchers = roots.SelectMany(o => o.Children).Where(o => o is VoucherRecord).Cast<VoucherRecord>();
 			var matchResult = VoucherRecord.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
 
@@ -75,6 +70,38 @@ namespace SIE.Tests
 			Assert.Equal(6, items.Length);
 		}
 
+		private class AccountInfo
+		{
+			public string Name { get; set; }
+			public string Source { get; set; }
+		}
+
+		[Fact]
+		public async Task GetAccounts()
+		{
+			var roots = await ReadSIEFiles(new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
+			var result = roots.SelectMany(o => o.Children.OfType<AccountRecord>()).GroupBy(o => o.AccountId).Select(o => o.First()).ToDictionary(o => o.AccountId, o => new AccountInfo { Name = o.AccountName, Source = "SIE" });
+			//string.Join("\n",  Select(o => $"{o.AccountId}\t{o.AccountName}"));
+
+			var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
+			var tmp = File.ReadAllText(Path.Combine(sieDir, "accountsexport.txt"));
+			var xx = tmp.Split('\n').Skip(1).Where(o => o.Length > 0).Select(line => line.Split('\t')).ToDictionary(o => int.Parse(o[0]), o => o[1].Trim());
+
+			foreach (var kv in xx)
+			{
+				if (!result.ContainsKey(kv.Key))
+					result.Add(kv.Key, new AccountInfo { Name = $"{kv.Value}", Source = "" });
+				else
+				{
+					result[kv.Key].Source = "";
+					if (result[kv.Key].Name != kv.Value)
+						result[kv.Key].Name += $" - {kv.Value}";
+				}
+			}
+
+			var str = string.Join("\n", result.Keys.OrderBy(o => o).Select(o => $"{o}\t{result[o].Name}\t{result[o].Source}"));
+		}
+
 		[Fact]
 		public void ParseAddress()
 		{
@@ -83,6 +110,16 @@ namespace SIE.Tests
 			record.Read(items);
 			
 			Assert.Equal("040 - 12345", record.PhoneNumber);
+		}
+
+		async Task<List<RootRecord>> ReadSIEFiles(IEnumerable<string> files)
+		{
+			var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
+			//var files = new[] { "output_2016.se", "output_2017.se", "output_2018.se" };
+			var tasks = files.Select(async file => await SIERecord.Read(Path.Combine(sieDir, file)));
+			await Task.WhenAll(tasks);
+			//var root = await SIERecord.Read(path);
+			return tasks.Select(o => o.Result).ToList();
 		}
 
 		string GetCurrentOrSolutionDirectory()
