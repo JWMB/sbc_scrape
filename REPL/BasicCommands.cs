@@ -76,7 +76,10 @@ namespace REPL
 		public override string Id => "csv";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var conf = new CsvHelper.Configuration.Configuration { Delimiter = "\t" };
+			var cultureInfo = System.Globalization.CultureInfo.CurrentCulture.Clone() as System.Globalization.CultureInfo;
+			cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
+			cultureInfo.NumberFormat.NumberGroupSeparator = "";
+			var conf = new CsvHelper.Configuration.Configuration { Delimiter = "\t", CultureInfo = cultureInfo };
 
 			if (parms.Count > 1 && parms[1] is string str) // Deserialize
 			{
