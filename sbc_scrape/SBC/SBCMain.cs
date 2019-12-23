@@ -21,21 +21,24 @@ namespace SBCScan.SBC
 
 		public async Task Login(string loginUrl, string username, string brfId)
 		{
+			if (string.IsNullOrEmpty(loginUrl)) throw new ArgumentNullException(nameof(loginUrl));
+			if (string.IsNullOrEmpty(username)) throw new ArgumentNullException(nameof(username));
+			if (string.IsNullOrEmpty(brfId)) throw new ArgumentNullException(nameof(brfId));
+
 			var wait10 = new WebDriverWait(driver, TimeSpan.FromSeconds(10));
 
 			driver.Navigate().GoToUrl(loginUrl);
 
 			driver.WaitUntilDocumentReady();
 
-			var pid = driver.FindElement(By.Id("login_UserName"));
+			var pid = driver.FindElement(By.Id("BankidLoginViewModel_PersonNumber")); //Changed dec 2019 from login_UserName
 			pid.Clear();
 			pid.SendKeys(username);
 
-			var btn = driver.FindElement(By.Id("login_Login_Button"));
+			var btn = driver.FindElement(By.CssSelector("form > button")); //Changed dec 2019 from By.Id("login_Login_Button"));
 			btn.Click();
 
-			var finder = By.XPath($"//input[@type='submit' and @value='{brfId}']");
-			//var finder = By.Id("Forening_picker_login_Login_select_forening_1");
+			var finder = By.XPath($"//a[text()='{brfId}']"); // Changed dec 2019 from "//input[@type='submit' and @value='{brfId}']");
 			new WebDriverWait(driver, TimeSpan.FromMinutes(4)).Until(WebDriverExtensions.ElementIsPresent(finder));
 			driver.FindElement(finder).Click();
 
