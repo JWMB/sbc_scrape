@@ -10,49 +10,59 @@ namespace SIE.Tests
 {
 	public class UnitTest1
 	{
+
+		[Fact]
+		public async Task TestX()
+		{
+			var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
+			var roots = await ReadSIEFiles(files); // new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
+			var allVouchers = roots.SelectMany(o => o.Children).Where(o => o is VoucherRecord).Cast<VoucherRecord>();
+
+			var trx45 = allVouchers.SelectMany(o => o.Transactions.Where(p => p.AccountId.ToString().StartsWith("45"))).OrderByDescending(o => o.Date).ToList();
+			var tmp = string.Join("\n", trx45);
+		}
+
 		[Fact]
 		public async Task Test1()
 		{
-			var roots = await ReadSIEFiles(new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
+			var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
+			var roots = await ReadSIEFiles(files); // new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
 			var allVouchers = roots.SelectMany(o => o.Children).Where(o => o is VoucherRecord).Cast<VoucherRecord>();
-			var matchResult = VoucherRecord.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
 
 			var annoyingAccountIds = new[] { 24400, 26410 }.ToList();
 			Func<IEnumerable<TransactionRecord>, IEnumerable<TransactionRecord>> txFilter = txs =>
 				TransactionRecord.PruneCorrections(txs).Where(t => !annoyingAccountIds.Contains(t.AccountId));
 
+			var matchResult = VoucherRecord.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
+
 			var multiAccount = matchResult.Matched.Where(mv => txFilter(mv.slr.Transactions).Count() > 1);
-			//var multiAccount = matchedVouchers.Where(mv => TransactionRecord.PruneCorrections(mv.slr.Transactions).Select(t => t.AccountId).Except(new[] { 24400, 26410 }).Count() > 1);
-			var dbg2 = string.Join("\n\n", matchResult.Matched.OrderBy(o => o.other.Date)
-				.Select(mv => $"{PrintVoucher(mv.slr, txFilter)}\n{PrintVoucher(mv.other, txFilter)}"));
+			//var dbg2 = string.Join("\n\n", matchResult.Matched.OrderBy(o => o.other.Date)
+			//	.Select(mv => $"{PrintVoucher(mv.slr, txFilter)}\n{PrintVoucher(mv.other, txFilter)}"));
+
+			Assert.DoesNotContain(matchResult.Matched, o => !o.slr.Transactions.Any());
+			Assert.DoesNotContain(matchResult.NotMatchedOther, o => !o.Transactions.Any());
+			Assert.DoesNotContain(matchResult.NotMatchedSLR, o => !o.Transactions.Any());
 
 			var cc = matchResult.Matched
-				.Select(o => new {
+				.Select(o => new
+				{
 					o.other.Date,
 					txFilter(o.slr.Transactions).First().Amount,
 					txFilter(o.slr.Transactions).First().AccountId,
 					txFilter(o.slr.Transactions).First().CompanyName,
 					Comment = "",
 				})
-				.Concat(matchResult.UnmatchedOther
-					.Select(o => new {
+				.Concat((matchResult.NotMatchedSLR.Concat(matchResult.NotMatchedOther))
+					.Select(o => new
+					{
 						o.Date,
-						txFilter(o.Transactions).First().Amount,
+						Amount = txFilter(o.Transactions).FirstOrDefault()?.Amount ?? 0,
 						AccountId = 0,
-						txFilter(o.Transactions).First().CompanyName,
-						Comment = o.VoucherTypeCode,
-					}))
-				.Concat(matchResult.UnmatchedSLR
-					.Select(o => new {
-						o.Date,
-						txFilter(o.Transactions).First().Amount,
-						AccountId = 0,
-						txFilter(o.Transactions).First().CompanyName,
+						CompanyName = txFilter(o.Transactions).FirstOrDefault()?.CompanyName ?? "N/A",
 						Comment = o.VoucherTypeCode,
 					}));
-			cc = cc.OrderBy(o => o.Date);
+			cc = cc.OrderBy(o => o.Date).ToList();
 			var dbg = string.Join("\n", cc.Select(o => $"{o.Date.AtMidnight().ToDateTimeUnspecified().ToString("yyyy-MM-dd")}\t{o.Comment}\t{o.Amount}\t{o.AccountId}\t{o.CompanyName}"));
-			//bool filterAccountIds(int accountId) => ((accountId / 10000 != 1) || accountId == 19420 || accountId == 16300) && accountId != 27180 && accountId != 27300;
 
 
 			string PrintVoucher(VoucherRecord voucher, Func<IEnumerable<TransactionRecord>, IEnumerable<TransactionRecord>> funcModifyTransactions = null)
@@ -115,10 +125,8 @@ namespace SIE.Tests
 		async Task<List<RootRecord>> ReadSIEFiles(IEnumerable<string> files)
 		{
 			var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
-			//var files = new[] { "output_2016.se", "output_2017.se", "output_2018.se" };
 			var tasks = files.Select(async file => await SIERecord.Read(Path.Combine(sieDir, file)));
 			await Task.WhenAll(tasks);
-			//var root = await SIERecord.Read(path);
 			return tasks.Select(o => o.Result).ToList();
 		}
 
