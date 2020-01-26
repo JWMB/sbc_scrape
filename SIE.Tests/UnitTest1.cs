@@ -27,29 +27,32 @@ namespace SIE.Tests
 		{
 			var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
 			var roots = await ReadSIEFiles(files); // new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
-			var allVouchers = roots.SelectMany(o => o.Children).Where(o => o is VoucherRecord).Cast<VoucherRecord>();
+			var allVouchers = roots.SelectMany(o => o.Children).OfType<VoucherRecord>();
 
 			var annoyingAccountIds = new[] { 24400, 26410 }.ToList();
 			Func<IEnumerable<TransactionRecord>, IEnumerable<TransactionRecord>> txFilter = txs =>
 				TransactionRecord.PruneCorrections(txs).Where(t => !annoyingAccountIds.Contains(t.AccountId));
 
+			var multi = allVouchers.Where(o => !(new[] { "FAS", "LAN", "LON", "MA", "BS", "RV" }.Contains(o.VoucherTypeCode)) &&
+				TransactionRecord.PruneCorrections(o.Transactions).Count(t => !(new[] { '1', '2' }.Contains(t.AccountId.ToString()[0]))) > 1).ToList();
+
 			var matchResult = VoucherRecord.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
 
-			var multiAccount = matchResult.Matched.Where(mv => txFilter(mv.slr.Transactions).Count() > 1);
+			var multiAccount = matchResult.Matches.Where(mv => txFilter(mv.SLR.Transactions).Count() > 1);
 			//var dbg2 = string.Join("\n\n", matchResult.Matched.OrderBy(o => o.other.Date)
 			//	.Select(mv => $"{PrintVoucher(mv.slr, txFilter)}\n{PrintVoucher(mv.other, txFilter)}"));
 
-			Assert.DoesNotContain(matchResult.Matched, o => !o.slr.Transactions.Any());
+			Assert.DoesNotContain(matchResult.Matches, o => !o.SLR.Transactions.Any());
 			Assert.DoesNotContain(matchResult.NotMatchedOther, o => !o.Transactions.Any());
 			Assert.DoesNotContain(matchResult.NotMatchedSLR, o => !o.Transactions.Any());
 
-			var cc = matchResult.Matched
+			var cc = matchResult.Matches
 				.Select(o => new
 				{
-					o.other.Date,
-					txFilter(o.slr.Transactions).First().Amount,
-					txFilter(o.slr.Transactions).First().AccountId,
-					txFilter(o.slr.Transactions).First().CompanyName,
+					o.Other.Date,
+					txFilter(o.SLR.Transactions).First().Amount,
+					txFilter(o.SLR.Transactions).First().AccountId,
+					txFilter(o.SLR.Transactions).First().CompanyName,
 					Comment = "",
 				})
 				.Concat((matchResult.NotMatchedSLR.Concat(matchResult.NotMatchedOther))
@@ -61,9 +64,15 @@ namespace SIE.Tests
 						CompanyName = txFilter(o.Transactions).FirstOrDefault()?.CompanyName ?? "N/A",
 						Comment = o.VoucherTypeCode,
 					}));
+			//cc = cc.Where(o => !string.IsNullOrEmpty(o.Comment) && o.Comment != "LON" && o.Comment != "LAN");
 			cc = cc.OrderBy(o => o.Date).ToList();
-			var dbg = string.Join("\n", cc.Select(o => $"{o.Date.AtMidnight().ToDateTimeUnspecified().ToString("yyyy-MM-dd")}\t{o.Comment}\t{o.Amount}\t{o.AccountId}\t{o.CompanyName}"));
 
+			//var dbg = string.Join("\n", cc.Select(o => $"{o.Date.AtMidnight().ToDateTimeUnspecified():yyyy-MM-dd}\t{o.Comment}\t{o.Amount}\t{o.AccountId}\t{o.CompanyName}"));
+
+
+			var maintenance = matchResult.Matches.Where(o => o.AccountIdNonAdmin.ToString().StartsWith("45"));
+			var dbg2 = string.Join("\n", maintenance.Select(o => $"{o.SLR.Date.ToSimpleDateString()}\t{o.Other.Date.ToSimpleDateString()}\t{o.AccountIdNonAdmin}\t{txFilter(o.SLR.Transactions).First().Amount}"));
+			//{PrintVoucher(o.SLR)}\n{PrintVoucher(o.Other)}\n"));
 
 			string PrintVoucher(VoucherRecord voucher, Func<IEnumerable<TransactionRecord>, IEnumerable<TransactionRecord>> funcModifyTransactions = null)
 			{
@@ -127,7 +136,12 @@ namespace SIE.Tests
 			var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
 			var tasks = files.Select(async file => await SIERecord.Read(Path.Combine(sieDir, file)));
 			await Task.WhenAll(tasks);
-			return tasks.Select(o => o.Result).ToList();
+			var result = tasks.Select(o => o.Result).ToList();
+
+			result.SelectMany(o => o.Children).OfType<VoucherRecord>().SelectMany(o => o.Transactions).ToList()
+				.ForEach(o => o.PreProcessCompanyName());
+
+			return result;
 		}
 
 		string GetCurrentOrSolutionDirectory()
