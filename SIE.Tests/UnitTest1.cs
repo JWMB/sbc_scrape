@@ -18,8 +18,11 @@ namespace SIE.Tests
 			var roots = await ReadSIEFiles(files); // new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
 			var allVouchers = roots.SelectMany(o => o.Children).Where(o => o is VoucherRecord).Cast<VoucherRecord>();
 
-			var trx45 = allVouchers.SelectMany(o => o.Transactions.Where(p => p.AccountId.ToString().StartsWith("45"))).OrderByDescending(o => o.Date).ToList();
-			var tmp = string.Join("\n", trx45);
+			var matchResult = VoucherRecord.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
+
+			var maintenance = matchResult.Matches.Where(o => o.AccountIdNonAdmin.ToString().StartsWith("45"));
+			var dbg = string.Join("\n", maintenance.OrderByDescending(o => o.Other.Date).Select(o =>
+				$"{o.Other.Date.ToSimpleDateString()}\t{o.SLR.Date.ToSimpleDateString()}\t{o.AccountIdNonAdmin}\t{o.SLR.TransactionsNonAdminOrCorrections.First().Amount}\t{o.SLR.Transactions.First().CompanyName}"));
 		}
 
 		[Fact]
@@ -68,11 +71,6 @@ namespace SIE.Tests
 			cc = cc.OrderBy(o => o.Date).ToList();
 
 			//var dbg = string.Join("\n", cc.Select(o => $"{o.Date.AtMidnight().ToDateTimeUnspecified():yyyy-MM-dd}\t{o.Comment}\t{o.Amount}\t{o.AccountId}\t{o.CompanyName}"));
-
-
-			var maintenance = matchResult.Matches.Where(o => o.AccountIdNonAdmin.ToString().StartsWith("45"));
-			var dbg2 = string.Join("\n", maintenance.Select(o => $"{o.SLR.Date.ToSimpleDateString()}\t{o.Other.Date.ToSimpleDateString()}\t{o.AccountIdNonAdmin}\t{txFilter(o.SLR.Transactions).First().Amount}"));
-			//{PrintVoucher(o.SLR)}\n{PrintVoucher(o.Other)}\n"));
 
 			string PrintVoucher(VoucherRecord voucher, Func<IEnumerable<TransactionRecord>, IEnumerable<TransactionRecord>> funcModifyTransactions = null)
 			{
@@ -134,14 +132,17 @@ namespace SIE.Tests
 		async Task<List<RootRecord>> ReadSIEFiles(IEnumerable<string> files)
 		{
 			var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
-			var tasks = files.Select(async file => await SIERecord.Read(Path.Combine(sieDir, file)));
-			await Task.WhenAll(tasks);
-			var result = tasks.Select(o => o.Result).ToList();
+			return await SBCExtensions.ReadSIEFiles(files.Select(file => Path.Combine(sieDir, file)));
 
-			result.SelectMany(o => o.Children).OfType<VoucherRecord>().SelectMany(o => o.Transactions).ToList()
-				.ForEach(o => o.PreProcessCompanyName());
+			//var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
+			//var tasks = files.Select(async file => await SIERecord.Read(Path.Combine(sieDir, file)));
+			//await Task.WhenAll(tasks);
+			//var result = tasks.Select(o => o.Result).ToList();
 
-			return result;
+			//result.SelectMany(o => o.Children).OfType<VoucherRecord>().SelectMany(o => o.Transactions).ToList()
+			//	.ForEach(o => o.PreProcessCompanyName());
+
+			//return result;
 		}
 
 		string GetCurrentOrSolutionDirectory()
