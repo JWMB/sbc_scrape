@@ -59,11 +59,11 @@ namespace Scrape.Main.Tests
 					DateRegistered = NodaTime.LocalDate.FromDateTime(o.RegisteredDate),
 					DateFinalized = o.PaymentDate.HasValue ? NodaTime.LocalDate.FromDateTime(o.PaymentDate.Value) : (NodaTime.LocalDate?)null,
 					Source = o,
-				}).ToList(); //fromSBC.OrderByDescending(o => o.RegisteredDate).ToList();
+				}).ToList();
 			}
 
 			//Load SIE vouchers
-			List<TransactionMatched> fromSIE; //List<MatchSLRResult.Matched> fromSIE;
+			List<TransactionMatched> fromSIE;
 			{
 				var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
 				var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
@@ -114,7 +114,7 @@ namespace Scrape.Main.Tests
 					while (true)
 					{
 						var newMatches = new List<(TransactionMatched, SBCVariant)>();
-						for (int sieIndex = sieList.Count - 1; sieIndex >= 0; sieIndex--) //foreach (var item in sieItem.Value)
+						for (int sieIndex = sieList.Count - 1; sieIndex >= 0; sieIndex--)
 						{
 							var item = sieList[sieIndex];
 							if (inSbc.TryGetValue(item.Amount, out var sbcSameAmount))
@@ -161,8 +161,13 @@ namespace Scrape.Main.Tests
 				}
 			}
 
-			var nonmatched = sbcByName.Values.SelectMany(o => o).Except(matches.Select(o => o.Item2))
-				.Concat(sieByName.Values.SelectMany(o => o).Except(matches.Select(o => o.Item1)));
+			var nonmatchedSBC = sbcByName.Values.SelectMany(o => o).Except(matches.Select(o => o.Item2));
+			//Remove cancelled-out pairs (same everything but opposite amount):
+			var cancelling = nonmatchedSBC.GroupBy(o => $"{o.CompanyName} {Math.Abs(o.Amount)} {o.DateRegistered?.ToSimpleDateString()} {o.DateFinalized?.ToSimpleDateString()}")
+				.Where(o => o.Count() == 2 && o.Sum(o => o.Amount) == 0).SelectMany(o => o);
+			nonmatchedSBC = nonmatchedSBC.Except(cancelling);
+
+			var nonmatched = nonmatchedSBC.Concat(sieByName.Values.SelectMany(o => o).Except(matches.Select(o => o.Item1)));
 
 			var all = matches.Select(o => o.Item1).Concat(nonmatched);
 
