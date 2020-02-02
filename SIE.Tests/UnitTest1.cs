@@ -1,4 +1,5 @@
 using NodaTime;
+using SIE.Matching;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -10,7 +11,6 @@ namespace SIE.Tests
 {
 	public class UnitTest1
 	{
-
 		[Fact]
 		public async Task TestX()
 		{
@@ -18,11 +18,38 @@ namespace SIE.Tests
 			var roots = await ReadSIEFiles(files); // new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
 			var allVouchers = roots.SelectMany(o => o.Children).Where(o => o is VoucherRecord).Cast<VoucherRecord>();
 
-			var matchResult = VoucherRecord.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
+			var matchResult = MatchSLRResult.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
 
 			var maintenance = matchResult.Matches.Where(o => o.AccountIdNonAdmin.ToString().StartsWith("45"));
 			var dbg = string.Join("\n", maintenance.OrderByDescending(o => o.Other.Date).Select(o =>
 				$"{o.Other.Date.ToSimpleDateString()}\t{o.SLR.Date.ToSimpleDateString()}\t{o.AccountIdNonAdmin}\t{o.SLR.TransactionsNonAdminOrCorrections.First().Amount}\t{o.SLR.Transactions.First().CompanyName}"));
+		}
+
+
+		[Fact]
+		public async Task TestCreateMatched()
+		{
+			var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
+			var roots = await ReadSIEFiles(files); // new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
+			var allAccountTypes = roots.SelectMany(o => o.Children).OfType<AccountRecord>().GroupBy(o => o.AccountId).ToDictionary(o => o.Key, o => string.Join(" | ", o.Select(o => o.AccountName).Distinct()));
+
+			var allVouchers = roots.SelectMany(o => o.Children).OfType<VoucherRecord>();
+
+			var transactionsWithUndefinedAccounts = allVouchers.SelectMany(o => o.Transactions.Where(tx => !allAccountTypes.ContainsKey(tx.AccountId)).Select(tx => new { tx.CompanyName, tx.AccountId }));
+			Assert.False(transactionsWithUndefinedAccounts.Any());
+
+			var matchResult = MatchSLRResult.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
+
+			//All must have a single (24400|15200) transaction
+			var requiredAccounts = new[] { 24400, 15200 };
+			var transactionsMissingRequired = matchResult.Matches.SelectMany(o => new[] { o.SLR, o.Other }).Where(o => o.Transactions.Count(tx => requiredAccounts.Contains(tx.AccountId)) != 1);
+			Assert.False(transactionsMissingRequired.Any());
+
+			Assert.Equal(0, matchResult.Matches.Count(o => o.Other.TransactionsNonAdminOrCorrections.Count() > 1));
+
+			var txs = TransactionMatched.FromVoucherMatches(matchResult, requiredAccounts);
+
+			var dbg = string.Join("\n", txs.OrderBy(o => o.DateRegistered ?? LocalDate.MinIsoValue));
 		}
 
 		[Fact]
@@ -39,7 +66,7 @@ namespace SIE.Tests
 			var multi = allVouchers.Where(o => !(new[] { "FAS", "LAN", "LON", "MA", "BS", "RV" }.Contains(o.VoucherTypeCode)) &&
 				TransactionRecord.PruneCorrections(o.Transactions).Count(t => !(new[] { '1', '2' }.Contains(t.AccountId.ToString()[0]))) > 1).ToList();
 
-			var matchResult = VoucherRecord.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
+			var matchResult = MatchSLRResult.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
 
 			var multiAccount = matchResult.Matches.Where(mv => txFilter(mv.SLR.Transactions).Count() > 1);
 			//var dbg2 = string.Join("\n\n", matchResult.Matched.OrderBy(o => o.other.Date)

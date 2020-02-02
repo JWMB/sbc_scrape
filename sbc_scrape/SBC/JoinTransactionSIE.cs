@@ -1,5 +1,6 @@
 ﻿using SBCScan.REPL;
 using SIE;
+using SIE.Matching;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +17,7 @@ namespace sbc_scrape.SBC
 			var basePath = @"C:\Users\jonas\source\repos\sbc_scrape\sbc_scrape\scraped\";
 			var path = basePath + @"SIE\output_2016.se"; //output_20190929
 			var root = await SIERecord.Read(path);
-			var matchResult = VoucherRecord.MatchSLRVouchers(root.Children.Where(o => o is VoucherRecord).Cast<VoucherRecord>(), VoucherRecord.DefaultIgnoreVoucherTypes);
+			var matchResult = MatchSLRResult.MatchSLRVouchers(root.Children.Where(o => o is VoucherRecord).Cast<VoucherRecord>(), VoucherRecord.DefaultIgnoreVoucherTypes);
 
 			var src = new BankTransactionSource();
 			var transactions = src.ReadAllObjects(basePath + @"scb_html\");

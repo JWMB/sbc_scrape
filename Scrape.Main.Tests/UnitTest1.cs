@@ -3,6 +3,7 @@ using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using SIE;
+using SIE.Matching;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -54,14 +55,14 @@ namespace Scrape.Main.Tests
 			}
 
 			//Load SIE vouchers
-			List<VoucherRecord.MatchSLRResult.Matched> fromSIE;
+			List<MatchSLRResult.Matched> fromSIE;
 			{
 				var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
 				var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
 				var roots = await SBCExtensions.ReadSIEFiles(files.Select(file => Path.Combine(sieDir, file)));
 				var allVouchers = roots.SelectMany(o => o.Children).Where(o => o is VoucherRecord).Cast<VoucherRecord>();
 
-				var matchResult = VoucherRecord.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
+				var matchResult = MatchSLRResult.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
 
 				fromSIE = matchResult.Matches.Where(o => o.AccountIdNonAdmin.ToString().StartsWith("45")).ToList();
 			}
@@ -97,6 +98,7 @@ namespace Scrape.Main.Tests
 				//Non-matched: intersectInfo.OnlyInA and intersectInfo.OnlyInB
 			}
 
+			var dbg = "";
 			foreach (var sieItem in sieByName)
 			{
 				if (nameLookup.ContainsKey(sieItem.Key))
@@ -106,14 +108,17 @@ namespace Scrape.Main.Tests
 
 					foreach (var item in sieItem.Value)
 					{
-						var amount = Math.Abs(item.Other.TransactionsNonAdminOrCorrections.FirstOrDefault()?.Amount ?? 0M);
-						if (amount == 0)
-							continue;
+						var amount = Math.Abs(item.SLR.TransactionsNonAdminOrCorrections.FirstOrDefault()?.Amount ?? 0M);
+						//if (amount == 0)
+						//	continue;
 						if (ss.TryGetValue(amount, out var xxx))
 						{
+							dbg += $"{item.CompanyName} {amount} {item.Other.Date.ToSimpleDateString()} {xxx.Count}\n";
 						}
 						else
-						{ }
+						{
+							dbg += $"{item.CompanyName} {amount} {item.Other.Date.ToSimpleDateString()}\n";
+						}
 					}
 				}
 				else; //Ignore non-matched for now
