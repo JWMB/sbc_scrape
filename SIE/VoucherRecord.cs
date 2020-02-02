@@ -23,12 +23,12 @@ namespace SIE
 			return $"{Code} ({Name})";
 		}
 
-		private static Dictionary<string, VoucherType> _lookup;
+		private static Dictionary<string, VoucherType> _lookup = new Dictionary<string, VoucherType>();
 		private static Dictionary<string, VoucherType> Lookup
 		{
 			get
 			{
-				if (_lookup == null)
+				if (!_lookup.Any())
 				{
 					_lookup = new[] {
 							new VoucherType("AR", nameof(AR)),
@@ -66,7 +66,7 @@ namespace SIE
 
 		public static VoucherType GetByCode(string code)
 		{
-			return Lookup.GetValueOrDefault(code, null);
+			return Lookup.GetValueOrDefault(code, null) ?? throw new NotImplementedException($"{code}");
 		}
 	}
 
@@ -102,12 +102,12 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 		//}
 		private static Regex rxType = new Regex(@"(\D+)(\d+)");
 
-		public string VoucherTypeCode { get; set; }
+		public string VoucherTypeCode { get; set; } = string.Empty;
 		public SIE.VoucherType VoucherType { get => SIE.VoucherType.GetByCode(VoucherTypeCode); }
-		public string VoucherForId { get; set; }
+		public string VoucherForId { get; set; } = string.Empty;
 		public int Unknown1 { get; set; }
 		public LocalDate Date { get; set; }
-		public string Unknown2 { get; set; }
+		public string Unknown2 { get; set; } = string.Empty;
 
 		public override string Tag { get => "VER"; }
 
@@ -123,6 +123,8 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 				TransactionsNonAdmin.GroupBy(o => $"{o.AccountId}{Math.Abs(o.Amount)}")
 				.Where(o => o.ToList().Sum(p => p.Amount) != 0).SelectMany(o => o.ToList()).ToList(); }
 
+		public string CompanyName { get => Transactions.Select(o => o.CompanyName).Where(o => !string.IsNullOrEmpty(o)).Distinct().Single(); }
+
 		public override void Read(string[] cells)
 		{
 			var match = rxType.Match(cells[1]);
@@ -137,15 +139,17 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 			return $"{Tag} {VoucherTypeCode}{VoucherForId} {Unknown1} {FormatDate(Date)} {Unknown2}";
 		}
 
-		public string GetTransactionsCompanyName() => Transactions.FirstOrDefault()?.CompanyName;
+		public string GetTransactionsCompanyName() => Transactions.FirstOrDefault()?.CompanyName ?? string.Empty;
 		public decimal GetTransactionsMaxAmount() => Transactions.Select(o => Math.Abs(o.Amount)).Max();
 
 		public static void NormalizeCompanyNames(IEnumerable<VoucherRecord> vouchers)
 		{
 			//Match SLR/LR and other entries
-			var grouped = vouchers.Where(o => o.Transactions.Any()).GroupBy(o => o.Transactions.First().CompanyName).ToDictionary(o => o.Key, o => o.ToList());
-			var sortedNames = grouped.Keys.OrderBy(o => o).ToList();
-			//Test: though I'd find some groupings with shortened names, but it's not obvious how... var countByLength = sortedNames.GroupBy(o => o.Length).ToDictionary(o => o.Key, o => o.ToList());
+			//var grouped = vouchers.Where(o => o.Transactions.Any()).GroupBy(o => o.Transactions.First().CompanyName).ToDictionary(o => o.Key, o => o.ToList());
+			//var sortedNames = grouped.Keys.OrderBy(o => o).ToList();
+			var sortedNames = vouchers.SelectMany(o => o.Transactions).Select(o => o.CompanyName).Distinct().OrderBy(o => o).ToList();
+
+			//Test: thought I'd find some groupings with shortened names, but it's not obvious how... var countByLength = sortedNames.GroupBy(o => o.Length).ToDictionary(o => o.Key, o => o.ToList());
 
 			var aliases = new Dictionary<string, List<string>>();
 			var shortName = "-----------";
@@ -154,7 +158,7 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 				var name = sortedNames[i];
 				if (name.Length < 5)
 				{ }
-				if (name.StartsWith(shortName))
+				else if (name.StartsWith(shortName))
 				{
 					if (!aliases.TryGetValue(shortName, out var list))
 					{
@@ -196,9 +200,10 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 
 			public class Matched
 			{
-				public VoucherRecord SLR { get; set; }
-				public VoucherRecord Other { get; set; }
+				public VoucherRecord SLR { get; set; } = new VoucherRecord();
+				public VoucherRecord Other { get; set; } = new VoucherRecord();
 				public int AccountIdNonAdmin { get => SLR.Transactions.FirstOrDefault(o => !(new[] { '1', '2' }.Contains(o.AccountId.ToString()[0])))?.AccountId ?? 0; }
+				public string CompanyName { get => SLR.CompanyName; }
 			}
 		}
 
@@ -210,7 +215,7 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 		/// <param name="vouchers"></param>
 		/// <param name="filterVoucherTypes"></param>
 		/// <returns></returns>
-		public static MatchSLRResult MatchSLRVouchers(IEnumerable<VoucherRecord> vouchers, IEnumerable<VoucherType> filterVoucherTypes = null)
+		public static MatchSLRResult MatchSLRVouchers(IEnumerable<VoucherRecord> vouchers, IEnumerable<VoucherType>? filterVoucherTypes = null)
 		{
 			if (filterVoucherTypes != null)
 				vouchers = vouchers.Where(vr => !filterVoucherTypes.Contains(vr.VoucherType));
@@ -307,11 +312,11 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 		// #TRANS 27180 {} -2047.00 20190210 "Skatteverket"
 		public override string Tag { get => "TRANS"; }
 		public int AccountId { get; set; }
-		public string Unknown { get; set; }
+		public string Unknown { get; set; } = string.Empty;
 		public decimal Amount { get; set; }
 		public LocalDate Date { get; set; }
-		public string CompanyName { get; set; }
-		public string CompanyId { get; set; }
+		public string CompanyName { get; set; } = string.Empty;
+		public string CompanyId { get; set; } = string.Empty;
 		public override void Read(string[] cells)
 		{
 			AccountId = int.Parse(cells[1]);

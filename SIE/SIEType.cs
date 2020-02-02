@@ -58,23 +58,23 @@ namespace SIE
 			var excludeTypes = new[] { typeof(SIERecord), typeof(RootRecord), typeof(UnknownRecord) };
 			types = types.Except(excludeTypes).ToList();
 
-			SIERecord Construct(Type type) => type.GetConstructor(new Type[] { }).Invoke(new object[] { }) as SIERecord;
+			SIERecord Construct(Type type) => (SIERecord)(type.GetConstructor(new Type[] { })?.Invoke(new object[] { }) ?? throw new Exception($"Invalid type {type}"));
 			var tagMap = types.Select(o => new { Tag = Construct(o).Tag, Type = o }).ToDictionary(o => o.Tag, o => o.Type);
 
 			var hierarchy = new Stack<SIERecord>();
 			var root = new RootRecord();
 			hierarchy.Push(root);
-			SIERecord current = null;
+			SIERecord? current = null;
 			var errors = new List<(Exception exception, string line)>();
 			while (!sr.EndOfStream)
 			{
-				var line = (await sr.ReadLineAsync()).Trim();
+				var line = ((await sr.ReadLineAsync()) ?? "").Trim();
 				if (line.StartsWith("{"))
 				{
 					if (current is IWithChildren)
 						hierarchy.Push(current);
 					else
-						throw new Exception($"{current.GetType()} does not implement {nameof(IWithChildren)}");
+						throw new Exception($"{current?.GetType().FullName ?? "N/A"} does not implement {nameof(IWithChildren)}");
 				}
 				else if (line.StartsWith("}"))
 					hierarchy.Pop();
@@ -99,7 +99,7 @@ namespace SIE
 						{
 							throw new NotImplementedException($"Only SIE v4 is supported (was {unknown.Data[1]})");
 						}
-						(hierarchy.Peek() as IWithChildren).Children.Add(instance);
+						((IWithChildren)hierarchy.Peek()).Children.Add(instance);
 						current = instance;
 					}
 				}
@@ -138,11 +138,12 @@ namespace SIE
 
 		public static T Parse<T>(string val, T defaultValueElseThrow = default(T))
 		{
-			var type = typeof(T);
-			return (T)Parse(typeof(T), val, defaultValueElseThrow);
+			var parsed = Parse(typeof(T), val, defaultValueElseThrow);
+			if (parsed == null) throw new NullReferenceException($"{val}");
+			return (T)parsed;
 		}
 
-		public static object Parse(Type type, string val, object defaultValueElseThrow)
+		public static object? Parse(Type type, string val, object? defaultValueElseThrow)
 		{
 			object converted;
 			try
@@ -172,7 +173,7 @@ namespace SIE
 
 		protected void Populate(IEnumerable<string> cells, IEnumerable<string> propertyNames)
 		{
-			Populate(cells, propertyNames.Select(p => this.GetType().GetProperty(p)), this);
+			Populate(cells, propertyNames.Select(p => GetType().GetProperty(p)).OfType<System.Reflection.PropertyInfo>(), this);
 		}
 
 		public static void Populate(IEnumerable<string> cells, IEnumerable<System.Reflection.PropertyInfo> properties, object targetObject)
@@ -202,7 +203,7 @@ namespace SIE
 
 	public class UnknownRecord : SIERecord
 	{
-		public string[] Data { get; set; }
+		public string[] Data { get; set; } = new string[] { };
 		private string tag = "";
 		public override string Tag => tag;
 		public override void Read(string[] cells)
@@ -218,10 +219,10 @@ namespace SIE
 		// #ADRESS "SvenSvensson"  "Box 21""21120   MALMÖ"  "040-12345"
 		// kontakt utdelningsadr postadr tel
 		public override string Tag { get => "ADRESS"; }
-		public string Contact { get; set; }
-		public string Address { get; set; }
-		public string PostalAddress { get; set; }
-		public string PhoneNumber { get; set; }
+		public string Contact { get; set; } = string.Empty;
+		public string Address { get; set; } = string.Empty;
+		public string PostalAddress { get; set; } = string.Empty;
+		public string PhoneNumber { get; set; } = string.Empty;
 
 		public override void Read(string[] cells)
 		{
@@ -234,7 +235,7 @@ namespace SIE
 	{
 		// #BKOD  SNI-kod
 		public override string Tag { get => "BKOD"; }
-		public string SNI { get; set; }
+		public string SNI { get; set; } = string.Empty;
 		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(SNI) });
 		public override string ToString()=>  $"{Tag}: {SNI})";
 	}
@@ -243,7 +244,7 @@ namespace SIE
 		//# DIM    dimensionsnr    namn  # DIM    1   "Avdelning"
 		public override string Tag { get => "DIM"; }
 		public int DimensionId { get; set; }
-		public string Name { get; set; }
+		public string Name { get; set; } = string.Empty;
 		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(DimensionId), nameof(Name) });
 		public override string ToString()=> $"{Tag}: {DimensionId} {Name})";
 	}
@@ -253,7 +254,7 @@ namespace SIE
 		//#ENHET  kontonr enhet
 		public override string Tag { get => "ENHET"; }
 		public int AccountId { get; set; }
-		public string Unit { get; set; }
+		public string Unit { get; set; } = string.Empty;
 		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(AccountId), nameof(Unit) });
 		public override string ToString() => $"{Tag}: {AccountId} {Unit})";
 	}
@@ -271,7 +272,7 @@ namespace SIE
 	{
 		//#FNAMN  företagsnamn
 		public override string Tag { get => "FNAMN"; }
-		public string Value { get; set; }
+		public string Value { get; set; } = string.Empty;
 		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(Value) });
 		public override string ToString() => $"{Tag}: {Value})";
 	}
@@ -289,7 +290,7 @@ namespace SIE
 	{
 		//#FORMAT PC8
 		public override string Tag { get => "FORMAT"; }
-		public string Value { get; set; }
+		public string Value { get; set; } = string.Empty;
 		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(Value) });
 		public override string ToString() => $"{Tag}: {Value})";
 	}
@@ -300,7 +301,7 @@ namespace SIE
 		// #KONTO 84710 "Räntebidrag"
 		public override string Tag { get => "KONTO"; }
 		public int AccountId { get; set; }
-		public string AccountName { get; set; }
+		public string AccountName { get; set; } = string.Empty;
 		public override void Read(string[] cells) => Populate(cells.Skip(1), new[] { nameof(AccountId), nameof(AccountName) });
 		public override string ToString() => $"{Tag}: {AccountId} ({AccountName})";
 	}
