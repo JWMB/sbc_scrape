@@ -22,7 +22,9 @@ namespace SIE.Matching
 			return $"{AccountId}\t{Amount}\t{DateRegistered?.ToSimpleDateString()}\t{DateFinalized?.ToSimpleDateString()}\t{CompanyName}\t{ExtendedName}";
 		}
 
-		public static List<TransactionMatched> FromVoucherMatches(MatchSLRResult matchResult, int[] requiredAccounts)
+		public static List<int> RequiredAccountIds = new List<int> { 24400, 15200 };
+
+		public static List<TransactionMatched> FromVoucherMatches(MatchSLRResult matchResult, IEnumerable<int> requiredAccounts)
 		{
 			var result = matchResult.Matches.SelectMany(o =>
 			{

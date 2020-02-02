@@ -41,13 +41,13 @@ namespace SIE.Tests
 			var matchResult = MatchSLRResult.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
 
 			//All must have a single (24400|15200) transaction
-			var requiredAccounts = new[] { 24400, 15200 };
-			var transactionsMissingRequired = matchResult.Matches.SelectMany(o => new[] { o.SLR, o.Other }).Where(o => o.Transactions.Count(tx => requiredAccounts.Contains(tx.AccountId)) != 1);
+			var transactionsMissingRequired = matchResult.Matches.SelectMany(o => new[] { o.SLR, o.Other })
+				.Where(o => o.Transactions.Count(tx => TransactionMatched.RequiredAccountIds.Contains(tx.AccountId)) != 1);
 			Assert.False(transactionsMissingRequired.Any());
 
 			Assert.Equal(0, matchResult.Matches.Count(o => o.Other.TransactionsNonAdminOrCorrections.Count() > 1));
 
-			var txs = TransactionMatched.FromVoucherMatches(matchResult, requiredAccounts);
+			var txs = TransactionMatched.FromVoucherMatches(matchResult, TransactionMatched.RequiredAccountIds);
 
 			var dbg = string.Join("\n", txs.OrderBy(o => o.DateRegistered ?? LocalDate.MinIsoValue));
 		}
