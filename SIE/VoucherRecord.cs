@@ -40,9 +40,11 @@ namespace SIE
 							new VoucherType("KR", nameof(KR)),
 							new VoucherType("SLR", nameof(SLR)),
 							new VoucherType("LON", nameof(Salary)),
+							new VoucherType("LAN", nameof(LAN)),
 							new VoucherType("LR", nameof(TaxAndExpense)),
 							new VoucherType("LB", nameof(LB)),
 							new VoucherType("PE", nameof(Accrual)),
+							new VoucherType("RV", nameof(Revision)),
 							new VoucherType("MA", nameof(Anulled)),
 						}.ToDictionary(o => o.Code, o => o);
 				}
@@ -59,9 +61,11 @@ namespace SIE
 		public static VoucherType FAS { get => Lookup["FAS"]; }
 		public static VoucherType SLR { get => Lookup["SLR"]; }
 		public static VoucherType Salary { get => Lookup["LON"]; }
+		public static VoucherType LAN { get => Lookup["LAN"]; }
 		public static VoucherType TaxAndExpense { get => Lookup["LR"]; }
 		public static VoucherType LB { get => Lookup["LB"]; }
 		public static VoucherType Accrual { get => Lookup["PE"]; }
+		public static VoucherType Revision { get => Lookup["RV"]; }
 		public static VoucherType Anulled { get => Lookup["MA"]; }
 
 		public static VoucherType GetByCode(string code)

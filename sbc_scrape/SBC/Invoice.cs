@@ -7,7 +7,7 @@ using SBCScan;
 
 namespace sbc_scrape.SBC
 {
-	class InvoiceSource : HtmlSource<Invoice>
+	public class InvoiceSource : HtmlSource<Invoice>
 	{
 		public override string SavedFilePrefix => "Invoices";
 		public override string UrlPath => "Portalen/Ekonomi/Fakturaparm/";
