@@ -45,17 +45,25 @@ namespace Scrape.Main.Tests
 			Func<int, bool> accountFilter = accountId => accountId.ToString().StartsWith("45");
 
 			//Load SBC invoices
-			var fromSBC = new List<sbc_scrape.SBC.Invoice>();
+			var fromSBC = new List<SBCVariant>();
 			{
 				var dir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "sbc_html");
+				var tmp = new List<sbc_scrape.SBC.Invoice>();
 				await foreach (var sbcRows in new sbc_scrape.SBC.InvoiceSource().ReadAllAsync(dir))
-					fromSBC.AddRange(sbcRows.Where(o => accountFilter(o.AccountId)));
+					tmp.AddRange(sbcRows.Where(o => accountFilter(o.AccountId)));
 
-				fromSBC = fromSBC.OrderByDescending(o => o.RegisteredDate).ToList();
+				fromSBC = tmp.Select(o => new SBCVariant {
+					AccountId = o.AccountId,
+					Amount = o.Amount,
+					CompanyName = o.Supplier,
+					DateRegistered = NodaTime.LocalDate.FromDateTime(o.RegisteredDate),
+					DateFinalized = o.PaymentDate.HasValue ? NodaTime.LocalDate.FromDateTime(o.PaymentDate.Value) : (NodaTime.LocalDate?)null,
+					Source = o,
+				}).ToList(); //fromSBC.OrderByDescending(o => o.RegisteredDate).ToList();
 			}
 
 			//Load SIE vouchers
-			List<MatchSLRResult.Matched> fromSIE;
+			List<TransactionMatched> fromSIE; //List<MatchSLRResult.Matched> fromSIE;
 			{
 				var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
 				var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
@@ -63,13 +71,10 @@ namespace Scrape.Main.Tests
 				var allVouchers = roots.SelectMany(o => o.Children).Where(o => o is VoucherRecord).Cast<VoucherRecord>();
 
 				var matchResult = MatchSLRResult.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
-
-				fromSIE = matchResult.Matches.Where(o => o.AccountIdNonAdmin.ToString().StartsWith("45")).ToList();
+				fromSIE = TransactionMatched.FromVoucherMatches(matchResult, TransactionMatched.RequiredAccountIds).Where(o => accountFilter(o.AccountId)).ToList();
 			}
 
-			//fromSIE.First().Other.Date
-
-			var sbcByName = fromSBC.GroupBy(o => o.Supplier).ToDictionary(o => o.Key, o => o.ToList());
+			var sbcByName = fromSBC.GroupBy(o => o.CompanyName).ToDictionary(o => o.Key, o => o.ToList());
 			var sieByName = fromSIE.GroupBy(o => o.CompanyName).ToDictionary(o => o.Key, o => o.ToList());
 
 			//Create name lookup (can be truncated in one source but not the other):
@@ -98,35 +103,79 @@ namespace Scrape.Main.Tests
 				//Non-matched: intersectInfo.OnlyInA and intersectInfo.OnlyInB
 			}
 
-			var dbg = "";
-			foreach (var sieItem in sieByName)
+			var matches = new List<(TransactionMatched, SBCVariant)>();
+			foreach (var (sieName, sieList) in sieByName)
 			{
-				if (nameLookup.ContainsKey(sieItem.Key))
+				if (nameLookup.ContainsKey(sieName))
 				{
-					var inSbc = sbcByName[nameLookup[sieItem.Key]];
-					var ss = inSbc.GroupBy(o => o.Amount).ToDictionary(o => o.Key, o => o.ToList());
+					var inSbc = sbcByName[nameLookup[sieName]].GroupBy(o => o.Amount).ToDictionary(o => o.Key, o => o.ToList());
 
-					foreach (var item in sieItem.Value)
+					//Multiple passes of the following until no more matches
+					while (true)
 					{
-						var amount = Math.Abs(item.SLR.TransactionsNonAdminOrCorrections.FirstOrDefault()?.Amount ?? 0M);
-						//if (amount == 0)
-						//	continue;
-						if (ss.TryGetValue(amount, out var xxx))
+						var newMatches = new List<(TransactionMatched, SBCVariant)>();
+						for (int sieIndex = sieList.Count - 1; sieIndex >= 0; sieIndex--) //foreach (var item in sieItem.Value)
 						{
-							dbg += $"{item.CompanyName} {amount} {item.Other.Date.ToSimpleDateString()} {xxx.Count}\n";
+							var item = sieList[sieIndex];
+							if (inSbc.TryGetValue(item.Amount, out var sbcSameAmount))
+							{
+								var sbcSameAmountAccount = sbcSameAmount.Where(o => o.AccountId == item.AccountId);
+								//Find those with same register date (could be many)
+								//If multiple or none, take those with closest payment date.
+								//Remove match from inSbc so it can't be matched again
+								var found = new List<SBCVariant>();
+								if (item.DateRegistered.HasValue)
+									found = sbcSameAmountAccount.Where(o => (o.DateRegistered.Value - item.DateRegistered.Value).Days <= 1).ToList();
+								else
+									found = sbcSameAmountAccount.Where(o => (o.DateFinalized.HasValue && item.DateFinalized.HasValue)
+										&& (o.DateFinalized.Value - item.DateFinalized.Value).Days <= 1).ToList();
+
+								if (found.Count > 1)
+								{
+									var orderByDateDiff = found
+										.Where(o => (o.DateFinalized.HasValue && item.DateFinalized.HasValue))
+										.Select(o => new
+										{
+											Diff = Math.Abs((o.DateFinalized.Value - item.DateFinalized.Value).Days),
+											Object = o
+										})
+										.OrderBy(o => o.Diff);
+									var minDiff = orderByDateDiff.First().Diff;
+									if (orderByDateDiff.Count(o => o.Diff == minDiff) == 1)
+									{
+										found = orderByDateDiff.Take(1).Select(o => o.Object).ToList();
+									}
+								}
+								if (found.Count == 1)
+								{
+									newMatches.Add((item, found.Single()));
+									sieList.RemoveAt(sieIndex);
+									sbcSameAmount.Remove(found.First());
+								}
+							}
 						}
-						else
-						{
-							dbg += $"{item.CompanyName} {amount} {item.Other.Date.ToSimpleDateString()}\n";
-						}
+						if (!newMatches.Any())
+							break;
+						matches.AddRange(newMatches);
 					}
 				}
-				else; //Ignore non-matched for now
 			}
 
-			//var dbg = string.Join('\n', x1.Concat(x2));
-			//var dbg = string.Join("\n", maintenance.OrderByDescending(o => o.Other.Date).Select(o =>
-			//	$"{o.Other.Date.ToSimpleDateString()}\t{o.SLR.Date.ToSimpleDateString()}\t{o.AccountIdNonAdmin}\t{o.SLR.TransactionsNonAdminOrCorrections.First().Amount}\t{o.SLR.Transactions.First().CompanyName}"));
+			var nonmatched = sbcByName.Values.SelectMany(o => o).Except(matches.Select(o => o.Item2))
+				.Concat(sieByName.Values.SelectMany(o => o).Except(matches.Select(o => o.Item1)));
+
+			var all = matches.Select(o => o.Item1).Concat(nonmatched);
+
+			var sss = string.Join("\n",
+				all
+					.OrderBy(o => o.CompanyName).ThenBy(o => o.DateRegistered)
+					.Select(o => $"{o.CompanyName}\t{o.Amount}\t{o.AccountId}\t{o.DateRegistered?.ToSimpleDateString()}\t{o.DateFinalized?.ToSimpleDateString()}\t{(nonmatched.Contains(o) ? "X" : "")}\t{((o is SBCVariant) ? "SBC" : "")}")
+			);
+		}
+
+		class SBCVariant : TransactionMatched
+		{
+			public sbc_scrape.SBC.Invoice Source { get; set; } = new sbc_scrape.SBC.Invoice();
 		}
 
 		(List<T> Intersection, List<T> OnlyInA, List<T> OnlyInB) IntersectInfo<T>(IEnumerable<T> enumA, IEnumerable<T> enumB)
