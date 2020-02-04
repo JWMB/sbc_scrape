@@ -18,6 +18,7 @@ namespace SIE.Tests
 			var roots = await ReadSIEFiles(files);
 			var allVouchers = roots.SelectMany(o => o.Children).Where(o => o is VoucherRecord).Cast<VoucherRecord>();
 
+			var ma = string.Join("\n", allVouchers.Where(o => o.VoucherTypeCode == "MA").OrderBy(o => o.Date).Select(o => o.ToHierarchicalString()));
 
 			var withSalaries = allVouchers.Where(o => !(new[] { "LR", "BS", "MA", "AR" }.Contains(o.VoucherTypeCode))
 				&& o.Transactions.Any(t => t.AccountId.ToString().StartsWith("647"))).OrderBy(o => o.Date); //27300
