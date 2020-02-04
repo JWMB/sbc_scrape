@@ -15,14 +15,14 @@ namespace SIE.Tests
 		public async Task TestX()
 		{
 			var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
-			var roots = await ReadSIEFiles(files); // new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
+			var roots = await ReadSIEFiles(files);
 			var allVouchers = roots.SelectMany(o => o.Children).Where(o => o is VoucherRecord).Cast<VoucherRecord>();
 
-			var matchResult = MatchSLRResult.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
 
-			var maintenance = matchResult.Matches.Where(o => o.AccountIdNonAdmin.ToString().StartsWith("45"));
-			var dbg = string.Join("\n", maintenance.OrderByDescending(o => o.Other.Date).Select(o =>
-				$"{o.Other.Date.ToSimpleDateString()}\t{o.SLR.Date.ToSimpleDateString()}\t{o.AccountIdNonAdmin}\t{o.SLR.TransactionsNonAdminOrCorrections.First().Amount}\t{o.SLR.Transactions.First().CompanyName}"));
+			var withSalaries = allVouchers.Where(o => !(new[] { "LR", "BS", "MA", "AR" }.Contains(o.VoucherTypeCode))
+				&& o.Transactions.Any(t => t.AccountId.ToString().StartsWith("647"))).OrderBy(o => o.Date); //27300
+			var dbg = string.Join("\n", withSalaries.Select(o => o.ToHierarchicalString()));
+			//var salaries = allVouchers.Where(o => o.VoucherType == VoucherType.Salary).OrderBy(o => o.Date).ToList();
 		}
 
 
