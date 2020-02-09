@@ -39,6 +39,15 @@ namespace Scrape.Main.Tests
 			throw new Exception($"JSON in '{path}' is not a {typeof(T).Name}");
 		}
 
+		async Task<List<sbc_scrape.SBC.Invoice>> LoadSBCInvoices(Func<int, bool> accountFilter)
+		{
+			var dir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "sbc_html");
+			var tmp = new List<sbc_scrape.SBC.Invoice>();
+			await foreach (var sbcRows in new sbc_scrape.SBC.InvoiceSource().ReadAllAsync(dir))
+				tmp.AddRange(sbcRows.Where(o => accountFilter(o.AccountId)));
+			return tmp;
+		}
+
 		[TestMethod]
 		public async Task TestMethod1()
 		{
@@ -47,12 +56,7 @@ namespace Scrape.Main.Tests
 			//Load SBC invoices
 			var fromSBC = new List<SBCVariant>();
 			{
-				var dir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "sbc_html");
-				var tmp = new List<sbc_scrape.SBC.Invoice>();
-				await foreach (var sbcRows in new sbc_scrape.SBC.InvoiceSource().ReadAllAsync(dir))
-					tmp.AddRange(sbcRows.Where(o => accountFilter(o.AccountId)));
-
-				fromSBC = tmp.Select(o => new SBCVariant {
+				fromSBC = (await LoadSBCInvoices(accountFilter)).Select(o => new SBCVariant {
 					AccountId = o.AccountId,
 					Amount = o.Amount,
 					CompanyName = o.Supplier,
@@ -189,14 +193,21 @@ namespace Scrape.Main.Tests
 			return (intersect, enumA.Except(intersect).ToList(), enumB.Except(intersect).ToList());
 		}
 
-		void DownloadManagement(List<sbc_scrape.SBC.Invoice> fromSBC)
-		{
 
-			var downloadDir = new DirectoryInfo(Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "maintenance"));
+		[TestMethod]
+		public async Task DownloadedGetAmounts()
+		{
+			var invoices = await LoadSBCInvoices(accountId => accountId.ToString().StartsWith("45"));
+			//DownloadManagement(invoices);
+			var filenames = GenerateFilenames(invoices);
+			var sorted = string.Join("\n", filenames.OrderBy(o => o.extendedFilename).Select(o => $"{o.extendedFilename}\t{o.invoice.Amount}\t{o.invoice.AccountId}"));
+		}
+
+		static List<(sbc_scrape.SBC.Invoice invoice, string filename, string extendedFilename)> GenerateFilenames(List<sbc_scrape.SBC.Invoice> fromSBC)
+		{
 			var rxFilename = new System.Text.RegularExpressions.Regex(@"\/([^\/]+\.\w{3})$");
 			var unnamedCnt = 0;
-			var problems = new List<string>();
-			fromSBC.ToList().ForEach(o => {
+			return fromSBC.Select(o => {
 				var m = rxFilename.Match(o.InvoiceLink);
 				string filename;
 				if (m.Success)
@@ -204,16 +215,30 @@ namespace Scrape.Main.Tests
 				else
 					filename = $"Invoice({++unnamedCnt}).pdf";
 
-				if (!File.Exists(Path.Join(downloadDir.FullName, filename)))
-				{
-					problems.Add($"N/A  {o.InvoiceLink}");
-					return;
-				}
-				var name = $"{o.RegisteredDate:yyyy-MM-dd}_{(int)Math.Abs(o.Amount)}_{Truncate(o.Supplier, 7)}_{filename}";
-				File.Copy(Path.Join(downloadDir.FullName, filename), Path.Join(downloadDir.FullName, "Renamed/", name), true);
-			});
+				return (
+					o,
+					filename,
+					$"{o.RegisteredDate:yyyy-MM-dd}_{(int)Math.Abs(o.Amount)}_{Truncate(o.Supplier, 7)}_{filename}"
+				);
+			}).ToList();
 
 			string Truncate(string val, int maxLength) { if (val.Length > maxLength) return val.Remove(maxLength); return val; }
+		}
+		void DownloadManagement(List<sbc_scrape.SBC.Invoice> fromSBC)
+		{
+			var downloadDir = new DirectoryInfo(Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "maintenance"));
+			var filenames = GenerateFilenames(fromSBC);
+			var problems = new List<string>();
+			foreach (var (invoice, filename, extendedFilename) in filenames)
+			{
+				if (!File.Exists(Path.Join(downloadDir.FullName, filename)))
+				{
+					problems.Add($"N/A  {invoice.InvoiceLink}");
+					continue;
+				}
+				File.Copy(Path.Join(downloadDir.FullName, filename), Path.Join(downloadDir.FullName, "Renamed/", extendedFilename), true);
+			}
+
 			var script = @"
 function download(all) {
 	let cnt = 0;
