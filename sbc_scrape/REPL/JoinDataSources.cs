@@ -23,7 +23,9 @@ namespace SBCScan.REPL
 		public override async Task<object> Evaluate(List<object> parms)
 		{
 			Console.WriteLine("0");
-			var invoices = (await main.LoadInvoices(includeOCRd: false, (i, l) => Console.RewriteLine($"{i}/{l}"))).Where(o => o.DueDate.HasValue).ToList();
+			var invoices = (await main.LoadInvoices(includeOCRd: false, (i, l) => {
+				if (l < 100 || i % 20 == 0) Console.RewriteLine($"{i}/{l}");
+			})).Where(o => o.DueDate.HasValue).ToList();
 			//var invoices = (await main.LoadInvoices(false)).Where(o => o.DueDate.HasValue).ToList();
 			var receipts = new ReceiptsSource().ReadAll(defaultFolder);
 			var transactions = new BankTransactionSource().ReadAll(defaultFolder);
@@ -77,7 +79,7 @@ namespace SBCScan.REPL
 				Supplier = i.Supplier,
 				AccountId = i.Invoice?.AccountId,
 				AccountName = i.Invoice?.AccountName,
-				Comments = i.Invoice?.Comments,
+				Comments = i.Invoice?.Comments ?? i.Receipt?.OCR,
 				InvoiceId = i.Invoice?.Id,
 				ReceiptId = i.Receipt?.Information,
 				CurrencyDate = o.Transaction.CurrencyDate,

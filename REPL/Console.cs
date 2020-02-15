@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace REPL
@@ -28,20 +29,52 @@ namespace REPL
 			set { Console.CursorLeft = value.X; Console.CursorTop = value.Y; }
 		}
 
+		private string _lastWrite = string.Empty;
+
+		private void _WriteLine(string text)
+		{
+			_lastWrite = text;
+			Console.WriteLine(text);
+		}
+		private void _Write(string text)
+		{
+			_lastWrite = text;
+			Console.Write(text);
+		}
+
+		//Leaky abstraction, we may e.g. have changed window size. Whole lastWrite thingy should be replaced with VDOM anyway
+		private List<int> LastWriteLineLengths
+		{
+			get
+			{
+				var lengths = _lastWrite.Split('\n').SelectMany(ln => Enumerable.Range(0, ln.Length / Window.Width).Select(o => Window.Width).Concat(new[] { ln.Length % Window.Width }));
+				return lengths.ToList();
+			}
+		}
+		private string GetEmptyString(int len) => "".PadLeft(len, ' ');
+
 		public override (int Top, int Width, int Height) Window => (Console.WindowTop, Console.WindowWidth, Console.WindowHeight);
 
 		//TODO: we need to know how long the line currently is so we can space out the rest of the line
 		public override void RewriteLine(string text, ConsoleColor? foreColor = null, ConsoleColor? backColor = null) =>
 			Write(() => {
+				var lln = LastWriteLineLengths;
+				if (lln.Count > 1 || lln.First() > text.Length)
+				{
+					CursorPosition = (0, CursorPosition.Y - lln.Count);
+					foreach (var item in lln)
+						_WriteLine(GetEmptyString(item));
+					
+				}
 				CursorPosition = (0, CursorPosition.Y - 1);
-				Console.WriteLine(text);
+				_WriteLine(text);
 			}, foreColor, backColor);
 
 		public override void Write(string text, ConsoleColor? foreColor = null, ConsoleColor? backColor = null) =>
-			Write(() => Console.Write(text), foreColor, backColor);
+			Write(() => _Write(text), foreColor, backColor);
 
 		public override void WriteLine(string text, ConsoleColor? foreColor = null, ConsoleColor? backColor = null) =>
-			Write(() => Console.WriteLine(text), foreColor, backColor);
+			Write(() => _WriteLine(text), foreColor, backColor);
 
 		private void Write(Action writer, ConsoleColor? foreColor = null, ConsoleColor? backColor = null)
 		{

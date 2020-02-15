@@ -22,7 +22,7 @@ namespace sbc_scrape.SBC
 				OCR = r[3],
 				Amount = decimal.Parse(r[4], culture),
 				Information = r[5],
-				Supplier = r[6],
+				Supplier = r[6].Trim(),
 			});
 		}
 	}
