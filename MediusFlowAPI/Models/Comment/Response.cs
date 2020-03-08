@@ -11,51 +11,56 @@ namespace MediusFlowAPI.Models.Comment
 	//    using QuickType;
 	//
 	//    var response = Response.FromJson(jsonString);
-		using System;
-		using System.Collections.Generic;
+	using System;
+	using System.Collections.Generic;
 
-		using System.Globalization;
-		using Newtonsoft.Json;
-		using Newtonsoft.Json.Converters;
+	using System.Globalization;
+	using Newtonsoft.Json;
+	using Newtonsoft.Json.Converters;
 
-		public partial class Response
+	public partial class Response
+	{
+		[JsonProperty("$type")]
+		public string Type { get; set; }
+
+		[JsonProperty("Id")]
+		public long Id { get; set; }
+
+		[JsonProperty("Text")]
+		public string Text { get; set; }
+
+		[JsonProperty("Author")]
+		public string Author { get; set; }
+
+		[JsonProperty("CreatedDate")]
+		public string CreatedDate { get; set; }
+
+		public override string ToString()
 		{
-			[JsonProperty("$type")]
-			public string Type { get; set; }
-
-			[JsonProperty("Id")]
-			public long Id { get; set; }
-
-			[JsonProperty("Text")]
-			public string Text { get; set; }
-
-			[JsonProperty("Author")]
-			public string Author { get; set; }
-
-			[JsonProperty("CreatedDate")]
-			public string CreatedDate { get; set; }
+			return $"{CreatedDate} {Author} {Text} {Id}";
 		}
+	}
 
-		public partial class Response
-		{
-			public static Response[] FromJson(string json) => JsonConvert.DeserializeObject<Response[]>(json, Converter.Settings);
-		}
+	public partial class Response
+	{
+		public static Response[] FromJson(string json) => JsonConvert.DeserializeObject<Response[]>(json, Converter.Settings);
+	}
 
-		public static class Serialize
-		{
-			public static string ToJson(this Response[] self) => JsonConvert.SerializeObject(self, Converter.Settings);
-		}
+	public static class Serialize
+	{
+		public static string ToJson(this Response[] self) => JsonConvert.SerializeObject(self, Converter.Settings);
+	}
 
-		internal static class Converter
+	internal static class Converter
+	{
+		public static readonly JsonSerializerSettings Settings = new JsonSerializerSettings
 		{
-			public static readonly JsonSerializerSettings Settings = new JsonSerializerSettings
-			{
-				MetadataPropertyHandling = MetadataPropertyHandling.Ignore,
-				DateParseHandling = DateParseHandling.None,
-				Converters =
+			MetadataPropertyHandling = MetadataPropertyHandling.Ignore,
+			DateParseHandling = DateParseHandling.None,
+			Converters =
 			{
 				new IsoDateTimeConverter { DateTimeStyles = DateTimeStyles.AssumeUniversal }
 			},
-			};
-		}
+		};
+	}
 }

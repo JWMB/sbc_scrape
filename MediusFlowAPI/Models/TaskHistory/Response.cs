@@ -44,6 +44,11 @@ namespace MediusFlowAPI.Models.TaskHistory
 
 		[JsonProperty("IsDetail")]
 		public bool IsDetail { get; set; }
+
+		public override string ToString()
+		{
+			return $"{Date} {Topic} {Description}";
+		}
 	}
 
 	public partial class Response
