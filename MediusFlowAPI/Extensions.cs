@@ -9,13 +9,15 @@ namespace MediusFlowAPI
 	{
 		public static string ToUtcString(this DateTime datetime) => datetime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
-		static Regex rxMediusDate = new Regex(@"/Date\((\d{12,14})\)/");
+		static Regex rxMediusDate = new Regex(@"/Date\((\d{12,14})([+-]\d{4})?\)/");
 		public static DateTime? FromMediusDate(this string str)
 		{
 			if (str == null)
 				return null;
 			var m = rxMediusDate.Match(str);
-			return m.Success && m.Groups.Count > 1 ? (DateTime?)new DateTime(1970, 1, 1).AddMilliseconds(ulong.Parse(m.Groups[1].Value)) : null;
+			if (m.Success && m.Groups.Count > 1)
+				return (DateTime?)new DateTime(1970, 1, 1).AddMilliseconds(ulong.Parse(m.Groups[1].Value)); //TODO: timezone (Groups[2])
+			return DateTime.Parse(str);
 		}
 
 		public static long ToUnixTimestamp(this DateTime datetime)
