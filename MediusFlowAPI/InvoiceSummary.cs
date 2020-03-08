@@ -1,4 +1,5 @@
-﻿using System;
+﻿using MediusFlowAPI.Models.SupplierInvoiceGadgetData;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -117,7 +118,7 @@ namespace MediusFlowAPI
 			}
 			catch (Exception ex)
 			{
-				throw;
+				throw new Exception($"{iv.Id} {iv.Supplier.Name} {iv.InvoiceDate}", ex);
 			}
 		}
 	}

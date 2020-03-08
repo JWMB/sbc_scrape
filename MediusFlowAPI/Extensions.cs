@@ -20,6 +20,11 @@ namespace MediusFlowAPI
 			return DateTime.Parse(str);
 		}
 
+		public static string ToMediusDate(this DateTime datetime)
+		{
+			return $"/Date({datetime.ToUnixTimestamp()})/";
+		}
+
 		public static long ToUnixTimestamp(this DateTime datetime)
 		{
 			return (long)(datetime - new DateTime(1970, 1, 1)).TotalMilliseconds;
