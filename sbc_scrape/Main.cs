@@ -25,13 +25,11 @@ namespace SBCScan
 		private readonly ILogger<Main> logger;
 
 		private Fetcher fetcher;
-		private SBCMain sbc;
-		private MediusFlow mediusFlow;
 		private RemoteWebDriver driver;
 		private string downloadFolder;
 
-		public SBCMain SBC { get => sbc; }
-		public MediusFlow MediusFlow { get => mediusFlow; }
+		public SBCMain SBC { get; private set; }
+		public MediusFlow MediusFlow { get; }
 
 		public Main(IOptions<AppSettings> settings, IKeyValueStore store, ILogger<Main> logger)
 		{
@@ -39,7 +37,7 @@ namespace SBCScan
 			this.store = store;
 			this.logger = logger;
 
-			mediusFlow = new MediusFlow(store, logger); //TODO: better pattern for loggers...
+			MediusFlow = new MediusFlow(store, logger); //TODO: better pattern for loggers...
 		}
 
 		public async Task Init()
@@ -49,14 +47,14 @@ namespace SBCScan
 
 			fetcher = new Fetcher(driver, new FileSystemKVStore(settings.StorageFolderDownloadedFiles, extension: ""));
 
-			sbc = new SBCMain(driver);
+			SBC = new SBCMain(driver);
 
-			await sbc.Login(settings.LoginPage_BankId, settings.UserLoginId_BankId, settings.UserLogin_BrfId);
+			await SBC.Login(settings.LoginPage_BankId, settings.UserLoginId_BankId, settings.UserLogin_BrfId);
 
-			mediusFlow.Init(fetcher);
+			MediusFlow.Init(fetcher);
 
 
-			sbc.LoginToMediusFlow(settings.RedirectUrlMediusFlow);
+			SBC.LoginToMediusFlow(settings.RedirectUrlMediusFlow);
 			logger.LogInformation($"Logged in");
 		}
 
