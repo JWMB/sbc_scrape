@@ -28,6 +28,9 @@ namespace MediusFlowAPI
 		[JsonIgnore()]
 		public TaskFull FirstTask { get => TaskAssignments?.FirstOrDefault()?.Task; }
 
+		[JsonIgnore()]
+		public bool IsRejected { get => Accounting?.DimensionStrings?.FirstOrDefault()?.TaskItems?.FirstOrDefault()?.IsRejected == true; }
+
 		public override string ToString()
 		{
 			return $"{(Invoice.InvoiceDate.FromMediusDate()?.ToString("yyyy-MM-dd") ?? "0000")} {Invoice.Supplier.Name} {Invoice.GrossAmount.DisplayValue} {Invoice.Id}";
@@ -77,7 +80,7 @@ namespace MediusFlowAPI
 					RegisteredDate = registeredDate ?? DateTime.MinValue,
 					State = invoice.FirstTask?.Task?.State
 				};
-
+				
 				return fmt.ToString();
 			}
 			public static string Create(InvoiceSummary invoice)
@@ -100,14 +103,10 @@ namespace MediusFlowAPI
 				var split = filename.Split('_');
 				if (!DateTime.TryParse(split[0], out var invoiceDate))
 					throw new FormatException($"Incorrect date format in {split[0]} (filename {filename}");
-				var status = 0;
 				var lastIndex = split.Length - 1;
-				if (split.Length > 4)
-				{
-					status = int.Parse(split[lastIndex]);
-					lastIndex--;
-				}
-				var registered = split[lastIndex];
+
+				var status = int.Parse(split[lastIndex]);
+				var registered = split[lastIndex - 1];
 				var rMonth = int.Parse(registered.Split('-')[0]);
 				var registeredDate = DateTime.Parse("" + (rMonth < invoiceDate.Month ? invoiceDate.Year + 1 : invoiceDate.Year)
 					+ "-" + registered);
@@ -115,8 +114,8 @@ namespace MediusFlowAPI
 				return new FilenameFormat
 				{
 					InvoiceDate = invoiceDate,
-					Supplier = split[1],
-					Id = long.Parse(split[lastIndex - 1]),
+					Supplier = string.Join("_", split.Skip(1).Take(1 + lastIndex - 4)), //Supplier may have underscore in name...
+					Id = long.Parse(split[lastIndex - 2]),
 					RegisteredDate = registeredDate,
 					State = status,
 				};
