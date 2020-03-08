@@ -2,6 +2,7 @@ using MediusFlowAPI;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Scrape.IO.Storage;
 using SIE;
 using SIE.Matching;
 using System;
@@ -15,37 +16,75 @@ namespace Scrape.Main.Tests
 	[TestClass]
 	public class UnitTest1
 	{
-		private string GetOutputFolder()
-		{
-			return Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped");
-			//var folder = Environment.CurrentDirectory;
-			//var bin = $"{Path.DirectorySeparatorChar}bin{Path.DirectorySeparatorChar}";
-			//if (folder.Contains(bin))
-			//	folder = folder.Remove(folder.LastIndexOf(bin));
-			//return Path.Combine(folder, "scraped");
-		}
-
-		private T LoadJsonFromFile<T>(string path) where T : JToken
-		{
-			path = Path.Combine(GetOutputFolder(), path);
-			if (!File.Exists(path))
-				throw new FileNotFoundException(path);
-			var json = File.ReadAllText(path);
-			if (json.Length == 0)
-				throw new FileLoadException($"File empty: {path}");
-			var token = JToken.Parse(json);
-			if (token is T)
-				return token as T;
-			throw new Exception($"JSON in '{path}' is not a {typeof(T).Name}");
-		}
+		private string GetOutputFolder() => Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped");
 
 		async Task<List<sbc_scrape.SBC.Invoice>> LoadSBCInvoices(Func<int, bool> accountFilter)
 		{
-			var dir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "sbc_html");
+			var dir = Path.Join(GetOutputFolder(), "sbc_html");
 			var tmp = new List<sbc_scrape.SBC.Invoice>();
 			await foreach (var sbcRows in new sbc_scrape.SBC.InvoiceSource().ReadAllAsync(dir))
 				tmp.AddRange(sbcRows.Where(o => accountFilter(o.AccountId)));
 			return tmp;
+		}
+
+		InvoiceFull CreateInvoiceFull(DateTime date, string supplier)
+		{
+			return new InvoiceFull
+			{
+				Invoice = new MediusFlowAPI.Models.SupplierInvoiceGadgetData.Invoice
+				{
+					Id = 1,
+					InvoiceDate = date.ToMediusDate(),
+					Supplier = new MediusFlowAPI.Models.SupplierInvoiceGadgetData.Supplier {
+						Name = supplier
+					}
+				},
+				TaskAssignments = new List<InvoiceFull.TaskAssignmentAndTasks> {
+					new InvoiceFull.TaskAssignmentAndTasks {
+						Task = new InvoiceFull.TaskFull {
+							Task = new MediusFlowAPI.Models.Task.Response {
+								CreatedTimestamp =  date.ToMediusDate(),
+								State = 2
+							}
+						} }
+				}
+			};
+		}
+
+		[TestMethod]
+		public async Task ScrapedStartEndDates()
+		{
+			var store = new InMemoryKVStore();
+			var invoiceStore = new SBCScan.InvoiceStore(store);
+
+			await invoiceStore.Post(CreateInvoiceFull(new DateTime(2017, 1, 1), "Supplier"));
+			var alreadyScraped = await invoiceStore.GetKeysParsed();
+
+			var mf = new SBCScan.MediusFlow(store, null);
+			var tmp = await mf.GetStartEndDates(alreadyScraped, null, null, false);
+		}
+
+		[TestMethod]
+		public async Task MyTestMethod()
+		{
+			var store = new FileSystemKVStore(GetOutputFolder());
+
+			var invoiceStore = new SBCScan.InvoiceStore(store);
+			var alreadyScraped = await invoiceStore.GetKeysParsed();
+
+			var errors = new Dictionary<InvoiceFull.FilenameFormat, Exception>();
+			foreach (var item in alreadyScraped)
+			{
+				try
+				{
+					await invoiceStore.Get(item);
+				}
+				catch (Exception ex)
+				{
+					errors.Add(item, ex);
+				}
+			}
+			Assert.IsFalse(errors.Any());
 		}
 
 		[TestMethod]

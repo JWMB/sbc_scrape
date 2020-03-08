@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using Scrape.IO;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -61,5 +62,53 @@ namespace Scrape.IO.Storage
 			var files = new DirectoryInfo(rootPath).GetFiles();
 			return files.Where(o => o.Name.EndsWith(extension)).Select(f => Path.GetFileNameWithoutExtension(f.Name)).ToList();
 		}
+	}
+
+	public class InMemoryKVStore : IKeyValueStore
+	{
+		protected readonly Dictionary<string, object> store = new Dictionary<string, object>();
+
+		private Task Taskify(Action act)
+		{
+			act();
+			return Task.FromResult(0);
+		}
+		public Task Delete(string key) => Taskify(() => store.Remove(key));
+		public Task<object> Get(string key) => Task.FromResult(store.GetValueOrDefault(key, null));
+		public Task<List<string>> GetAllKeys() => Task.FromResult(store.Keys.ToList());
+		public Task Post(string key, object obj) => Taskify(() => store[key] = obj);
+	}
+
+	public interface IKeyValueStoreOfT<T>
+	{
+		Task Post(string key, T obj);
+
+		Task<T> Get(string key);
+
+		Task<List<string>> GetAllKeys();
+
+		Task Delete(string key);
+	}
+
+	public class KeyValueStoreOfT<T> : IKeyValueStoreOfT<T>
+	{
+		private readonly IKeyValueStore store;
+		private readonly Func<T, string> convertToStore;
+		private readonly Func<string, T> convertFromStore;
+
+		public KeyValueStoreOfT(IKeyValueStore underlyingStorage, Func<T, string> convertToStore, Func<string, T> convertFromStore)
+		{
+			store = underlyingStorage;
+			this.convertFromStore = convertFromStore;
+			this.convertToStore = convertToStore;
+		}
+
+		public Task Post(string key, T obj) => store.Post(key, convertToStore(obj));
+
+		public async Task<T> Get(string key) => convertFromStore((await store.Get(key)).ToString());
+
+		public Task<List<string>> GetAllKeys() => store.GetAllKeys();
+
+		public async Task Delete(string key) => await store.Delete(key);
 	}
 }

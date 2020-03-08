@@ -11,15 +11,15 @@ using System.Threading.Tasks;
 
 namespace SBCScan
 {
-	class MediusFlow
+	public class MediusFlow
 	{
 		private Fetcher fetcher;
-		private readonly IKeyValueStore store;
+		private readonly InvoiceStore store;
 		private readonly ILogger logger;
 
 		public MediusFlow(IKeyValueStore store, ILogger logger)
 		{
-			this.store = store;
+			this.store = new InvoiceStore(store);
 			this.logger = logger;
 		}
 
@@ -56,48 +56,67 @@ namespace SBCScan
 			return result;
 		}
 
-		public async Task<List<InvoiceSummary>> Scrape(DateTime? minDate = null, DateTime? maxDate = null, bool saveToDisk = true, bool goBackwards = false)
+		public async Task<(DateTime start, DateTime end)> GetStartEndDates(IEnumerable<InvoiceFull.FilenameFormat> alreadyScraped, DateTime? minDate, DateTime? maxDate, bool goBackwards)
 		{
-			var skipAlreadyArchived = true;
-			var alreadyScraped = (await store.GetAllKeys()).Select(k => InvoiceFull.FilenameFormat.Parse(k)).ToList(); // .GetAllArchivedInvoiceDates();
 			var alreadyScrapedDates = alreadyScraped.Select(s => s.InvoiceDate);
-			var alreadyScrapedIds = alreadyScraped.Select(s => s.Id).ToList();
 
-			var dateBounds = (Min: minDate ?? new DateTime(2016, 1, 1), Max: maxDate ?? DateTime.Now.Date);
+			var earliestAvailableDate = new DateTime(2016, 1, 1); //TODO: should be a setting, depends on SBC/MediusFlow policies
+			var dateBounds = (Min: minDate ?? earliestAvailableDate, Max: maxDate ?? DateTime.Now.Date);
 			var latest = alreadyScrapedDates.Concat(new DateTime[] { dateBounds.Min }).Max();
 			var earliest = alreadyScrapedDates.Concat(new DateTime[] { dateBounds.Max }).Min();
 
-			logger.LogInformation($"Already downloaded invoice dates: {earliest.ToShortDateString()} - {latest.ToShortDateString()}");
+			logger?.LogInformation($"Already downloaded invoice dates: {earliest.ToShortDateString()} - {latest.ToShortDateString()}");
 
-			var timespan = TimeSpan.FromDays(7 * (goBackwards ? -1 : 1));
-			var maxNumPeriods = 26;
-
-			DateTime start, end;
-			if (minDate != null && maxDate != null)
-			{
-				start = minDate.Value;
-				end = maxDate.Value;
-			}
-			else
+			var start = minDate ?? dateBounds.Min;
+			var end = maxDate ?? dateBounds.Max;
+			if (minDate == null || maxDate == null)
 			{
 				if (goBackwards)
 				{
-					start = earliest.Add(timespan);
-					end = earliest;
+					//Normally only used first time
+					//TODO: if we use it backwards for periods where we already have data, we need similar functionality to below for going forward
+					start = earliest; //.Add(timespan);
+					//end = earliest;
 				}
 				else
 				{
+					start = alreadyScraped.Max(iv => iv.InvoiceDate);
+
 					//We need to revisit invoices - those with TaskState = 1 were not finished
 					var nonFinished = alreadyScraped.Where(iv => iv.State == 1);
-					if (nonFinished.Any())
-						start = nonFinished.Min(iv => iv.InvoiceDate);
-					else
-						start = alreadyScraped.Max(iv => iv.InvoiceDate);
+					//Not true, 1 just means not payed - can also be rejected
+					//TODO: change the "State" property to reflect this
+					var nonFinishedFull = (await LoadInvoices(f => nonFinished.Any(o => o.ToString() == f.ToString())));
+					var nonRejected = nonFinishedFull.Where(o => !o.IsRejected).Select(o => InvoiceSummary.Summarize(o)).ToList();
+
+					if (nonRejected.Any())
+					{
+						var earliestNonRejected = nonRejected.Min(iv => iv.InvoiceDate.Value);
+						if (start > earliestNonRejected)
+							start = earliestNonRejected;
+					}
 					//Also comments may have been updated, so add an additional 15 days back
 					start = start.AddDays(-15);
-					end = start.Add(timespan);
+					//end = start.Add(timespan);
 				}
 			}
+			return (start, end);
+		}
+
+		public async Task<List<InvoiceSummary>> Scrape(DateTime? minDate = null, DateTime? maxDate = null, bool saveToDisk = true, bool goBackwards = false)
+		{
+			var maxNumPeriods = 26;
+			//var skipAlreadyArchived = true;
+
+			var alreadyScraped = await store.GetKeysParsed();
+			var alreadyScrapedIds = alreadyScraped.Select(s => s.Id).ToList();
+
+			var startEnd = await GetStartEndDates(alreadyScraped, minDate, maxDate, goBackwards);
+			var dateBounds = (Min: startEnd.start, Max: startEnd.end);
+			var (start, end) = startEnd;
+			var timespan = TimeSpan.FromDays(7 * (goBackwards ? -1 : 1));
+			if (goBackwards)
+				start = start.Add(timespan);
 
 			var skippedIds = new List<long>();
 			var scraper = CreateScraper();
@@ -147,9 +166,9 @@ namespace SBCScan
 								if (alreadyScrapedIds.Contains(invoice.Id))
 								{
 									var oldOne = alreadyScraped.First(s => s.Id == invoice.Id);
-									await store.Delete(oldOne.ToString());
+									await store.Delete(oldOne);
 								}
-								await store.Post(InvoiceFull.FilenameFormat.Create(item), item);
+								await store.Post(item);
 							}
 							var summarized = InvoiceSummary.Summarize(item);
 							result.Add(summarized);
@@ -178,22 +197,20 @@ namespace SBCScan
 
 		public async Task<List<InvoiceFull.FilenameFormat>> GetAvailableInvoiceFiles(Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
 		{
-			var all = (await store.GetAllKeys()).Select(o => InvoiceFull.FilenameFormat.Parse(o));
-			if (quickFilter != null)
-				all = all.Where(o => quickFilter(o));
-			return all.ToList();
+			var all = await store.GetKeysParsed();
+			return quickFilter != null ? all.Where(o => quickFilter(o)).ToList() : all;
 		}
 		public async IAsyncEnumerable<T> LoadAndTransformInvoices<T>(Func<InvoiceFull, T> selector, Func<InvoiceFull.FilenameFormat, bool> quickFilter = null)
 		{
-			var files = (await store.GetAllKeys()).ToList();
+			var files = await store.GetKeysParsed();
 			foreach (var file in files)
 			{
-				if (quickFilter != null && quickFilter(InvoiceFull.FilenameFormat.Parse(file)) == false)
+				if (quickFilter != null && quickFilter(file) == false)
 					continue;
 				InvoiceFull invoice = null;
 				try
 				{
-					invoice = JsonConvert.DeserializeObject<InvoiceFull>((await store.Get(file)).ToString());
+					invoice = await store.Get(file); // JsonConvert.DeserializeObject<InvoiceFull>((await store.Get(file)).ToString());
 				}
 				catch (Exception ex)
 				{
@@ -245,5 +262,25 @@ namespace SBCScan
 			).OrderByDescending(o => o.TimeBin);
 			return summed.ToList();
 		}
+	}
+
+	public class InvoiceStore
+	{
+		private readonly KeyValueStoreOfT<InvoiceFull> store;
+		public InvoiceStore(IKeyValueStore store)
+		{
+			this.store = new KeyValueStoreOfT<InvoiceFull>(store,
+o => JsonConvert.SerializeObject(o, Formatting.Indented),
+o => JsonConvert.DeserializeObject<InvoiceFull>(o));
+		}
+
+		public async Task Post(InvoiceFull item) => await store.Post(InvoiceFull.FilenameFormat.Create(item), item);
+		public async Task Delete(string key) => await store.Delete(key);
+		public async Task Delete(InvoiceFull.FilenameFormat key) => await store.Delete(key.ToString());
+
+		public async Task<InvoiceFull> Get(InvoiceFull.FilenameFormat key) => await store.Get(key.ToString());
+
+		public async Task<List<InvoiceFull.FilenameFormat>> GetKeysParsed() =>
+			(await store.GetAllKeys()).Select(k => InvoiceFull.FilenameFormat.Parse(k)).ToList();
 	}
 }
