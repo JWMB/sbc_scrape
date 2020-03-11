@@ -79,7 +79,7 @@ namespace REPL
 			var cultureInfo = System.Globalization.CultureInfo.CurrentCulture.Clone() as System.Globalization.CultureInfo;
 			cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
 			cultureInfo.NumberFormat.NumberGroupSeparator = "";
-			var conf = new CsvHelper.Configuration.Configuration { Delimiter = "\t", CultureInfo = cultureInfo };
+			var conf = new CsvHelper.Configuration.CsvConfiguration(cultureInfo) { Delimiter = "\t" };
 
 			if (parms.Count > 1 && parms[1] is string str) // Deserialize
 			{
