@@ -16,51 +16,15 @@ namespace Scrape.IO.Selenium
 	public class Fetcher : IFetcher
 	{
 		private readonly RemoteWebDriver driver;
-		private readonly IKeyValueStore store;
 
 		public Fetcher(RemoteWebDriver driver, IKeyValueStore store)
 		{
 			this.driver = driver;
-			this.store = store;
+			Store = store;
 		}
 
-		//private async Task<string> GetInNewTab(string url, string expectedFilename)
-		//{
-		//	var originalHandle = driver.CurrentWindowHandle;
-		//	var body = driver.FindElement(By.TagName("body"));
-		//	body.SendKeys(Keys.Control + 't');
-		//	var newHandle = driver.CurrentWindowHandle;
+		public IKeyValueStore Store { get; }
 
-		//	var gotNewTab = originalHandle != newHandle;
-		//	driver.Navigate().GoToUrl(url);
-		//	var file = new FileInfo(Path.Combine(downloadFolderToCheck, expectedFilename));
-		//	var timeout = DateTime.Now.AddSeconds(3);
-		//	while (DateTime.Now < timeout)
-		//	{
-		//		if (file.Exists)
-		//			break;
-		//		await Task.Delay(100);
-		//	}
-		//	if (!file.Exists)
-		//		throw new Exception("ddd");
-
-		//	var lastLength = 0L;
-		//	while (true)
-		//	{
-		//		if (file.Length == lastLength)
-		//		{
-		//			if (!file.IsLocked())
-		//				break;
-		//		}
-		//		lastLength = file.Length;
-		//		await Task.Delay(100);
-		//	}
-
-		//	if (gotNewTab)
-		//		driver.Close();
-
-		//	return file.FullName;
-		//}
 		public async Task<string> DownloadFile(string url, FetchConfig config = null, string overrideFilenameHeader = null)
 		{
 			config = config ?? new FetchConfig
@@ -86,7 +50,7 @@ namespace Scrape.IO.Selenium
 						filename = m.Groups["filename"].Value;
 				}
 				filename = overrideFilenameHeader ?? filename;
-				await store.Post(filename, bytes);
+				await Store.Post(filename, bytes);
 				//await File.WriteAllBytesAsync(path, bytes);
 				return filename;
 			}

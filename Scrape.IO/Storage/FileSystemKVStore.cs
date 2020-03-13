@@ -34,12 +34,11 @@ namespace Scrape.IO.Storage
 		public async Task<object> Get(string key)
 		{
 			//TODO: read as byte[]?
-			//return File.ReadAllText(KeyToPath(key));
 			return await File.ReadAllTextAsync(KeyToPath(key));
 		}
 		public async Task<T> Get<T>(string key)
 		{
-			var content = await File.ReadAllTextAsync(KeyToPath(key));  //File.ReadAllText(KeyToPath(key)); //
+			var content = await File.ReadAllTextAsync(KeyToPath(key));
 			return JsonConvert.DeserializeObject<T>(content);
 		}
 
@@ -49,7 +48,6 @@ namespace Scrape.IO.Storage
 				await File.WriteAllBytesAsync(KeyToPath(key), bytes);
 			else
 				await File.WriteAllTextAsync(KeyToPath(key), JsonConvert.SerializeObject(obj, Formatting.Indented));
-			//TODO: WriteAllTextAsync(KeyToPath(key), JsonConvert.SerializeObject(obj, Formatting.Indented));
 		}
 
 		public Task Delete(string key)
