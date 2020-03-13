@@ -39,11 +39,14 @@ namespace SBCScan
 			return new InvoiceScraper(fetcher, GlobalSettings.AppSettings.MediusFlowRoot, GlobalSettings.AppSettings.MediusRequestHeader_XUserContext);
 		}
 
-		public async Task<Dictionary<InvoiceFull, List<string>>> DownloadImages(DateTime from, DateTime? to = null) //IEnumerable<long> invoiceIds)
+		public async Task<Dictionary<InvoiceFull, List<string>>> DownloadImages(Func<InvoiceFull.FilenameFormat, bool> invoiceFilter)
 		{
-			if (to == null)
-				to = DateTime.Now;
-			var invoices = await LoadInvoices(ff => ff.InvoiceDate >= from && ff.InvoiceDate <= to);
+			var invoices = await LoadInvoices(invoiceFilter);
+			return await DownloadImages(invoices);
+		}
+
+		private async Task<Dictionary<InvoiceFull, List<string>>> DownloadImages(IEnumerable<InvoiceFull> invoices)
+		{
 			var api = CreateApi();
 			var result = new Dictionary<InvoiceFull, List<string>>();
 			foreach (var invoice in invoices)
@@ -214,7 +217,7 @@ namespace SBCScan
 				}
 				catch (Exception ex)
 				{
-					throw new Exception($"Deserialization of {file} failed");
+					throw new Exception($"Deserialization of {file} failed", ex);
 				}
 				yield return selector(invoice);
 			}

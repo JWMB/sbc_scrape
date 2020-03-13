@@ -75,7 +75,7 @@ namespace SBCScan.REPL
 	{
 		public ObjectToFilenameAndObject() { }
 		public override string Id => "o2fo";
-		public override async Task<object> Evaluate(List<object> parms)
+		public override Task<object> Evaluate(List<object> parms)
 		{
 			var t = parms[0].GetType();
 			var ienum = parms[0] as System.Collections.IEnumerable;
@@ -88,7 +88,7 @@ namespace SBCScan.REPL
 					result.Add(filename, JsonConvert.SerializeObject(isum, Formatting.Indented));
 				}
 			}
-			return result;
+			return Task.FromResult<object>(result);
 		}
 	}
 
@@ -97,7 +97,7 @@ namespace SBCScan.REPL
 		private readonly string defaultFolder;
 		public ReadSBCHtml(string defaultFolder) => this.defaultFolder = defaultFolder;
 		public override string Id => "sbc";
-		public override async Task<object> Evaluate(List<object> parms)
+		public override Task<object> Evaluate(List<object> parms)
 		{
 			var src = FetchSBCHtml.GetHtmlSourceInstance(parms[0] as string);
 			var result = src.ReadAllObjects(defaultFolder);
@@ -105,7 +105,7 @@ namespace SBCScan.REPL
 			{
 				result = result.Select(r => (r as Invoice).ToSummary()).Cast<object>().ToList();
 			}
-			return result;
+			return Task.FromResult<object>(result);
 		}
 	}
 
@@ -208,12 +208,25 @@ namespace SBCScan.REPL
 		public override string Id => "getimages";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var defaultDates = new List<DateTime> { DateTime.Today.AddMonths(-1), DateTime.Today };
-			var dates = parms.Select((p, i) => ParseArgument(parms, i, DateTime.MinValue)).ToList();
-			for (int i = dates.Count; i < 2; i++)
-				dates.Add(defaultDates[i]);
+			var invoiceIds = ParseArguments<long?>(parms, null);
+			Func<InvoiceFull.FilenameFormat, bool> invoiceFilter;
+			if (invoiceIds.Any() && !invoiceIds.Any(o => o == null))
+			{
+				var idsList = invoiceIds.Cast<long>().ToList();
+				invoiceFilter = o => idsList.Contains(o.Id);
+			}
+			else
+			{
+				var defaultDates = new List<DateTime> { DateTime.Today.AddMonths(-1), DateTime.Today };
+				var dates = ParseArguments(parms, DateTime.MinValue);
+				for (int i = dates.Count; i < 2; i++)
+					dates.Add(defaultDates[i]);
 
-			var result = await main.MediusFlow.DownloadImages(dates[0], dates[1]);
+				Console.WriteLine($"Download images between {dates[0].ToShortDateString()} - {dates[1].ToShortDateString()}");
+				invoiceFilter = o => o.InvoiceDate >= dates[0] && o.InvoiceDate <= dates[1];
+			}
+
+			var result = await main.MediusFlow.DownloadImages(invoiceFilter);
 			return string.Join("\n", result.Select(kv => $"{InvoiceFull.FilenameFormat.Create(kv.Key)}: {string.Join(',', kv.Value)}"));
 		}
 	}
@@ -221,22 +234,28 @@ namespace SBCScan.REPL
 	class OCRImagesCmd : Command
 	{
 		public override string Id => "ocr";
-		public override async Task<object> Evaluate(List<object> parms)
+
+		public override Task<object> Evaluate(List<object> parms) => Task.FromResult<object>(_Evaluate(parms));
+
+		string _Evaluate(List<object> parms)
 		{
-			var files = new DirectoryInfo(GlobalSettings.AppSettings.StorageFolderDownloadedFiles).GetFiles("*.png");
+			var folder = new DirectoryInfo(GlobalSettings.AppSettings.StorageFolderDownloadedFiles);
+			var files = folder.GetFiles("*.png");
+			var alreadyProcessed = folder.GetFiles("*.txt").Select(o => Path.GetFileNameWithoutExtension(o.Name)).ToList();
+			var filesToProcess = files.Where(o => !alreadyProcessed.Contains(Path.GetFileNameWithoutExtension(o.Name)));
+
 			var processed = new List<string>();
-			foreach (var file in files)
+			var index = 0;
+			Console.WriteLine($"Found {filesToProcess.Count()} unprocessed files");
+			foreach (var file in filesToProcess)
 			{
 				var ocrFile = file.FullName.Remove(file.FullName.Length - file.Extension.Length) + ".txt";
-				if (!File.Exists(ocrFile))
-				{
-					var started = DateTime.Now;
-					var text = sbc_scrape.OCR.Run(file.FullName, new string[] { "swe", "eng" });
-					var elapsed = DateTime.Now - started;
-					File.WriteAllText(ocrFile, text);
-					Console.WriteLine(ocrFile);
-					processed.Add(ocrFile);
-				}
+				var started = DateTime.Now;
+				var text = sbc_scrape.OCR.Run(file.FullName, new string[] { "swe", "eng" });
+				var elapsed = DateTime.Now - started;
+				File.WriteAllText(ocrFile, text);
+				Console.WriteLine($"{index++}/{filesToProcess.Count()} {file.Name}");
+				processed.Add(ocrFile);
 			}
 			return string.Join("\n", processed);
 		}

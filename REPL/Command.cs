@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace REPL
@@ -25,20 +26,17 @@ namespace REPL
 			object parsed = null;
 			if (parms != null && parms.Count > index)
 			{
+				var type = typeof(T);
+				type = Nullable.GetUnderlyingType(type) ?? type;
+
 				Func<object, object> convert = null;
-				if (typeof(T) == typeof(long))
-				{
+				if (type == typeof(long))
 					convert = o => Convert.ToInt64(o);
-					//if (long.TryParse(val, out var lr)
-					//	parsed = Convert.ChangeType(lr, typeof(T));
-				}
-				else if (typeof(T) == typeof(DateTime))
-				{
+				else if (type == typeof(int))
+					convert = o => Convert.ToInt32(o);
+				else if (type == typeof(DateTime))
 					convert = o => Convert.ToDateTime(o);
-					//if (DateTime.TryParse(val, out var p))
-					//	parsed = Convert.ChangeType(p, typeof(T));
-				}
-				else if (typeof(T) == typeof(string))
+				else if (type == typeof(string))
 					convert = o => o.ToString();
 				if (convert != null)
 				{
@@ -63,5 +61,7 @@ namespace REPL
 				return parsed;
 			return defaultValue;
 		}
+
+		public static List<T> ParseArguments<T>(List<object> parms, T defaultValue) => parms.Select((o, i) => ParseArgument(parms, i, defaultValue)).ToList();
 	}
 }
