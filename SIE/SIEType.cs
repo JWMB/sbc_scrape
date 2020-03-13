@@ -166,7 +166,7 @@ namespace SIE
 			}
 			catch (Exception ex)
 			{
-				if (defaultValueElseThrow == null) throw;
+				if (defaultValueElseThrow == null) throw ex;
 				return defaultValueElseThrow;
 			}
 		}

@@ -34,33 +34,34 @@ namespace Scrape.IO.Storage
 		public async Task<object> Get(string key)
 		{
 			//TODO: read as byte[]?
-			return File.ReadAllText(KeyToPath(key));
-			//TODO: await File.ReadAllTextAsync(KeyToPath(key));
+			//return File.ReadAllText(KeyToPath(key));
+			return await File.ReadAllTextAsync(KeyToPath(key));
 		}
 		public async Task<T> Get<T>(string key)
 		{
-			var content = File.ReadAllText(KeyToPath(key)); //await File.ReadAllTextAsync(KeyToPath(key));
+			var content = await File.ReadAllTextAsync(KeyToPath(key));  //File.ReadAllText(KeyToPath(key)); //
 			return JsonConvert.DeserializeObject<T>(content);
 		}
 
 		public async Task Post(string key, object obj)
 		{
 			if (obj is byte[] bytes)
-				File.WriteAllBytes(KeyToPath(key), bytes);
+				await File.WriteAllBytesAsync(KeyToPath(key), bytes);
 			else
-				File.WriteAllText(KeyToPath(key), JsonConvert.SerializeObject(obj, Formatting.Indented));
+				await File.WriteAllTextAsync(KeyToPath(key), JsonConvert.SerializeObject(obj, Formatting.Indented));
 			//TODO: WriteAllTextAsync(KeyToPath(key), JsonConvert.SerializeObject(obj, Formatting.Indented));
 		}
 
-		public async Task Delete(string key)
+		public Task Delete(string key)
 		{
 			File.Delete(KeyToPath(key));
+			return Task.FromResult(0);
 		}
 
-		public async Task<List<string>> GetAllKeys()
+		public Task<List<string>> GetAllKeys()
 		{
 			var files = new DirectoryInfo(rootPath).GetFiles();
-			return files.Where(o => o.Name.EndsWith(extension)).Select(f => Path.GetFileNameWithoutExtension(f.Name)).ToList();
+			return Task.FromResult(files.Where(o => o.Name.EndsWith(extension)).Select(f => Path.GetFileNameWithoutExtension(f.Name)).ToList());
 		}
 	}
 

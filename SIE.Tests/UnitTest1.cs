@@ -100,12 +100,12 @@ namespace SIE.Tests
 
 			//var dbg = string.Join("\n", cc.Select(o => $"{o.Date.AtMidnight().ToDateTimeUnspecified():yyyy-MM-dd}\t{o.Comment}\t{o.Amount}\t{o.AccountId}\t{o.CompanyName}"));
 
-			string PrintVoucher(VoucherRecord voucher, Func<IEnumerable<TransactionRecord>, IEnumerable<TransactionRecord>> funcModifyTransactions = null)
-			{
-				if (funcModifyTransactions == null)
-					funcModifyTransactions = val => val;
-				return voucher.ToString() + "\n\t" + string.Join("\n\t", funcModifyTransactions(voucher.Transactions).Select(t => t.ToString()));
-			}
+			//string PrintVoucher(VoucherRecord voucher, Func<IEnumerable<TransactionRecord>, IEnumerable<TransactionRecord>> funcModifyTransactions = null)
+			//{
+			//	if (funcModifyTransactions == null)
+			//		funcModifyTransactions = val => val;
+			//	return voucher.ToString() + "\n\t" + string.Join("\n\t", funcModifyTransactions(voucher.Transactions).Select(t => t.ToString()));
+			//}
 		}
 
 		[Fact]
@@ -117,8 +117,8 @@ namespace SIE.Tests
 
 		private class AccountInfo
 		{
-			public string Name { get; set; }
-			public string Source { get; set; }
+			public string Name { get; set; } = string.Empty;
+			public string Source { get; set; } = string.Empty;
 		}
 
 		[Fact]

@@ -26,7 +26,6 @@ namespace SBCScan
 
 		private Fetcher fetcher;
 		private RemoteWebDriver driver;
-		private string downloadFolder;
 
 		public SBCMain SBC { get; private set; }
 		public MediusFlow MediusFlow { get; }
@@ -42,7 +41,7 @@ namespace SBCScan
 
 		public async Task Init()
 		{
-			driver = SetupDriver(downloadFolder);
+			driver = SetupDriver();
 			logger.LogInformation($"driver.SessionId = {driver.SessionId}");
 
 			fetcher = new Fetcher(driver, new FileSystemKVStore(settings.StorageFolderDownloadedFiles, extension: ""));
@@ -102,11 +101,21 @@ namespace SBCScan
 			}
 		}
 		
-		static RemoteWebDriver SetupDriver(string downloadFolder)
+		static RemoteWebDriver SetupDriver()
 		{
 			var options = new ChromeOptions();
 			//options.ToCapabilities().HasCapability();
 
+
+			var service = ChromeDriverService.CreateDefaultService(AppDomain.CurrentDomain.BaseDirectory);
+
+			// https://app.quicktype.io/#l=cs&r=json2csharp
+
+			return new ChromeDriver(service, options);
+		}
+
+		private void SetupDownloads(ChromeOptions options, string downloadFolder)
+		{
 			if (!string.IsNullOrEmpty(downloadFolder) && !Directory.Exists(downloadFolder))
 				Directory.CreateDirectory(downloadFolder);
 
@@ -120,11 +129,6 @@ namespace SBCScan
 			foreach (var kv in settings)
 				options.AddArgument($"--{kv.Key}={kv.Value}");
 
-			var service = ChromeDriverService.CreateDefaultService(AppDomain.CurrentDomain.BaseDirectory);
-
-			// https://app.quicktype.io/#l=cs&r=json2csharp
-
-			return new ChromeDriver(service, options);
 		}
 
 		public void Dispose()

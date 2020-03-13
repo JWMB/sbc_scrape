@@ -41,7 +41,9 @@ namespace sbc_scrape
 				process.BeginOutputReadLine();
 			}
 			catch (Exception ex)
-			{ }
+			{
+				throw ex;
+			}
 
 			process.WaitForExit();
 			string stdout = output.ToString();

@@ -10,7 +10,6 @@ namespace MediusFlowAPI
 {
 	public class InvoiceScraper
 	{
-		private readonly IFetcher fetcher;
 		private readonly API api;
 
 		public InvoiceScraper(IFetcher fetcher, string rootAddress, string xusercontext)

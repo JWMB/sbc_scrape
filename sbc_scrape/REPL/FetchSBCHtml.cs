@@ -83,7 +83,7 @@ namespace SBCScan.REPL
 			return result;
 		}
 
-		public static async Task<List<object>> Execute(Main main, HtmlSource src, DateTime start, DateTime end)
+		public static Task<List<object>> Execute(Main main, HtmlSource src, DateTime start, DateTime end)
 		{
 			var result = new List<object>();
 			for (var year = start.Year; year <= end.Year; year++)
@@ -96,7 +96,7 @@ namespace SBCScan.REPL
 					GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(src.FilenamePattern, filenameSuffix)), html);
 				result.AddRange(src.ParseObjects(html));
 			}
-			return result;
+			return Task.FromResult(result);
 		}
 	}
 }

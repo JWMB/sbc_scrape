@@ -54,7 +54,7 @@ namespace SBCScan.SBC
 			driver.WaitUntilDocumentReady();
 		}
 
-		public async Task<string> FetchHtmlSource(string urlPath, int year, int monthFrom = 1, int monthTo = 12)
+		public Task<string> FetchHtmlSource(string urlPath, int year, int monthFrom = 1, int monthTo = 12)
 		{
 			driver.NavigateAndWaitReadyIfNotThere("https://varbrf.sbc.se/" + urlPath);
 			//var accountSelect = driver.FindElement(By.XPath("//select[contains(@id,'_DDKonto')]"));
@@ -94,7 +94,7 @@ namespace SBCScan.SBC
 			driver.WaitUntilDocumentReady();
 
 			var fullpage = driver.PageSource;
-			return fullpage;
+			return Task.FromResult(fullpage);
 		}
 	}
 }
