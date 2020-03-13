@@ -226,7 +226,7 @@ namespace SBCScan.REPL
 				invoiceFilter = o => o.InvoiceDate >= dates[0] && o.InvoiceDate <= dates[1];
 			}
 
-			var result = await main.MediusFlow.DownloadImages(invoiceFilter);
+			var result = await main.MediusFlow.DownloadPdfs(invoiceFilter); //DownloadImages
 			return string.Join("\n", result.Select(kv => $"{InvoiceFull.FilenameFormat.Create(kv.Key)}: {string.Join(',', kv.Value)}"));
 		}
 	}

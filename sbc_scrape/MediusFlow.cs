@@ -39,6 +39,22 @@ namespace SBCScan
 			return new InvoiceScraper(fetcher, GlobalSettings.AppSettings.MediusFlowRoot, GlobalSettings.AppSettings.MediusRequestHeader_XUserContext);
 		}
 
+		public async Task<Dictionary<InvoiceFull, List<string>>> DownloadPdfs(Func<InvoiceFull.FilenameFormat, bool> invoiceFilter)
+		{
+			var invoices = await LoadInvoices(invoiceFilter);
+
+			var api = CreateApi();
+			var result = new Dictionary<InvoiceFull, List<string>>();
+			foreach (var invoice in invoices)
+			{
+				var images = await api.GetTaskPdf(invoice.FirstTask?.Task.Document);
+				foreach (var item in images)
+					await fetcher.Store.Post($"{item.Key}.pdf", item.Value);
+				result.Add(invoice, images.Keys.Select(k => k.ToString()).ToList());
+			}
+			return result;
+		}
+
 		public async Task<Dictionary<InvoiceFull, List<string>>> DownloadImages(Func<InvoiceFull.FilenameFormat, bool> invoiceFilter)
 		{
 			var invoices = await LoadInvoices(invoiceFilter);

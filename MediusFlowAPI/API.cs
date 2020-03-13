@@ -35,6 +35,16 @@ namespace MediusFlowAPI
 		{
 			return task?.Document?.HashFiles?.Where(hf => hf.HashFileType == "InvoiceImage");
 		}
+
+		public async Task<Dictionary<Guid, byte[]>> GetTaskPdf(Models.Task.Document document)
+		{
+			var images = new Dictionary<Guid, byte[]>();
+			var imageInfos = document.HashFiles.Where(hf => hf.HashFileType == "InvoiceImage");
+			foreach (var hf in imageInfos)
+				images.Add(hf.Hash, await GetPdf(hf.Hash, document.Id));
+			return images;
+		}
+
 		public async Task<Dictionary<Guid, object>> GetTaskImages(IEnumerable<Models.Task.HashFile> imageInfos, bool downloadImages, string filenameFormat = "{0}")
 		{
 			var images = new Dictionary<Guid, object>();
@@ -134,6 +144,28 @@ namespace MediusFlowAPI
 			var typed = Models.AccountingObjectWithLinesForInvoice.Response.FromJson(JsonConvert.SerializeObject(result.Body));
 			return typed;
 
+		}
+
+		public async Task<byte[]> GetPdf(Guid hash, long docId)
+		{
+			var headers = GetHeaders(new Dictionary<string, string> {
+					{ "accept", "*/*" },
+					{ "accept-encoding", "gzip, deflate, br" },
+					{ "cache-control", "no-cache" }
+			});
+			var config = new FetchConfig
+			{
+				Method = MethodMode.Get,
+				Mode = CorsMode.Cors,
+				Headers = headers,
+				Credentials = CredentialsMode.Include,
+				ReferrerPolicy = ReferrerPolicyMode.NoReferrerWhenDowngrade
+			};
+
+			var response = await fetcher.Fetch(
+				baseAddress + $"Rest/MediaService/image/{hash}/pdf?docId={docId}&docType=Medius.ExpenseInvoice.Entities.ExpenseInvoice&tag=DocumentImage&download=application/pdf;base64",
+				config);
+			return System.Text.Encoding.UTF8.GetBytes(response.Body.ToString());
 		}
 
 		public async Task<object> GetMedia(Guid hash, string tag)
