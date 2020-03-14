@@ -31,16 +31,17 @@ namespace Scrape.IO.Storage
 			return key.Remove(key.LastIndexOf(extension));
 		}
 
-		public async Task<object> Get(string key)
+		public async Task<object?> Get(string key)
 		{
 			//TODO: read as byte[]?
-			return await File.ReadAllTextAsync(KeyToPath(key));
+			var path = KeyToPath(key);
+			return File.Exists(path) ? await File.ReadAllTextAsync(path) : null;
 		}
-		public async Task<T> Get<T>(string key)
-		{
-			var content = await File.ReadAllTextAsync(KeyToPath(key));
-			return JsonConvert.DeserializeObject<T>(content);
-		}
+		//public async Task<T> Get<T>(string key)
+		//{
+		//	var content = await File.ReadAllTextAsync(KeyToPath(key));
+		//	return JsonConvert.DeserializeObject<T>(content);
+		//}
 
 		public async Task Post(string key, object obj)
 		{
@@ -65,7 +66,7 @@ namespace Scrape.IO.Storage
 
 	public class InMemoryKVStore : IKeyValueStore
 	{
-		protected readonly Dictionary<string, object> store = new Dictionary<string, object>();
+		protected readonly Dictionary<string, object?> store = new Dictionary<string, object?>();
 
 		private Task Taskify(Action act)
 		{
@@ -73,7 +74,7 @@ namespace Scrape.IO.Storage
 			return Task.FromResult(0);
 		}
 		public Task Delete(string key) => Taskify(() => store.Remove(key));
-		public Task<object> Get(string key) => Task.FromResult(store.GetValueOrDefault(key, null));
+		public Task<object?> Get(string key) => Task.FromResult(store.GetValueOrDefault(key, null));
 		public Task<List<string>> GetAllKeys() => Task.FromResult(store.Keys.ToList());
 		public Task Post(string key, object obj) => Taskify(() => store[key] = obj);
 	}
@@ -82,7 +83,7 @@ namespace Scrape.IO.Storage
 	{
 		Task Post(string key, T obj);
 
-		Task<T> Get(string key);
+		Task<T> Get(string key, T defaultValue);
 
 		Task<List<string>> GetAllKeys();
 
@@ -104,7 +105,11 @@ namespace Scrape.IO.Storage
 
 		public Task Post(string key, T obj) => store.Post(key, convertToStore(obj));
 
-		public async Task<T> Get(string key) => convertFromStore((await store.Get(key)).ToString());
+		public async Task<T> Get(string key, T defaultValue = default)
+		{
+			var val = await store.Get(key);
+			return val == null ? defaultValue : convertFromStore(val.ToString());
+		}
 
 		public Task<List<string>> GetAllKeys() => store.GetAllKeys();
 

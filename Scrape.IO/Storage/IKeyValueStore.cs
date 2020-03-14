@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Scrape.IO.Storage
@@ -9,7 +8,7 @@ namespace Scrape.IO.Storage
 	{
 		Task Post(string key, object obj);
 
-		Task<object> Get(string key);
+		Task<object?> Get(string key);
 
 		Task<List<string>> GetAllKeys();
 

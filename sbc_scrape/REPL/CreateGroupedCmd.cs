@@ -33,17 +33,7 @@ namespace SBCScan.REPL
 			var accountDescriptions = distinct.Select(s => accountDescriptionsWithDups.First(d => d.AccountId == s))
 				.ToDictionary(s => s.AccountId, s => s.AccountName);
 
-			Func<InvoiceSummary, DateTime> timeBinSelector = null;
-			if (false)
-			{
-				var bin = TimeSpan.FromDays(7);
-				var tsAsTicks = bin.Ticks;
-				timeBinSelector = invoice => new DateTime((invoice.InvoiceDate.Value.Ticks / tsAsTicks) * tsAsTicks);
-			}
-			else
-			{
-				timeBinSelector = invoice => new DateTime(invoice.InvoiceDate.Value.Year, invoice.InvoiceDate.Value.Month, 1);
-			}
+			Func<InvoiceSummary, DateTime> timeBinSelector = invoice => new DateTime(invoice.InvoiceDate.Value.Year, invoice.InvoiceDate.Value.Month, 1);
 
 			var aggregated = main.MediusFlow.AggregateByTimePeriodAndFunc(summaries,
 				inGroup => inGroup.Sum(o => o.GrossAmount),

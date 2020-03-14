@@ -11,7 +11,7 @@ namespace REPL
 	public class Runner
 	{
 		private NullCmd nullCmd = new NullCmd();
-		private QuitCmd quitCmd;
+		private QuitCmd? quitCmd;
 		private IEnumerable<Command> cmds;
 		private ConsoleBase console;
 
@@ -28,7 +28,7 @@ namespace REPL
 			cmds.ToList().ForEach(c => c.Console = c.Console ?? console);
 		}
 
-		public async Task<(Command, object)> Evaluate(List<object> input, IEnumerable<Command> cmds, object previousResult = null)
+		public async Task<(Command?, object)> Evaluate(List<object> input, IEnumerable<Command> cmds, object? previousResult = null)
 		{
 			var found = cmds.FirstOrDefault(c => c.Id == (string)input[0]);
 
@@ -50,7 +50,7 @@ namespace REPL
 
 			//Pipe handling
 			var pipeIndex = input.FindIndex(s => s is string && (string)s == ">");
-			List<object> theRest = null;
+			List<object>? theRest = null;
 			if (pipeIndex > 0)
 			{
 				theRest = input.Skip(pipeIndex + 1).ToList();
@@ -59,7 +59,7 @@ namespace REPL
 			if (previousResult != null)
 				input.Add(previousResult);
 
-			object result = null;
+			object? result = null;
 			try
 			{
 				result = await found.Evaluate(input.Skip(skip).Cast<object>().ToList());

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -17,19 +18,19 @@ namespace REPL
 		public abstract string Id { get; }
 		public abstract Task<object> Evaluate(List<object> parms);
 
-		public virtual string Help { get; }
+		public virtual string Help { get; } = string.Empty;
 
-		public ConsoleBase Console { get; set; } //TODO: prolly better as an argument to Evaluate
+		public ConsoleBase? Console { get; set; } //TODO: prolly better as an argument to Evaluate
 
-		public static bool TryParseArgument<T>(List<object> parms, int index, out T value)
+		public static bool TryParseArgument<T>(List<object> parms, int index, [MaybeNullWhen(false)] out T value)
 		{
-			object parsed = null;
+			object? parsed = null;
 			if (parms != null && parms.Count > index)
 			{
 				var type = typeof(T);
 				type = Nullable.GetUnderlyingType(type) ?? type;
 
-				Func<object, object> convert = null;
+				Func<object, object>? convert = null;
 				if (type == typeof(long))
 					convert = o => Convert.ToInt64(o);
 				else if (type == typeof(int))
@@ -62,6 +63,7 @@ namespace REPL
 			return defaultValue;
 		}
 
-		public static List<T> ParseArguments<T>(List<object> parms, T defaultValue) => parms.Select((o, i) => ParseArgument(parms, i, defaultValue)).ToList();
+		public static List<T> ParseArguments<T>(List<object> parms, T defaultValue)
+			=> parms.Select((o, i) => ParseArgument(parms, i, defaultValue)).ToList();
 	}
 }

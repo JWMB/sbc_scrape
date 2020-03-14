@@ -25,7 +25,7 @@ namespace Scrape.IO.Selenium
 
 		public IKeyValueStore Store { get; }
 
-		public async Task<string> DownloadFile(string url, FetchConfig config = null, string overrideFilenameHeader = null)
+		public async Task<string?> DownloadFile(string url, FetchConfig? config = null, string? overrideFilenameHeader = null)
 		{
 			config = config ?? new FetchConfig
 			{
@@ -42,8 +42,8 @@ namespace Scrape.IO.Selenium
 			if (response.Body is byte[] bytes)
 			{
 				var filename = $"NOTSET_{Guid.NewGuid()}";
-				var contentDisposition = response.Headers?.GetOrDefault("content-disposition", null);
-				if (contentDisposition != null)
+				var contentDisposition = response.Headers?.GetOrDefault("content-disposition", string.Empty);
+				if (contentDisposition != string.Empty)
 				{
 					var m = rxFileName.Match(contentDisposition);
 					if (m.Success)
@@ -51,17 +51,17 @@ namespace Scrape.IO.Selenium
 				}
 				filename = overrideFilenameHeader ?? filename;
 				await Store.Post(filename, bytes);
-				//await File.WriteAllBytesAsync(path, bytes);
 				return filename;
 			}
-			return response.Body.ToString();
+			return response.Body?.ToString();
 		}
+
 		static Regex rxFileName = new Regex(@"filename=""(?<filename>[\w-]+(\.\w+))");
-		public async Task<FetchResponse> Fetch(string url, FetchConfig config = null)
+		public async Task<FetchResponse> Fetch(string url, FetchConfig? config = null)
 		{
 			config = config ?? new FetchConfig();
 			var isBinary = false;
-			if (config.Headers == null || !config.Headers.TryGetValue("accept", out string acceptHeader))
+			if (config.Headers == null || !config.Headers.TryGetValue("accept", out string? acceptHeader))
 				acceptHeader = "";
 
 			var additionalScripts = "";
@@ -96,7 +96,7 @@ body: {bodyConversion}
 			}
 			var body = config.Body == null ? null : JsonConvert.SerializeObject(config.Body);
 
-			string NullOrQuoted(string str) => str == null ? "null" : $"'{str}'";
+			string NullOrQuoted(string? str) => str == null ? "null" : $"'{str}'";
 
 			var script = $@"{additionalScripts}
 fetch('{url}',
@@ -117,10 +117,10 @@ fetch('{url}',
 			{
 				return ((IJavaScriptExecutor)driver).ExecuteAsyncScript(forExec);
 			});
-			if (response is Dictionary<string, object> dict)
+			if (response is Dictionary<string, object?> dict)
 			{
 				var headers = new Dictionary<string, string>();
-				object evaluatedBody = null;
+				object? evaluatedBody = null;
 				var headersRaw = dict.GetOrDefault("headers", null) as System.Collections.ObjectModel.ReadOnlyCollection<object>;
 				if (headersRaw != null)
 				{
@@ -130,13 +130,16 @@ fetch('{url}',
 							.ToDictionary(k => k[0].ToString(), k => k[1].ToString());
 					}
 					catch (Exception ex)
-					{ }
+					{
+						throw ex;
+					}
 				}
 
-				if (isBinary)
+				var responseBody = dict.GetValueOrDefault("body", null);
+				if (responseBody != null && isBinary)
 				{
 					var isImage = true;
-					evaluatedBody = Convert.FromBase64String(isImage ? FixBase64ForImage((string)dict["body"]) : (string)dict["body"]);
+					evaluatedBody = Convert.FromBase64String(isImage ? FixBase64ForImage((string)responseBody) : (string)responseBody);
 
 					string FixBase64ForImage(string Image)
 					{
@@ -146,10 +149,9 @@ fetch('{url}',
 						return sbText.ToString();
 					}
 				}
-				if (!dict.ContainsKey("body"))
-				{ }
+
 				return new FetchResponse {
-					Body = evaluatedBody != null ? evaluatedBody : dict.GetOrDefault("body", null),
+					Body = evaluatedBody != null ? evaluatedBody : responseBody,
 					Status = dict.GetOrDefault("status", null)?.ToString() ?? "N/A",
 					Headers = headers
 				};

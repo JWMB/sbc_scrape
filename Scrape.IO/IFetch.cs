@@ -86,9 +86,9 @@ namespace Scrape.IO
 	{
 		public MethodMode Method { get; set; } = MethodMode.Get;
 
-		public object Body { get; set; }
+		public object? Body { get; set; }
 
-		public Dictionary<string, string> Headers { get; set; }
+		public Dictionary<string, string>? Headers { get; set; }
 
 		public CorsMode Mode { get; set; } = CorsMode.SameOrigin;
 
@@ -99,14 +99,14 @@ namespace Scrape.IO
 
 	public class FetchResponse
 	{
-		public Dictionary<string, string> Headers { get; set; }
-		public object Body { get; set; }
-		public string Status { get; set; }
+		public Dictionary<string, string>? Headers { get; set; }
+		public object? Body { get; set; }
+		public string? Status { get; set; }
 	}
 
 	public interface IFetcher
 	{
-		Task<FetchResponse> Fetch(string url, FetchConfig config = null);
-		Task<string> DownloadFile(string url, FetchConfig config = null, string overrideFilenameHeader = null);
+		Task<FetchResponse> Fetch(string url, FetchConfig? config = null);
+		Task<string?> DownloadFile(string url, FetchConfig? config = null, string? overrideFilenameHeader = null);
 	}
 }

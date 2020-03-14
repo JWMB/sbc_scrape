@@ -18,7 +18,7 @@ namespace Scrape.IO
 	{
 		public static bool IsLocked(this FileInfo file)
 		{
-			FileStream stream = null;
+			FileStream? stream = null;
 			try
 			{
 				stream = file.Open(FileMode.Open, FileAccess.Read, FileShare.None);

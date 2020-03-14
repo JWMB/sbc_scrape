@@ -10,18 +10,18 @@ namespace REPL
 	public class NullCmd : Command
 	{
 		public override string Id => "";
-		public override async Task<object> Evaluate(List<object> parms)
+		public override Task<object> Evaluate(List<object> parms)
 		{
-			return parms.Count == 0 ? "" : $"{parms.First()} not found";
+			return Task.FromResult<object>(parms.Count == 0 ? "" : $"{parms.First()} not found");
 		}
 	}
 
 	public class QuitCmd : Command, IQuitCommand
 	{
 		public override string Id => "q";
-		public override async Task<object> Evaluate(List<object> parms)
+		public override Task<object> Evaluate(List<object> parms)
 		{
-			return "Goodbye!";
+			return Task.FromResult<object>("Goodbye!");
 		}
 	}
 	public class ListCmd : Command
@@ -29,11 +29,11 @@ namespace REPL
 		private readonly IEnumerable<Command> commands;
 		public override string Id => "l";
 		public ListCmd(IEnumerable<Command> commands) => this.commands = commands;
-		public override async Task<object> Evaluate(List<object> parms)
+		public override Task<object> Evaluate(List<object> parms)
 		{
-			return "Available commands:\n"
+			return Task.FromResult<object>("Available commands:\n"
 				+ string.Join("\n",
-				commands.Select(c => $"{c.GetType().Name.Replace("Cmd", "")}: {c.Id}\n{c.Help}"));
+				commands.Select(c => $"{c.GetType().Name.Replace("Cmd", "")}: {c.Id}\n{c.Help}")));
 		}
 	}
 
@@ -74,9 +74,9 @@ namespace REPL
 	{
 		public CSVCmd() { }
 		public override string Id => "csv";
-		public override async Task<object> Evaluate(List<object> parms)
+		public override Task<object> Evaluate(List<object> parms)
 		{
-			var cultureInfo = System.Globalization.CultureInfo.CurrentCulture.Clone() as System.Globalization.CultureInfo;
+			var cultureInfo = (System.Globalization.CultureInfo)System.Globalization.CultureInfo.CurrentCulture.Clone();
 			cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
 			cultureInfo.NumberFormat.NumberGroupSeparator = "";
 			var conf = new CsvHelper.Configuration.CsvConfiguration(cultureInfo) { Delimiter = "\t" };
@@ -92,7 +92,7 @@ namespace REPL
 				using (var reader = new StringReader(str))
 				using (var csv = new CsvHelper.CsvReader(reader, conf))
 				{
-					return csv.GetRecords(type).ToList();
+					return Task.FromResult<object>(csv.GetRecords(type).ToList());
 				}
 			}
 
@@ -100,7 +100,7 @@ namespace REPL
 			using (var csv = new CsvHelper.CsvWriter(writer, conf))
 			{
 				csv.WriteRecords(parms[0] as IEnumerable<object>);
-				return writer.ToString();
+				return Task.FromResult<object>(writer.ToString());
 			}
 		}
 	}
@@ -115,7 +115,7 @@ namespace REPL
 		public override async Task<object> Evaluate(List<object> parms)
 		{
 			var filePath = Path.Combine(defaultFolder, (string)parms[0]);
-			File.WriteAllText(filePath, parms[1].ToString());
+			await File.WriteAllTextAsync(filePath, parms[1].ToString());
 			//TODO: where is File.WriteAllTextAsync?
 			//TODO: accept other paths than relative to defaultFolder
 			return filePath;
@@ -132,7 +132,7 @@ namespace REPL
 			var filePath = Path.Combine(defaultFolder, (string)parms[0]);
 			//TODO: where is File.ReadAllTextAsync?
 			//TODO: accept other paths than relative to defaultFolder
-			return File.ReadAllText(filePath);
+			return await File.ReadAllBytesAsync(filePath);
 		}
 	}
 
@@ -141,7 +141,7 @@ namespace REPL
 		private readonly string defaultFolder;
 		public WriteFiles(string defaultFolder) => this.defaultFolder = defaultFolder;
 		public override string Id => "writefiles";
-		public override async Task<object> Evaluate(List<object> parms)
+		public override Task<object> Evaluate(List<object> parms)
 		{
 			//var folder = Path.Combine(defaultFolder, (string)parms[0]);
 			var folder = defaultFolder;
@@ -151,7 +151,7 @@ namespace REPL
 			var t = dictParm.GetType();
 			if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Dictionary<,>) && t.GetGenericArguments()[0] == typeof(string))
 			{
-				var dict = dictParm as System.Collections.IDictionary;
+				var dict = (System.Collections.IDictionary)dictParm;
 				foreach (var key in dict.Keys)
 				{
 					var filePath = Path.Combine(folder, (string)key);
@@ -159,7 +159,7 @@ namespace REPL
 					result.Add((filePath, dict[key].ToString().Length));
 				}
 			}
-			return string.Join("\n", result.Select(r => $"{r.Item1}: {r.Item2}"));
+			return Task.FromResult<object>(string.Join("\n", result.Select(r => $"{r.Item1}: {r.Item2}")));
 		}
 	}
 }
