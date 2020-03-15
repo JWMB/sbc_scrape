@@ -126,8 +126,8 @@ fetch('{url}',
 				{
 					try
 					{
-						headers = headersRaw.Cast<System.Collections.ObjectModel.ReadOnlyCollection<object>>()
-							.ToDictionary(k => k[0].ToString(), k => k[1].ToString());
+						headers = headersRaw?.Cast<System.Collections.ObjectModel.ReadOnlyCollection<object>>()
+							.ToDictionary(k => k[0].ToString() ?? "", k => k[1].ToString() ?? "") ?? new Dictionary<string, string>();
 					}
 					catch (Exception ex)
 					{

@@ -167,8 +167,8 @@ namespace Scrape.Main.Tests
 								//If multiple or none, take those with closest payment date.
 								//Remove match from inSbc so it can't be matched again
 								var found = new List<SBCVariant>();
-								if (item.DateRegistered.HasValue)
-									found = sbcSameAmountAccount.Where(o => (o.DateRegistered.Value - item.DateRegistered.Value).Days <= 1).ToList();
+								if (item.DateRegistered is NodaTime.LocalDate dateRegistered)
+									found = sbcSameAmountAccount.Where(o => (dateRegistered - item.DateRegistered.Value).Days <= 1).ToList();
 								else
 									found = sbcSameAmountAccount.Where(o => (o.DateFinalized.HasValue && item.DateFinalized.HasValue)
 										&& (o.DateFinalized.Value - item.DateFinalized.Value).Days <= 1).ToList();
@@ -179,7 +179,9 @@ namespace Scrape.Main.Tests
 										.Where(o => (o.DateFinalized.HasValue && item.DateFinalized.HasValue))
 										.Select(o => new
 										{
+#pragma warning disable CS8629 // Nullable value type may be null.
 											Diff = Math.Abs((o.DateFinalized.Value - item.DateFinalized.Value).Days),
+#pragma warning restore CS8629 // Nullable value type may be null.
 											Object = o
 										})
 										.OrderBy(o => o.Diff);
