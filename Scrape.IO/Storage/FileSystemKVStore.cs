@@ -21,10 +21,8 @@ namespace Scrape.IO.Storage
 			this.extension = extension;
 		}
 
-		protected string KeyToPath(string key)
-		{
-			return Path.Combine(rootPath, key) + extension;
-		}
+		protected string KeyToPath(string key) => Path.Combine(rootPath, key) + extension;
+
 		protected string PathToKey(string path)
 		{
 			var key = path.Replace(rootPath, "");
@@ -48,7 +46,7 @@ namespace Scrape.IO.Storage
 			if (obj is byte[] bytes)
 				await File.WriteAllBytesAsync(KeyToPath(key), bytes);
 			else
-				await File.WriteAllTextAsync(KeyToPath(key), JsonConvert.SerializeObject(obj, Formatting.Indented));
+				await File.WriteAllTextAsync(KeyToPath(key), obj.ToString());
 		}
 
 		public Task Delete(string key)
@@ -108,7 +106,7 @@ namespace Scrape.IO.Storage
 		public async Task<T> Get(string key, T defaultValue = default)
 		{
 			var val = await store.Get(key);
-			return val == null ? defaultValue : convertFromStore(val.ToString());
+			return val == null ? defaultValue : convertFromStore((string)val);
 		}
 
 		public Task<List<string>> GetAllKeys() => store.GetAllKeys();

@@ -164,17 +164,6 @@ namespace SBCScan
 
 				foreach (var invoice in ordered)
 				{
-					//Nope... we really should download, in case comments/history have changed (or include that info in filename)
-					//if (skipAlreadyArchived && alreadyScrapedIds.Contains(invoice.Id))
-					//{
-					//	if (alreadyScraped.First(s => s.Id == invoice.Id).State == 2)
-					//	{
-					//		skippedIds.Add(invoice.Id);
-					//		logger.LogInformation($"Skipping {invoice.Id} {invoice.InvoiceDate?.FromMediusDate()}");
-					//		continue;
-					//	}
-					//}
-
 					try
 					{
 						var downloaded = await scraper.GetInvoices(new List<MediusFlowAPI.Models.SupplierInvoiceGadgetData.Invoice> { invoice });
@@ -185,6 +174,7 @@ namespace SBCScan
 								if (alreadyScrapedIds.Contains(invoice.Id))
 								{
 									var oldOne = alreadyScraped.First(s => s.Id == invoice.Id);
+									//TODO: would be interesting to see if there's a diff (and if so what)
 									await store.Delete(oldOne);
 								}
 								await store.Post(item);
