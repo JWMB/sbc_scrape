@@ -10,8 +10,14 @@ namespace sbc_scrape
 {
 	class OCR
 	{
+
 		public static string Run(string imageFile, IEnumerable<string> languages)
 		{
+			if (imageFile.ToLower().EndsWith(".pdf"))
+			{
+				//TODO: PdfExtract.Extract(imageFile);
+			}
+
 			var pathToTesseract = SBCScan.GlobalSettings.AppSettings.PathToTesseract;
 			if (!File.Exists(pathToTesseract))
 				throw new FileNotFoundException($"Tesseract not found at '{pathToTesseract}'");

@@ -2,6 +2,7 @@ using MediusFlowAPI;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using sbc_scrape;
 using Scrape.IO.Storage;
 using SIE;
 using SIE.Matching;
@@ -62,6 +63,13 @@ namespace Scrape.Main.Tests
 
 			var mf = new SBCScan.MediusFlow(store, null);
 			var tmp = await mf.GetStartEndDates(alreadyScraped, null, null, false);
+		}
+
+		[TestMethod]
+		public void ParsePdf()
+		{
+			var file = @"C:\Users\Jonas Beckeman\Downloads\document(2).pdf";
+			var texts = PdfExtract.Extract(file);
 		}
 
 		[TestMethod]
