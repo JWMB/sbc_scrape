@@ -149,7 +149,7 @@ namespace MediusFlowAPI
 		public async Task<byte[]> GetPdf(Guid hash, long docId)
 		{
 			var headers = GetHeaders(new Dictionary<string, string> {
-					{ "accept", "*/*" },
+					{ "accept", "application/pdf,*/*" },
 					{ "accept-encoding", "gzip, deflate, br" },
 					{ "cache-control", "no-cache" }
 			});
@@ -165,7 +165,7 @@ namespace MediusFlowAPI
 			var response = await fetcher.Fetch(
 				baseAddress + $"Rest/MediaService/image/{hash}/pdf?docId={docId}&docType=Medius.ExpenseInvoice.Entities.ExpenseInvoice&tag=DocumentImage&download=application/pdf;base64",
 				config);
-			return System.Text.Encoding.UTF8.GetBytes(response.Body.ToString());
+			return (byte[])response.Body;
 		}
 
 		public async Task<object> GetMedia(Guid hash, string tag)

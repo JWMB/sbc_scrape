@@ -70,7 +70,7 @@ namespace Scrape.IO.Selenium
 			string responseParsing;
 			if (acceptHeader.Contains("application/json"))
 				initialResultConversionFunction = "json";
-			else if (acceptHeader.Contains("application/octet-stream") || acceptHeader.Contains("image/"))
+			else if (acceptHeader.Contains("application/octet-stream") || acceptHeader.Contains("image/") || acceptHeader.Contains("application/pdf"))
 			{
 				isBinary = true;
 				initialResultConversionFunction = "arrayBuffer";
