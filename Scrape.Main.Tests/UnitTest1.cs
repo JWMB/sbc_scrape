@@ -123,11 +123,11 @@ namespace Scrape.Main.Tests
 			//Create name lookup (can be truncated in one source but not the other):
 			Dictionary<string, string> nameLookup;
 			{
-				var intersectInfo = IntersectInfo(sbcByName.Keys, sieByName.Keys);
-				nameLookup = intersectInfo.Intersection.ToDictionary(o => o, o => o);
+				var (Intersection, OnlyInA, OnlyInB) = IntersectInfo(sbcByName.Keys, sieByName.Keys);
+				nameLookup = Intersection.ToDictionary(o => o, o => o);
 
-				AddLookups(intersectInfo.OnlyInA, intersectInfo.OnlyInB);
-				AddLookups(intersectInfo.OnlyInB, intersectInfo.OnlyInA);
+				AddLookups(OnlyInA, OnlyInB);
+				AddLookups(OnlyInB, OnlyInA);
 				void AddLookups(List<string> enumA, List<string> enumB)
 				{
 					for (int i = enumA.Count - 1; i >= 0; i--)
@@ -263,7 +263,7 @@ namespace Scrape.Main.Tests
 				);
 			}).ToList();
 
-			string Truncate(string val, int maxLength) { if (val.Length > maxLength) return val.Remove(maxLength); return val; }
+			static string Truncate(string val, int maxLength) { if (val.Length > maxLength) return val.Remove(maxLength); return val; }
 		}
 		void DownloadManagement(List<sbc_scrape.SBC.Invoice> fromSBC)
 		{
@@ -295,7 +295,7 @@ download([{links}]);
 */
 ";
 			script = script.Replace("{links}", string.Join("\n", fromSBC.Select(o => $"'{o.InvoiceLink.Replace("\\", "\\\\")}',")));
-			script = script.Replace("{info}", string.Join("\n", fromSBC.Select(o => $"{o.RegisteredDate.ToString("yyyy-MM-dd")}\t{o.Amount}\t{o.Supplier}\t{o.InvoiceLink}")));
+			script = script.Replace("{info}", string.Join("\n", fromSBC.Select(o => $"{o.RegisteredDate:yyyy-MM-dd}\t{o.Amount}\t{o.Supplier}\t{o.InvoiceLink}")));
 			//PaymentDate
 		}
 

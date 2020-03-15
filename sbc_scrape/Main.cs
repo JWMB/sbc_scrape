@@ -21,7 +21,6 @@ namespace SBCScan
 	class Main : IDisposable
 	{
 		private readonly AppSettings settings;
-		private readonly IKeyValueStore store;
 		private readonly ILogger<Main> logger;
 
 		private Fetcher fetcher;
@@ -33,7 +32,6 @@ namespace SBCScan
 		public Main(IOptions<AppSettings> settings, IKeyValueStore store, ILogger<Main> logger)
 		{
 			this.settings = settings.Value;
-			this.store = store;
 			this.logger = logger;
 
 			MediusFlow = new MediusFlow(store, logger); //TODO: better pattern for loggers...
@@ -88,7 +86,7 @@ namespace SBCScan
 				if (includeOCRd)
 				{
 					var found = summary.InvoiceImageIds?.Select(v => new { Guid = v, File = ocrFiles.SingleOrDefault(f => f.Name.Contains(v)) })
-		.Where(f => f.File != null).Select(f => new { Guid = f.Guid, Content = File.ReadAllText(f.File.FullName) });
+		.Where(f => f.File != null).Select(f => new { f.Guid, Content = File.ReadAllText(f.File.FullName) });
 					if (found.Any())
 					{
 						summary.InvoiceTexts = string.Join("\n", found.Select(f =>

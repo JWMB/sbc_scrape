@@ -115,7 +115,7 @@ namespace SIE.Matching
 
 			return result;
 
-			decimal FindRelevantAmount(IEnumerable<TransactionRecord> txs) => txs.Select(o => Math.Abs(o.Amount)).Max();
+			static decimal FindRelevantAmount(IEnumerable<TransactionRecord> txs) => txs.Select(o => Math.Abs(o.Amount)).Max();
 		}
 	}
 }

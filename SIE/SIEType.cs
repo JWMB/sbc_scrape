@@ -46,10 +46,8 @@ namespace SIE
 		{
 			Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 			var encoding = Encoding.GetEncoding(865); // "IBM865");
-			using (var sr = new StreamReader(path, encoding))
-			{
-				return await Read(sr);
-			}
+			using var sr = new StreamReader(path, encoding);
+			return await Read(sr);
 		}
 
 		public static async Task<RootRecord> Read(StreamReader sr)
@@ -58,8 +56,8 @@ namespace SIE
 			var excludeTypes = new[] { typeof(SIERecord), typeof(RootRecord), typeof(UnknownRecord) };
 			types = types.Except(excludeTypes).ToList();
 
-			SIERecord Construct(Type type) => (SIERecord)(type.GetConstructor(new Type[] { })?.Invoke(new object[] { }) ?? throw new Exception($"Invalid type {type}"));
-			var tagMap = types.Select(o => new { Tag = Construct(o).Tag, Type = o }).ToDictionary(o => o.Tag, o => o.Type);
+			static SIERecord Construct(Type type) => (SIERecord)(type.GetConstructor(new Type[] { })?.Invoke(new object[] { }) ?? throw new Exception($"Invalid type {type}"));
+			var tagMap = types.Select(o => new { Construct(o).Tag, Type = o }).ToDictionary(o => o.Tag, o => o.Type);
 
 			var hierarchy = new Stack<SIERecord>();
 			var root = new RootRecord();
@@ -114,7 +112,7 @@ namespace SIE
 			var sbResult = new StringBuilder();
 			RecBuild(this, sbResult, "");
 
-			void RecBuild(SIERecord item, StringBuilder sb, string indent)
+			static void RecBuild(SIERecord item, StringBuilder sb, string indent)
 			{
 				if (!(item is RootRecord))
 				{
@@ -136,7 +134,7 @@ namespace SIE
 			return sbResult.ToString();
 		}
 
-		public static T Parse<T>(string val, T defaultValueElseThrow = default(T))
+		public static T Parse<T>(string val, T defaultValueElseThrow = default)
 		{
 			var parsed = Parse(typeof(T), val, defaultValueElseThrow);
 			if (parsed == null) throw new NullReferenceException($"{val}");

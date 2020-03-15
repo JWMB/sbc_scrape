@@ -10,7 +10,7 @@ namespace SIE
 {
 	public static class SBCExtensions
 	{
-		static List<Regex> CompanyNameRx = new List<Regex> {
+		static readonly List<Regex> CompanyNameRx = new List<Regex> {
 			new Regex(@"^(P?\d+)(?::)(.+)"),
 			new Regex(@"([^;]+);(.+)"),
 			new Regex(@"^(\d{2})\/(.+)"),

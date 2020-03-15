@@ -77,7 +77,6 @@ namespace SBCScan.REPL
 		public override string Id => "o2fo";
 		public override Task<object> Evaluate(List<object> parms)
 		{
-			var t = parms[0].GetType();
 			var ienum = parms[0] as System.Collections.IEnumerable;
 			var result = new Dictionary<string, object>();
 			foreach (var item in ienum)
@@ -125,7 +124,7 @@ namespace SBCScan.REPL
 			{
 				//MediusFlow
 				//var mediusExisting = await main.MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate.Year == year);
-				var scraped = await main.MediusFlow.Scrape();
+				await main.MediusFlow.Scrape();
 				//TODO: check diff with existing files and return what was updated/added
 			}
 

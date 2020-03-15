@@ -61,7 +61,7 @@ namespace SIE.Tests
 			var allVouchers = roots.SelectMany(o => o.Children).OfType<VoucherRecord>();
 
 			var annoyingAccountIds = new[] { 24400, 26410 }.ToList();
-			Func<IEnumerable<TransactionRecord>, IEnumerable<TransactionRecord>> txFilter = txs =>
+			IEnumerable<TransactionRecord> txFilter(IEnumerable<TransactionRecord> txs) =>
 				TransactionRecord.PruneCorrections(txs).Where(t => !annoyingAccountIds.Contains(t.AccountId));
 
 			var multi = allVouchers.Where(o => !(new[] { "FAS", "LAN", "LON", "MA", "BS", "RV" }.Contains(o.VoucherTypeCode)) &&

@@ -32,7 +32,7 @@ namespace SBCScan.REPL
 
 			//TODO: parms date from
 			var dateRange = (Min: new DateTime(2016, 1, 1), Max: DateTime.Today);
-			Func<DateTime, bool> inRange = d => d >= dateRange.Min && d.Date <= dateRange.Max;
+			bool inRange(DateTime d) => d >= dateRange.Min && d.Date <= dateRange.Max;
 
 			invoices = invoices.Where(o => inRange(o.DueDate.Value)).ToList();
 			receipts = receipts.Where(o => inRange(o.Date)).ToList();
@@ -64,7 +64,7 @@ namespace SBCScan.REPL
 
 			var dbg = string.Join("\n", sortedUnmatched);
 
-			decimal AmountCorrectSign(decimal amount, BankTransaction trx)
+			static decimal AmountCorrectSign(decimal amount, BankTransaction trx)
 			{
 				return amount * ((trx != null &&
 					(trx.Reference.EndsWith(" BGINB")

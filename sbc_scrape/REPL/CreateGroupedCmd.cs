@@ -33,7 +33,7 @@ namespace SBCScan.REPL
 			var accountDescriptions = distinct.Select(s => accountDescriptionsWithDups.First(d => d.AccountId == s))
 				.ToDictionary(s => s.AccountId, s => s.AccountName);
 
-			Func<InvoiceSummary, DateTime> timeBinSelector = invoice => new DateTime(invoice.InvoiceDate.Value.Year, invoice.InvoiceDate.Value.Month, 1);
+			static DateTime timeBinSelector(InvoiceSummary invoice) => new DateTime(invoice.InvoiceDate.Value.Year, invoice.InvoiceDate.Value.Month, 1);
 
 			var aggregated = main.MediusFlow.AggregateByTimePeriodAndFunc(summaries,
 				inGroup => inGroup.Sum(o => o.GrossAmount),
@@ -69,8 +69,10 @@ namespace SBCScan.REPL
 			var emptyRow = header.Select(o => (string)null).ToList();
 			foreach (var byDate in byDateAndColumn.OrderByDescending(k => k.Key))
 			{
-				var row = new List<string>(emptyRow);
-				row[0] = byDate.Key.ToString("yyyy-MM-dd");
+				var row = new List<string>(emptyRow)
+				{
+					[0] = byDate.Key.ToString("yyyy-MM-dd")
+				};
 
 				table.Add(row);
 				foreach (var kv in byDate.Value)

@@ -33,7 +33,7 @@ namespace SBCScan.REPL
 			}
 		}
 
-		static Regex rxDate = new Regex(@"^(?<year>\d{2,4})-?(?<month>\d{1,2})?");
+		static readonly Regex rxDate = new Regex(@"^(?<year>\d{2,4})-?(?<month>\d{1,2})?");
 		public static DateTime? ParseDate(string input)
 		{
 			var m = rxDate.Match(input);

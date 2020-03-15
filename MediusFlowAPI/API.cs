@@ -73,7 +73,7 @@ namespace MediusFlowAPI
 
 		public async Task<Models.Tasks.Response[]> GetTasks(long folderId)
 		{
-			var body = new { folderId = folderId, };
+			var body = new { folderId, };
 			var result = await Request(baseAddress + "Rpc/lightApi/InboxTaskService/GetTasks", "POST", body);
 			var json = JsonConvert.SerializeObject(result.Body);
 			return json.Length <= 2 ? new Models.Tasks.Response[] { } : Models.Tasks.Response.FromJson(json);

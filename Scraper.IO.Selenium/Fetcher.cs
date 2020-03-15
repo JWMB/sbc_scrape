@@ -27,7 +27,7 @@ namespace Scrape.IO.Selenium
 
 		public async Task<string?> DownloadFile(string url, FetchConfig? config = null, string? overrideFilenameHeader = null)
 		{
-			config = config ?? new FetchConfig
+			config ??= new FetchConfig
 			{
 				Headers = new Dictionary<string, string> {
 					{ "accept", "image/png,image/webp,image/apng,*/*;q=0.8" },
@@ -56,10 +56,10 @@ namespace Scrape.IO.Selenium
 			return response.Body?.ToString();
 		}
 
-		static Regex rxFileName = new Regex(@"filename=""(?<filename>[\w-]+(\.\w+))");
+		static readonly Regex rxFileName = new Regex(@"filename=""(?<filename>[\w-]+(\.\w+))");
 		public async Task<FetchResponse> Fetch(string url, FetchConfig? config = null)
 		{
-			config = config ?? new FetchConfig();
+			config ??= new FetchConfig();
 			var isBinary = false;
 			if (config.Headers == null || !config.Headers.TryGetValue("accept", out string? acceptHeader))
 				acceptHeader = "";
@@ -96,7 +96,7 @@ body: {bodyConversion}
 			}
 			var body = config.Body == null ? null : JsonConvert.SerializeObject(config.Body);
 
-			string NullOrQuoted(string? str) => str == null ? "null" : $"'{str}'";
+			static string NullOrQuoted(string? str) => str == null ? "null" : $"'{str}'";
 
 			var script = $@"{additionalScripts}
 fetch('{url}',
@@ -141,7 +141,7 @@ fetch('{url}',
 					var isImage = true;
 					evaluatedBody = Convert.FromBase64String(isImage ? FixBase64ForImage((string)responseBody) : (string)responseBody);
 
-					string FixBase64ForImage(string Image)
+					static string FixBase64ForImage(string Image)
 					{
 						var sbText = new StringBuilder(Image, Image.Length);
 						sbText.Replace("\r\n", string.Empty);
@@ -151,7 +151,7 @@ fetch('{url}',
 				}
 
 				return new FetchResponse {
-					Body = evaluatedBody != null ? evaluatedBody : responseBody,
+					Body = evaluatedBody ?? responseBody,
 					Status = dict.GetOrDefault("status", null)?.ToString() ?? "N/A",
 					Headers = headers
 				};

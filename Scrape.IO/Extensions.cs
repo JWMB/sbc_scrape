@@ -38,7 +38,7 @@ namespace Scrape.IO
 	}
 	public static class PathExtensions
 	{
-		static Regex rx = new Regex(@"%(\w+)%");
+		static readonly Regex rx = new Regex(@"%(\w+)%");
 		public static string Parse(string path)
 		{
 			var other = Path.DirectorySeparatorChar == '\\' ? '/' : '\\';
@@ -48,7 +48,7 @@ namespace Scrape.IO
 				path = Path.Combine(Environment.CurrentDirectory, path);
 			//path = Path.GetFullPath(path.Substring(1), Environment.CurrentDirectory);
 
-			string Substitute(string id)
+			static string Substitute(string id)
 			{
 				if (Enum.TryParse<Environment.SpecialFolder>(id, true, out var found))
 					return Environment.GetFolderPath(found);

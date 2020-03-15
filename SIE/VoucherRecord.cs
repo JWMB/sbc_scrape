@@ -104,7 +104,7 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 		//{
 		//	#TRANS 27180 {} -2047.00 20190210 "Skatteverket"
 		//}
-		private static Regex rxType = new Regex(@"(\D+)(\d+)");
+		private static readonly Regex rxType = new Regex(@"(\D+)(\d+)");
 
 		public string VoucherTypeCode { get; set; } = string.Empty;
 		public SIE.VoucherType VoucherType { get => SIE.VoucherType.GetByCode(VoucherTypeCode); }

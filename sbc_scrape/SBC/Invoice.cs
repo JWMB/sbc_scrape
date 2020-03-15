@@ -119,7 +119,7 @@ namespace sbc_scrape.SBC
 
 		public class SBCvsMediusEqualityComparer : IEqualityComparer<MediusFlowAPI.InvoiceSummary>
 		{
-			private List<List<long>> mixedUpAccountIds = GlobalSettings.AppSettings.MixedUpAccountIdsParsed;
+			private readonly List<List<long>> mixedUpAccountIds = GlobalSettings.AppSettings.MixedUpAccountIdsParsed;
 			private readonly bool matchMixedUpAccounts;
 
 			public SBCvsMediusEqualityComparer(bool matchMixedUpAccounts = true)

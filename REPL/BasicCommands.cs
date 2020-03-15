@@ -89,11 +89,9 @@ namespace REPL
 				if (type == null)
 					throw new ArgumentException($"Type not found: {typeName}");
 
-				using (var reader = new StringReader(str))
-				using (var csv = new CsvHelper.CsvReader(reader, conf))
-				{
-					return Task.FromResult<object>(csv.GetRecords(type).ToList());
-				}
+				using var reader = new StringReader(str);
+				using var csv = new CsvHelper.CsvReader(reader, conf);
+				return Task.FromResult<object>(csv.GetRecords(type).ToList());
 			}
 
 			using (var writer = new StringWriter())

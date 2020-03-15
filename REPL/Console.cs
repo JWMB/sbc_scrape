@@ -31,12 +31,12 @@ namespace REPL
 
 		private string _lastWrite = string.Empty;
 
-		private void _WriteLine(string text)
+		private void WriteLineInternal(string text)
 		{
 			_lastWrite = text;
 			Console.WriteLine(text);
 		}
-		private void _Write(string text)
+		private void WriteInternal(string text)
 		{
 			_lastWrite = text;
 			Console.Write(text);
@@ -63,18 +63,18 @@ namespace REPL
 				{
 					CursorPosition = (0, CursorPosition.Y - lln.Count);
 					foreach (var item in lln)
-						_WriteLine(GetEmptyString(item));
+						WriteLineInternal(GetEmptyString(item));
 					
 				}
 				CursorPosition = (0, CursorPosition.Y - 1);
-				_WriteLine(text);
+				WriteLineInternal(text);
 			}, foreColor, backColor);
 
 		public override void Write(string text, ConsoleColor? foreColor = null, ConsoleColor? backColor = null) =>
-			Write(() => _Write(text), foreColor, backColor);
+			Write(() => WriteInternal(text), foreColor, backColor);
 
 		public override void WriteLine(string text, ConsoleColor? foreColor = null, ConsoleColor? backColor = null) =>
-			Write(() => _WriteLine(text), foreColor, backColor);
+			Write(() => WriteLineInternal(text), foreColor, backColor);
 
 		private void Write(Action writer, ConsoleColor? foreColor = null, ConsoleColor? backColor = null)
 		{

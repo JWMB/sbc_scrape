@@ -50,7 +50,7 @@ namespace REPL
 			}
 			if (parsed == null)
 			{
-				value = default(T);
+				value = default;
 				return false;
 			}
 			value = (T)parsed;

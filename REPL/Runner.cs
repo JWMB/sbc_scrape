@@ -10,10 +10,10 @@ namespace REPL
 
 	public class Runner
 	{
-		private NullCmd nullCmd = new NullCmd();
-		private QuitCmd? quitCmd;
+		private readonly NullCmd nullCmd = new NullCmd();
+		private readonly QuitCmd? quitCmd;
 		private IEnumerable<Command> cmds;
-		private ConsoleBase console;
+		private readonly ConsoleBase console;
 
 		public Runner(IEnumerable<Command> cmds)
 		{
@@ -25,7 +25,7 @@ namespace REPL
 
 		private void PrepareCommands(IEnumerable<Command> cmds)
 		{
-			cmds.ToList().ForEach(c => c.Console = c.Console ?? console);
+			cmds.ToList().ForEach(c => c.Console ??= console);
 		}
 
 		public async Task<(Command?, object)> Evaluate(List<object> input, IEnumerable<Command> cmds, object? previousResult = null)
