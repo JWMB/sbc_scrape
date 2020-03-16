@@ -68,8 +68,9 @@ namespace Scrape.Main.Tests
 		[TestMethod]
 		public void ParsePdf()
 		{
+			//TODO: this test (and assembly reference) should not be in this test project!!
 			var file = @"C:\Users\Jonas Beckeman\Downloads\document(2).pdf";
-			var texts = PdfExtract.Extract(file);
+			var texts = OCR.PdfExtract.Extract(file);
 		}
 
 		[TestMethod]

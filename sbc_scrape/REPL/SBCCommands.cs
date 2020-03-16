@@ -1,5 +1,6 @@
 ﻿using MediusFlowAPI;
 using Newtonsoft.Json;
+using OCR;
 using REPL;
 using sbc_scrape.SBC;
 using Scrape.IO;
@@ -250,7 +251,7 @@ namespace SBCScan.REPL
 			{
 				var ocrFile = file.FullName.Remove(file.FullName.Length - file.Extension.Length) + ".txt";
 				var started = DateTime.Now;
-				var text = sbc_scrape.OCR.Run(file.FullName, new string[] { "swe", "eng" });
+				var text = new TesseractOCR(GlobalSettings.AppSettings.PathToTesseract).Run(file.FullName, new string[] { "swe", "eng" });
 				var elapsed = DateTime.Now - started;
 				File.WriteAllText(ocrFile, text);
 				Console.WriteLine($"{index++}/{filesToProcess.Count()} {file.Name}");
