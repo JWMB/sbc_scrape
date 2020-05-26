@@ -35,7 +35,7 @@ namespace SBCScan.SBC
 			pid.Clear();
 			pid.SendKeys(username);
 
-			var btn = driver.FindElement(By.CssSelector("form > button")); //Changed dec 2019 from By.Id("login_Login_Button"));
+			var btn = driver.FindElement(By.XPath("//button[@type='submit' and contains(., 'BankID')]")); // Changed spring 2020 from By.CssSelector("form > button")); //Changed dec 2019 from By.Id("login_Login_Button"));
 			btn.Click();
 
 			var finder = By.XPath($"//a[text()='{brfId}']"); // Changed dec 2019 from "//input[@type='submit' and @value='{brfId}']");
