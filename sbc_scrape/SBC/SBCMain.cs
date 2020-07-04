@@ -40,10 +40,12 @@ namespace SBCScan.SBC
 
 			var finder = By.XPath($"//a[text()='{brfId}']"); // Changed dec 2019 from "//input[@type='submit' and @value='{brfId}']");
 			new WebDriverWait(driver, TimeSpan.FromMinutes(4)).Until(WebDriverExtensions.ElementIsPresent(finder));
-			driver.FindElement(finder).Click();
+			var element = driver.FindElement(finder);
+			if (element == null)
+				throw new NotFoundException($"Text {brfId} not found");
+			element.Click();
 
 			await Task.Delay(500);
-			//System.Threading.Thread.Sleep(1000);
 			driver.WaitUntilDocumentReady();
 		}
 
