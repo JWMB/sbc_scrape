@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace SBCScan.SBC
@@ -39,11 +40,19 @@ namespace SBCScan.SBC
 			btn.Click();
 
 			var finder = By.XPath($"//a[text()='{brfId}']"); // Changed dec 2019 from "//input[@type='submit' and @value='{brfId}']");
-			new WebDriverWait(driver, TimeSpan.FromMinutes(4)).Until(WebDriverExtensions.ElementIsPresent(finder));
+			new WebDriverWait(driver, TimeSpan.FromMinutes(1)).Until(WebDriverExtensions.ElementIsPresent(finder));
 			var element = driver.FindElement(finder);
 			if (element == null)
 				throw new NotFoundException($"Text {brfId} not found");
-			element.Click();
+			await Task.Delay(500);
+			try
+			{
+				element.Click();
+			}
+			catch (Exception ex)
+			{
+				throw;
+			}
 
 			await Task.Delay(500);
 			driver.WaitUntilDocumentReady();

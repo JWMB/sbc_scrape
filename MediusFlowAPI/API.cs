@@ -124,7 +124,10 @@ namespace MediusFlowAPI
 				ActualPage = page + 1
 			};
 
-			var result = await Request(baseAddress + "Rpc/PurchaseToPayGadgetDataService/GetSupplierInvoiceGadgetData", "POST", body);
+			var url = baseAddress + "Rpc/PurchaseToPayGadgetDataService/GetSupplierInvoiceGadgetData";
+			var result = await Request(url, "POST", body);
+			if (result == null || result.Body == null)
+				throw new NullReferenceException($"Null result from {url}");
 			var typed = Models.SupplierInvoiceGadgetData.Response.FromJson(JsonConvert.SerializeObject(result.Body));
 			return typed;
 		}
