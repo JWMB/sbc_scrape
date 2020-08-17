@@ -48,8 +48,7 @@ namespace SBCScan.REPL
 		public override string Id => "accounts";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			Console.WriteLine("0");
-			var invoices = (await main.LoadInvoices(includeOCRd: false, (i, l) => Console.RewriteLine($"{i}/{l}"))).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+			var invoices = await CreateIndexCmd.LoadInvoicesConsole(Console, main); // (await main.LoadInvoices(includeOCRd: false, (i, l) => Console.RewriteLine($"{i}/{l}"))).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 			var tmp = invoices.GroupBy(o => o.AccountId).ToDictionary(o => o.Key, o => new { Total = o.Sum(g => g.GrossAmount), Names = o.Select(g => g.AccountName).Distinct() });
 			var result = string.Join("\n",
 				tmp.Select(kv => $"{kv.Key}\t{string.Join(',', kv.Value.Names)}\t{kv.Value.Total}")
@@ -66,9 +65,21 @@ namespace SBCScan.REPL
 		public override string Id => "createindex";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			Console.WriteLine("0");
-			return (await main.LoadInvoices(includeOCRd: false, (i, l) => Console.RewriteLine($"{i}/{l}"))).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+			return await CreateIndexCmd.LoadInvoicesConsole(Console, main);
+			//Console.WriteLine("0");
+			//return (await main.LoadInvoices(includeOCRd: false, (i, l) => Console.RewriteLine($"{i}/{l}"))).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 			//return (await main.LoadInvoices(true)).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
+		}
+
+		public static async Task<List<InvoiceSummary>> LoadInvoicesConsole(ConsoleBase console, Main main)
+		{
+			console.WriteLine("0");
+			return (await main.LoadInvoices(includeOCRd: false, (i, l) => {
+				if (l < 300 || (i % 10 == 0))
+					console.RewriteLine($"{i}/{l}");
+			}))
+				.OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1))
+				.ToList();
 		}
 	}
 
@@ -99,7 +110,10 @@ namespace SBCScan.REPL
 		public override string Id => "sbc";
 		public override Task<object> Evaluate(List<object> parms)
 		{
-			var src = FetchSBCHtml.GetHtmlSourceInstance(parms[0] as string);
+			//if (!parms.Any())
+			//	throw new ArgumentException("No HTML Source type defined");
+			//var src = FetchSBCHtml.GetHtmlSourceInstance(parms[0] as string);
+			var src = new InvoiceSource();
 			var result = src.ReadAllObjects(defaultFolder);
 			if (src is InvoiceSource invSrc)
 			{
