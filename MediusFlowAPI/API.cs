@@ -14,12 +14,14 @@ namespace MediusFlowAPI
 		private readonly IFetcher fetcher;
 		private readonly string baseAddress;
 		private readonly string mediusRequestHeader_XUserContext;
+		private readonly string csrfToken;
 
-		public API(IFetcher fetcher, string baseAddress, string mediusRequestHeader_XUserContext)
+		public API(IFetcher fetcher, string baseAddress, string mediusRequestHeader_XUserContext, string csrfToken)
 		{
 			this.fetcher = fetcher;
 			this.baseAddress = baseAddress;
 			this.mediusRequestHeader_XUserContext = mediusRequestHeader_XUserContext;
+			this.csrfToken = csrfToken;
 		}
 
 		public async Task<InvoiceFull.TaskFull> GetAllTaskInfo(long taskId, bool downloadImages = false)
@@ -71,9 +73,36 @@ namespace MediusFlowAPI
 			return json.Length <= 2 ? new List<TaskAssignment>() : JsonConvert.DeserializeObject<List<TaskAssignment>>(json);
 		}
 
-		public async Task<Models.Tasks.Response[]> GetTasks(long folderId)
+		public async Task<Models.Tasks.Response[]> GetTasks(DateTime from, DateTime to, long folderId = 1)
 		{
-			var body = new { folderId, };
+			var body = new {
+				folderId = folderId,
+				filter = new {
+					OrderCriteria = new {
+						DocumentType = "Medius.ExpenseInvoice.Entities.ExpenseInvoice",
+						Path = "Document.DueDate",
+						Type = "asc",
+						FolderId = folderId
+					},
+					Keywords = new List<string>(),
+					Labels = new List<string>(),
+					SerializedQuery = JsonConvert.SerializeObject(new {
+						Name = (string)null,
+						Task = (string)null,
+						Documents = new[] { new {
+							Type = "Medius.ExpenseInvoice.Entities.ExpenseInvoice",
+							WithLabels = false,
+							OnHoldCondition = (string)null,
+							Labels = new List<string>(),
+							Conditions = new []{ new {
+								Id = 102,
+								From = from.ToUtcString(),
+								To = to.ToUtcString(),
+								ValueSource = "DueDate",
+							} } } }
+					})
+				}
+			};
 			var result = await Request(baseAddress + "Rpc/lightApi/InboxTaskService/GetTasks", "POST", body);
 			var json = JsonConvert.SerializeObject(result.Body);
 			return json.Length <= 2 ? new Models.Tasks.Response[] { } : Models.Tasks.Response.FromJson(json);
@@ -108,22 +137,28 @@ namespace MediusFlowAPI
 
 		public async Task<Models.SupplierInvoiceGadgetData.Response> GetSupplierInvoiceGadgetData(DateTime from, DateTime to, int page = 0, int take = 100)
 		{
-			return await GetSupplierInvoiceGadgetData(new Models.SupplierInvoiceGadgetData.Filters
-			{
-				//CompanyHierarchyId = "", ///1/4/5/2404/",
-				InvoiceDateFrom = from.ToUtcString(),
-				InvoiceDateTo = to.ToUtcString(),
-			}, page, take);
-		}
-		public async Task<Models.SupplierInvoiceGadgetData.Response> GetSupplierInvoiceGadgetData(Models.SupplierInvoiceGadgetData.Filters filters, int page = 0, int take = 100)
-		{
-			var body = new Models.SupplierInvoiceGadgetData.Request
-			{
-				Filters = filters,
+			//var body = new {
+			//	Filters = new {
+			//		InvoiceDateFrom = from.ToUtcString(),
+			//		InvoiceDateTo = to.ToUtcString(),
+			//	},
+			//	PageSize = take,
+			//	ActualPage = page + 1
+			//};
+			var body = new Models.SupplierInvoiceGadgetData.Request {
+				Filters = new Models.SupplierInvoiceGadgetData.Filters {
+					//CompanyHierarchyId = "", ///1/4/5/2404/",
+					InvoiceDateFrom = from.ToUtcString(),
+					InvoiceDateTo = to.ToUtcString(),
+				},
 				PageSize = take,
 				ActualPage = page + 1
 			};
+			return await GetSupplierInvoiceGadgetData(body);
+		}
 
+		public async Task<Models.SupplierInvoiceGadgetData.Response> GetSupplierInvoiceGadgetData(object body)
+		{
 			var url = baseAddress + "Rpc/PurchaseToPayGadgetDataService/GetSupplierInvoiceGadgetData";
 			var result = await Request(url, "POST", body);
 			if (result == null || result.Body == null)
@@ -195,6 +230,8 @@ namespace MediusFlowAPI
 			if (headerOverrides == null)
 				headerOverrides = new Dictionary<string, string>();
 			headerOverrides["x-user-context"] = mediusRequestHeader_XUserContext;
+			if (method != "GET")
+				headerOverrides.Add("__RequestVerificationToken", csrfToken);
 			return await Request(fetcher, url, method, body, headerOverrides);
 		}
 
@@ -215,9 +252,14 @@ namespace MediusFlowAPI
 		public async static Task<FetchResponse> Request(IFetcher fetch, string url, string method = "GET", object body = null, Dictionary<string, string> headerOverrides = null)
 		{
 			var headers = GetHeaders(headerOverrides);
-			return await fetch.Fetch(url, new FetchConfig { Method = MethodMode.Parse(method),
-				Body = body, Mode = CorsMode.Cors, Headers = headers,
-				Credentials = CredentialsMode.Include, ReferrerPolicy = ReferrerPolicyMode.NoReferrerWhenDowngrade });
+			return await fetch.Fetch(url, new FetchConfig {
+				Method = MethodMode.Parse(method),
+				Body = body,
+				Mode = CorsMode.Cors,
+				Headers = headers,
+				Credentials = CredentialsMode.Include,
+				ReferrerPolicy = ReferrerPolicyMode.NoReferrerWhenDowngrade
+			});
 		}
 
 	}

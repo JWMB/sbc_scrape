@@ -6,6 +6,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -60,9 +61,28 @@ namespace SBCScan.SBC
 
 		public void LoginToMediusFlow(string url)
 		{
-			// https://stackoverflow.com/questions/17547473/how-to-open-a-new-tab-using-selenium-webdriver
-			driver.Navigate().GoToUrl(url);
-			driver.WaitUntilDocumentReady();
+			Go();
+			var ensureHost = new Uri(url).Host;
+			while (!driver.Url.Contains(ensureHost))
+			{
+				Thread.Sleep(500);
+				Go();
+			}
+
+			void Go()
+			{
+				// https://stackoverflow.com/questions/17547473/how-to-open-a-new-tab-using-selenium-webdriver
+				driver.Navigate().GoToUrl(url);
+				driver.WaitUntilDocumentReady();
+			}
+		}
+
+		public string GetMediusFlowCSRFToken()
+		{
+			//var csrfToken = driver.FindElementsByXPath("//input[@name='__RequestVerificationToken']").FirstOrDefault()?.GetAttribute("value");
+			var js = driver.FindElementsByXPath("//script[contains(., 'antiForgeryToken.init')]").FirstOrDefault()?.GetAttribute("innerText") ?? "";
+			var m = Regex.Match(js, @"(?<=antiForgeryToken\.init.+value=\"")[^\""]+");
+			return m.Value;
 		}
 
 		public Task<string> FetchHtmlSource(string urlPath, int year, int monthFrom = 1, int monthTo = 12)

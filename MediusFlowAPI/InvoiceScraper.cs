@@ -12,9 +12,9 @@ namespace MediusFlowAPI
 	{
 		private readonly API api;
 
-		public InvoiceScraper(IFetcher fetcher, string rootAddress, string xusercontext)
+		public InvoiceScraper(IFetcher fetcher, string rootAddress, string xusercontext, string csrfToken)
 		{
-			api = new API(fetcher, rootAddress, xusercontext);
+			api = new API(fetcher, rootAddress, xusercontext, csrfToken);
 		}
 
 		// "/Rpc/LinksService/GetLinks" - H "Accept: application/json, text/javascript, */*; q=0.01" - H "Content-Type: application/json; charset=utf-8" - H "X-Json-Preserve-References: true"
@@ -36,13 +36,24 @@ namespace MediusFlowAPI
 
 		public async Task<Models.SupplierInvoiceGadgetData.Response> GetSupplierInvoiceGadgetData(DateTime start, DateTime? end = null)
 		{
-			var invoiceResult = await api.GetSupplierInvoiceGadgetData(start, end ?? DateTime.Now.Date);
-			if (invoiceResult.RowCount > invoiceResult.Invoices.Count())
+			var pageIndex = 0;
+			var pageSize = 100;
+
+			Models.SupplierInvoiceGadgetData.Response result = null;
+			var allInvoices = new List<Models.SupplierInvoiceGadgetData.Invoice>();
+			while (true)
 			{
-				//TODO: get next page!
-				//await api.GetSupplierInvoiceGadgetData(start, end ?? DateTime.Now.Date)
+				var invoiceResult = await api.GetSupplierInvoiceGadgetData(start, end ?? DateTime.Now.Date, pageIndex, pageSize);
+				result = result ?? invoiceResult;
+
+				allInvoices.AddRange(invoiceResult.Invoices);
+				if (allInvoices.Count >= invoiceResult.RowCount || invoiceResult.Invoices.Count() < pageSize)
+					break;
+				pageIndex++;
 			}
-			return invoiceResult;
+			result.Invoices = allInvoices.ToArray();
+			result.RowCount = allInvoices.Count;
+			return result;
 		}
 
 		public async Task<InvoiceFull> GetInvoice(long invoiceId)

@@ -13,9 +13,11 @@ namespace SBCScan
 {
 	public class MediusFlow
 	{
-		private Fetcher fetcher;
 		private readonly InvoiceStore store;
 		private readonly ILogger logger;
+
+		private Fetcher fetcher;
+		private string csrfToken;
 
 		public MediusFlow(IKeyValueStore store, ILogger logger)
 		{
@@ -23,20 +25,21 @@ namespace SBCScan
 			this.logger = logger;
 		}
 
-		public void Init(Fetcher fetcher)
+		public void Init(Fetcher fetcher, string csrfToken)
 		{
 			this.fetcher = fetcher;
+			this.csrfToken = csrfToken;
 		}
 
 		public API CreateApi()
 		{
-			return new API(fetcher, GlobalSettings.AppSettings.MediusFlowRoot, GlobalSettings.AppSettings.MediusRequestHeader_XUserContext);
+			return new API(fetcher, GlobalSettings.AppSettings.MediusFlowRoot, GlobalSettings.AppSettings.MediusRequestHeader_XUserContext, csrfToken);
 		}
 
 		public InvoiceScraper CreateScraper()
 		{
 			//TODO: can we get the x-user-context header from existing requests? E.g. puppeteers Network.responseReceived
-			return new InvoiceScraper(fetcher, GlobalSettings.AppSettings.MediusFlowRoot, GlobalSettings.AppSettings.MediusRequestHeader_XUserContext);
+			return new InvoiceScraper(fetcher, GlobalSettings.AppSettings.MediusFlowRoot, GlobalSettings.AppSettings.MediusRequestHeader_XUserContext, csrfToken);
 		}
 
 		public async Task<Dictionary<InvoiceFull, List<string>>> DownloadPdfs(Func<InvoiceFull.FilenameFormat, bool> invoiceFilter)

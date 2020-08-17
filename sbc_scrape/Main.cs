@@ -48,10 +48,11 @@ namespace SBCScan
 
 			await SBC.Login(settings.LoginPage_BankId, settings.UserLoginId_BankId, settings.UserLogin_BrfId);
 
-			MediusFlow.Init(fetcher);
-
-
 			SBC.LoginToMediusFlow(settings.RedirectUrlMediusFlow);
+			var csrf = SBC.GetMediusFlowCSRFToken();
+
+			MediusFlow.Init(fetcher, csrf);
+
 			logger.LogInformation($"Logged in");
 		}
 
