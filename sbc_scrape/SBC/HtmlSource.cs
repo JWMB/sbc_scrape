@@ -12,6 +12,17 @@ namespace sbc_scrape.SBC
 		public abstract string UrlPath { get; }
 		public abstract List<object> ParseObjects(string html);
 		public abstract List<object> ReadAllObjects(string folder);
+
+		public static DocumentVersion GetDocumentVersion(string html)
+		{
+			return html.StartsWith(@"<html xmlns=""http://www.w3.org/1999/xhtml"">") ? DocumentVersion.Pre2020 : DocumentVersion.Spring2020;
+		}
+	}
+
+	public enum DocumentVersion
+	{
+		Pre2020,
+		Spring2020,
 	}
 
 	public abstract class HtmlSource<TRow> : HtmlSource
@@ -22,7 +33,9 @@ namespace sbc_scrape.SBC
 
 		public static List<T> ParseDocument<T>(HtmlDocument doc, Func<List<string>, T> deserializeRow, IEnumerable<string> skipColumns = null)
 		{
-			var node = doc.DocumentNode.SelectSingleNode("//table[@class='portal-table']");
+			var node = GetDocumentVersion(doc.DocumentNode.OuterHtml) == DocumentVersion.Pre2020
+				? doc.DocumentNode.SelectSingleNode("//table[@class='portal-table']")
+				: doc.DocumentNode.SelectSingleNode("//table[starts-with(@id,'ctl00_MainBodyAddRegion_ctl01_GridView')]"); // //table[@id='ctl00_MainBodyAddRegion_ctl01_GridViewUrval']
 			if (node == null)
 				throw new FormatException("Couldn't find table node");
 			node = node.ChildNodes.FirstOrDefault(n => n.Name == "tbody") ?? node; //Some variants have no tbody, but tr directly under

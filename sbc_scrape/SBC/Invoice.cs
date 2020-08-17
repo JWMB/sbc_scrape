@@ -17,9 +17,13 @@ namespace sbc_scrape.SBC
 			var doc = new HtmlDocument();
 			doc.LoadHtml(html);
 
-			var accountNames = doc.DocumentNode.SelectNodes("(//table[contains(@class, 'portal-table-nogrid')]//select)[1]//option")
-				.Select(n => new { Key = n.GetAttributeValue("value", 0), Value = HtmlEntity.DeEntitize(n.InnerText) })
-				.ToDictionary(k => k.Key, k => k.Value.Replace($"{k.Key} ", ""));
+			var accountNameOptions = HtmlSource.GetDocumentVersion(html) == DocumentVersion.Pre2020
+				? doc.DocumentNode.SelectNodes("(//table[contains(@class, 'portal-table-nogrid')]//select)[1]//option")
+				: doc.DocumentNode.SelectSingleNode("//select[@id='ctl00_MainBodyAddRegion_ctl01_DDKontoFrom']").ChildNodes.Where(o => o.Name == "option");
+
+			var accountNames = accountNameOptions
+					.Select(n => new { Key = n.GetAttributeValue("value", 0), Value = HtmlEntity.DeEntitize(n.InnerText) })
+					.ToDictionary(k => k.Key, k => k.Value.Replace($"{k.Key} ", ""));
 
 			var culture = new System.Globalization.CultureInfo("sv-SE");
 			return ParseDocument(html, r => new Invoice
