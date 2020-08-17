@@ -7,9 +7,10 @@ namespace MediusFlowAPI
 {
 	public static class Extensions
 	{
-		public static string ToUtcString(this DateTime datetime) => datetime.ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
+		public static string ToUtcString(this DateTime datetime) => datetime.ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ");
 
-		static readonly Regex rxMediusDate = new Regex(@"/Date\((\d{12,14})([+-]\d{4})?\)/");
+		static readonly Regex 
+			rxMediusDate = new Regex(@"/Date\((\d{12,14})([+-]\d{4})?\)/");
 		public static DateTime? FromMediusDate(this string str)
 		{
 			if (str == null)
