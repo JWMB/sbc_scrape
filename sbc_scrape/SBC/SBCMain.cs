@@ -87,8 +87,10 @@ namespace SBCScan.SBC
 
 		public Task<string> FetchHtmlSource(string urlPath, int year, int monthFrom = 1, int monthTo = 12)
 		{
-			driver.NavigateAndWaitReadyIfNotThere("https://varbrf.sbc.se/" + urlPath);
-			//var accountSelect = driver.FindElement(By.XPath("//select[contains(@id,'_DDKonto')]"));
+			var url = "https://varbrf.sbc.se/" + urlPath;
+			driver.NavigateAndWaitReadyIfNotThere(url);
+			if (!driver.Url.ToLower().StartsWith(url.ToLower()))
+				throw new ArgumentException($"Was redirected from '{url}' to '{driver.Url}'");
 
 			List<IWebElement> FindXPathAndPredicate(string xpath, Func<IWebElement, bool> predicate)
 			{
@@ -102,21 +104,38 @@ namespace SBCScan.SBC
 
 			void ClickSelectOption(string selectIdContains, string optionText)
 			{
-				var xpath = $"//select[contains(@id,'{selectIdContains}')]/option[text() = '{optionText}']";
-				try
+				var tryXPaths = new[] { $"text() = '{optionText}'", $"@value = '{optionText}'" }
+					.Select(o => $"//select[contains(@id,'{selectIdContains}')]/option[{o}]");
+				var exceptions = new List<Exception>();
+				foreach (var xpath in tryXPaths)
 				{
-					var elOption = driver.FindElement(By.XPath(xpath));
-					if (elOption != null)
-						elOption.Click();
+					try
+					{
+						var elOption = driver.FindElement(By.XPath(xpath));
+						if (elOption != null)
+						{
+							elOption.Click();
+							return;
+						}
+					}
+					catch (Exception ex)
+					{
+						exceptions.Add(ex);
+					}
 				}
-				catch (Exception ex)
-				{
-					throw new Exception($"Unable to locate Select/Option {optionText} ({selectIdContains} for {urlPath})", ex);
-				}
+				throw new AggregateException($"Unable to locate Select/Option {optionText} ({selectIdContains} for {urlPath})", exceptions);
 			}
 
 			ClickSelectOption("PeriodFrom", monthFrom.ToString());
-			ClickSelectOption("PeriodTom", monthTo.ToString());
+			try
+			{
+				ClickSelectOption("PeriodTom", monthTo.ToString());
+			}
+			catch (Exception ex)
+			{
+				ClickSelectOption("PeriodTo", monthTo.ToString()); // Changed to PeriodTo for some pages aug 2020
+			}
+
 			//ClickSelectOption("Ar", year.ToString());
 			var found = FindXPathAndPredicate($"//select[contains(@id,'Ar')]/option", el => el.Text.StartsWith(year.ToString())).FirstOrDefault();
 			found?.Click();

@@ -13,14 +13,13 @@ namespace sbc_scrape.SBC
 		public override List<Receipt> Parse(string html) => ParseX(html).Cast<Receipt>().ToList();
 		public List<Receipt> ParseX(string html)
 		{
-			var culture = new System.Globalization.CultureInfo("sv-SE");
 			return HtmlSource<Receipt>.ParseDocument(html, r => new Receipt
 			{
 				//BG = r[0],
 				Date = DateTime.Parse(r[1]),
 				SupplierId = r[2],
 				OCR = r[3],
-				Amount = decimal.Parse(r[4], culture),
+				Amount = ParseDecimal(r[4]),
 				Information = r[5],
 				Supplier = r[6].Trim(),
 			});

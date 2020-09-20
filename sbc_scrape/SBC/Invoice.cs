@@ -10,16 +10,21 @@ namespace sbc_scrape.SBC
 	public class InvoiceSource : HtmlSource<Invoice>
 	{
 		public override string SavedFilePrefix => "Invoices";
-		public override string UrlPath => "Portalen/Ekonomi/Fakturaparm/";
+		public override string UrlPath => "Portalen/Ekonomi/Utforda-betalningar/"; // Changed Aug 2020 from Portalen/Ekonomi/Fakturaparm/
 		public override List<Invoice> Parse(string html) => ParseX(html).Cast<Invoice>().ToList();
 		public List<Invoice> ParseX(string html)
 		{
 			var doc = new HtmlDocument();
 			doc.LoadHtml(html);
 
-			var accountNameOptions = HtmlSource.GetDocumentVersion(html) == DocumentVersion.Pre2020
+			var docVersion = GetDocumentVersion(html);
+
+			var accountNameOptions = docVersion == DocumentVersion.Pre2020
 				? doc.DocumentNode.SelectNodes("(//table[contains(@class, 'portal-table-nogrid')]//select)[1]//option")
-				: doc.DocumentNode.SelectSingleNode("//select[@id='ctl00_MainBodyAddRegion_ctl01_DDKontoFrom']").ChildNodes.Where(o => o.Name == "option");
+				: (docVersion == DocumentVersion.Spring2020
+					? doc.DocumentNode.SelectSingleNode("//select[@id='ctl00_MainBodyAddRegion_ctl01_DDKontoFrom']").ChildNodes.Where(o => o.Name == "option")
+					: doc.DocumentNode.SelectSingleNode("//select[@id='ctl00_MainBodyAddRegion_ctl01_DDAccountFrom']").ChildNodes.Where(o => o.Name == "option")
+					);
 
 			var accountNames = accountNameOptions
 					.Select(n => new { Key = n.GetAttributeValue("value", 0), Value = HtmlEntity.DeEntitize(n.InnerText) })
@@ -34,7 +39,7 @@ namespace sbc_scrape.SBC
 				LevNr = r[3],
 				AccountId = int.Parse(r[4]),
 				AccountName = accountNames.GetValueOrDefault(int.Parse(r[4]), "N/A"),
-				Amount = decimal.Parse(r[5], System.Globalization.NumberStyles.Any, culture),
+				Amount = ParseDecimal(r[5]),
 				InvoiceLink = r[6]
 			}, new string[] { "Ver serie", "Ver nr" }).ToList();
 		}

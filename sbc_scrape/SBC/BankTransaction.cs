@@ -13,15 +13,14 @@ namespace sbc_scrape.SBC
 		public override List<BankTransaction> Parse(string html) => ParseX(html).Cast<BankTransaction>().ToList();
 		public List<BankTransaction> ParseX(string html)
 		{
-			var culture = new System.Globalization.CultureInfo("sv-SE");
 			return ParseDocument(html, r => new BankTransaction
 			{
 				Reference = r[0],
 				AccountingDate = DateTime.Parse(r[1]),
 				CurrencyDate = DateTime.Parse(r[2]),
 				Text = r[3],
-				Amount = decimal.Parse(r[4], culture),
-				TotalAccountAmount = decimal.Parse(r[5], culture),
+				Amount = ParseDecimal(r[4]),
+				TotalAccountAmount = ParseDecimal(r[5]),
 			});
 		}
 	}

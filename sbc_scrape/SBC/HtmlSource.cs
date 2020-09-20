@@ -1,6 +1,8 @@
 ﻿using HtmlAgilityPack;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 
 namespace sbc_scrape.SBC
@@ -15,7 +17,11 @@ namespace sbc_scrape.SBC
 
 		public static DocumentVersion GetDocumentVersion(string html)
 		{
-			return html.StartsWith(@"<html xmlns=""http://www.w3.org/1999/xhtml"">") ? DocumentVersion.Pre2020 : DocumentVersion.Spring2020;
+			if (html.StartsWith(@"<html xmlns=""http://www.w3.org/1999/xhtml"">"))
+				return DocumentVersion.Pre2020;
+			if (html.Contains("ctl00_MainBodyAddRegion_ctl01_DDAccountFrom"))
+				return DocumentVersion.Fall2020;
+			return DocumentVersion.Spring2020;
 		}
 	}
 
@@ -23,6 +29,7 @@ namespace sbc_scrape.SBC
 	{
 		Pre2020,
 		Spring2020,
+		Fall2020,
 	}
 
 	public abstract class HtmlSource<TRow> : HtmlSource
@@ -33,9 +40,13 @@ namespace sbc_scrape.SBC
 
 		public static List<T> ParseDocument<T>(HtmlDocument doc, Func<List<string>, T> deserializeRow, IEnumerable<string> skipColumns = null)
 		{
-			var node = GetDocumentVersion(doc.DocumentNode.OuterHtml) == DocumentVersion.Pre2020
+			var docVersion = GetDocumentVersion(doc.DocumentNode.OuterHtml);
+			var node = docVersion == DocumentVersion.Pre2020
 				? doc.DocumentNode.SelectSingleNode("//table[@class='portal-table']")
-				: doc.DocumentNode.SelectSingleNode("//table[starts-with(@id,'ctl00_MainBodyAddRegion_ctl01_GridView')]"); // //table[@id='ctl00_MainBodyAddRegion_ctl01_GridViewUrval']
+				: (docVersion == DocumentVersion.Spring2020
+					? doc.DocumentNode.SelectSingleNode("//table[starts-with(@id,'ctl00_MainBodyAddRegion_ctl01_GridView')]")
+					: doc.DocumentNode.SelectSingleNode("//table[starts-with(@id,'ctl00_MainBodyAddRegion_ctl01_GridPHResult')]"));
+			// //table[@id='ctl00_MainBodyAddRegion_ctl01_GridViewUrval']
 			if (node == null)
 				throw new FormatException("Couldn't find table node");
 			node = node.ChildNodes.FirstOrDefault(n => n.Name == "tbody") ?? node; //Some variants have no tbody, but tr directly under
@@ -53,7 +64,17 @@ namespace sbc_scrape.SBC
 					return c.FirstChild.Name == "a" ? c.FirstChild.GetAttributeValue("href", "") : HtmlEntity.DeEntitize(c.InnerText);
 				}).ToList()).ToList();
 
-			return parsedRows.Select(r => deserializeRow(r)).ToList();
+
+			return parsedRows.Select(r => {
+				try
+				{
+					return deserializeRow(r);
+				}
+				catch (Exception ex)
+				{
+					throw new Exception($"Error deserializing row {string.Join("\t", r)}", ex);
+				}
+			}).ToList();
 		}
 		public static List<T> ParseDocument<T>(string html, Func<List<string>, T> deserializeRow, IEnumerable<string> skipColumns = null)
 		{
@@ -64,11 +85,11 @@ namespace sbc_scrape.SBC
 
 		public List<TRow> ReadAll(string folder)
 		{
-			var files = new System.IO.DirectoryInfo(folder).GetFiles(string.Format(FilenamePattern, "*")).OrderByDescending(o => o.Name);
+			var files = new DirectoryInfo(folder).GetFiles(string.Format(FilenamePattern, "*")).OrderByDescending(o => o.Name);
 			return files.SelectMany(file => {
 					try
 					{
-						return Parse(System.IO.File.ReadAllText(file.FullName));
+						return Parse(File.ReadAllText(file.FullName));
 					}
 					catch (Exception ex)
 					{
@@ -78,13 +99,13 @@ namespace sbc_scrape.SBC
 		}
 		public async IAsyncEnumerable<List<TRow>> ReadAllAsync(string folder)
 		{
-			var files = new System.IO.DirectoryInfo(folder).GetFiles(string.Format(FilenamePattern, "*")).OrderByDescending(o => o.Name);
+			var files = new DirectoryInfo(folder).GetFiles(string.Format(FilenamePattern, "*")).OrderByDescending(o => o.Name);
 			foreach (var file in files)
 			{
 				List<TRow> rows;
 				try
 				{
-					rows = Parse(await System.IO.File.ReadAllTextAsync(file.FullName));
+					rows = Parse(await File.ReadAllTextAsync(file.FullName));
 				}
 				catch (Exception ex)
 				{
@@ -94,5 +115,26 @@ namespace sbc_scrape.SBC
 			}
 		}
 
+		private static CultureInfo _defaultCulture;
+		public static CultureInfo DefaultCulture
+		{
+			get
+			{
+				if (_defaultCulture == null)
+				{
+					_defaultCulture = new CultureInfo("sv-SE");
+					_defaultCulture.NumberFormat.NegativeSign = "-"; //.net 5 changed this to char 8722 instead..
+				}
+				return _defaultCulture;
+			}
+		}
+
+		public static decimal ParseDecimal(string value, CultureInfo culture = null)
+		{
+			culture ??= DefaultCulture;
+			if (decimal.TryParse(value.Replace(" ", ""), NumberStyles.Any, culture.NumberFormat, out var result))
+				return result;
+			throw new FormatException($"Can't parse decimal {value}");
+		}
 	}
 }
