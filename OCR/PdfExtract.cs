@@ -15,6 +15,7 @@ using System.Runtime.InteropServices;
 
 namespace OCR
 {
+	[Obsolete("It cannot be done! https://filingdb.com/b/pdf-text-extraction")]
 	public class PdfExtract
 	{
 		public static List<string> Extract(string filename)
