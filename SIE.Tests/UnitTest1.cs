@@ -2,8 +2,10 @@ using NodaTime;
 using SIE.Matching;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -11,6 +13,55 @@ namespace SIE.Tests
 {
 	public class UnitTest1
 	{
+		[Fact]
+		public async Task ToCsv()
+		{
+			var roots = await ReadSIEFiles();
+			var all = roots.Select(root => {
+				var period = root.Children.FirstOrDefault(c => c.Tag == "RAR") as UnknownRecord;
+				Assert.True(period != null);
+				Assert.True(period.Data.Length > 2);
+				Debug.WriteLine(period.Data[2]);
+				var year = int.Parse(period.Data[2].Substring(0, 4));
+				var res = root.Children.Where(c => c.Tag == "RES").OfType<UnknownRecord>();
+				return new
+				{
+					Year = year,
+					Results = res.Select(r =>
+					{
+						return new
+						{
+							AccountId = int.Parse(r.Data[2].Substring(0, 2)), //int.Parse(r.Data[2]),
+							Amount = SIERecord.ParseDecimal(r.Data[3])
+						};
+					}).GroupBy(o => o.AccountId).Select(o => new { AccountId = o.Key, Amount = o.Sum(p => p.Amount) }).ToList()
+				};
+			}).ToList();
+
+			var allAccounts = all.SelectMany(o => o.Results.Select(p => p.AccountId)).Distinct().OrderBy(o => o);
+
+			var rows = new List<List<string>>();
+
+			var years = all.Select(o => o.Year).OrderBy(o => o);
+			var header = new List<string> { "" }.Concat(years.Select(o => o.ToString())).ToList();
+			rows.Add(header);
+
+			foreach (var accountId in allAccounts)
+			{
+				var row = new List<string>();
+				row.Add($"{accountId}");
+				rows.Add(row);
+				foreach (var year in years)
+				{
+					var inYear = all.Single(o => o.Year == year);
+					var found = inYear.Results.SingleOrDefault(o => o.AccountId == accountId);
+					row.Add(found == null ? "0" : $"{(int)found.Amount}");
+				}
+			}
+
+			var csv = string.Join("\n", rows.Select(r => string.Join("\t", r)));
+		}
+
 		[Fact]
 		public async Task TestX()
 		{
@@ -150,16 +201,18 @@ namespace SIE.Tests
 		[Fact]
 		public void ParseAddress()
 		{
-			var items = SIERecord.ParseLine(@"#ADRESS ""SvenSvensson"" ""Box 21"" ""21120   MALMÖ"" ""040 - 12345""");
+			var items = SIERecord.ParseLine(@"#ADRESS ""SvenSvensson"" ""Box 21"" ""21120   MALMï¿½"" ""040 - 12345""");
 			var record = new AddressRecord();
 			record.Read(items);
 			
 			Assert.Equal("040 - 12345", record.PhoneNumber);
 		}
 
-		async Task<List<RootRecord>> ReadSIEFiles(IEnumerable<string> files)
+		async Task<List<RootRecord>> ReadSIEFiles(IEnumerable<string>? files = null)
 		{
 			var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
+			if (files == null)
+				files = new DirectoryInfo(sieDir).GetFiles("*.se").Select(o => o.Name);
 			return await SBCExtensions.ReadSIEFiles(files.Select(file => Path.Combine(sieDir, file)));
 
 			//var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
