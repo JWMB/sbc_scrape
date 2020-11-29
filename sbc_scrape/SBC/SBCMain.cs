@@ -37,24 +37,32 @@ namespace SBCScan.SBC
 			pid.Clear();
 			pid.SendKeys(username);
 
+			// Select BankID login
 			var btn = driver.FindElement(By.XPath("//button[@type='submit' and contains(., 'BankID')]")); // Changed spring 2020 from By.CssSelector("form > button")); //Changed dec 2019 from By.Id("login_Login_Button"));
 			btn.Click();
 
-			var finder = By.XPath($"//a[text()='{brfId}']"); // Changed dec 2019 from "//input[@type='submit' and @value='{brfId}']");
-			new WebDriverWait(driver, TimeSpan.FromMinutes(1)).Until(WebDriverExtensions.ElementIsPresent(finder));
-			var element = driver.FindElement(finder);
-			if (element == null)
-				throw new NotFoundException($"Text {brfId} not found");
-			await Task.Delay(500);
-			try
-			{
-				element.Click();
-			}
-			catch (Exception ex)
-			{
-				throw;
-			}
+			// Waiting for user to login
+			// TODO: not sure what the doc looks like when choosing between roles...
+			new WebDriverWait(driver, TimeSpan.FromMinutes(1)).Until(d => d.FindElements(By.Id("loginModal")).Any() == false);
 
+			// We might have to select a role here - otherwise we'll be at portal main page
+			if (!driver.Url.EndsWith("/Portalen"))  //https://varbrf.sbc.se
+			{
+				var finder = By.XPath($"//a[text()='{brfId}']"); // Changed dec 2019 from "//input[@type='submit' and @value='{brfId}']");
+				new WebDriverWait(driver, TimeSpan.FromMinutes(1)).Until(WebDriverExtensions.ElementIsPresent(finder));
+				var element = driver.FindElement(finder);
+				if (element == null)
+					throw new NotFoundException($"Text {brfId} not found");
+				await Task.Delay(500);
+				try
+				{
+					element.Click();
+				}
+				catch (Exception ex)
+				{
+					throw;
+				}
+			}
 			await Task.Delay(500);
 			driver.WaitUntilDocumentReady();
 		}
