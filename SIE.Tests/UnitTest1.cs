@@ -31,7 +31,7 @@ namespace SIE.Tests
 					{
 						return new
 						{
-							AccountId = int.Parse(r.Data[2].Substring(0, 2)), //int.Parse(r.Data[2]),
+							AccountId = int.Parse(r.Data[2]),
 							Amount = SIERecord.ParseDecimal(r.Data[3])
 						};
 					}).GroupBy(o => o.AccountId).Select(o => new { AccountId = o.Key, Amount = o.Sum(p => p.Amount) }).ToList()
@@ -40,26 +40,39 @@ namespace SIE.Tests
 
 			var allAccounts = all.SelectMany(o => o.Results.Select(p => p.AccountId)).Distinct().OrderBy(o => o);
 
-			var rows = new List<List<string>>();
-
 			var years = all.Select(o => o.Year).OrderBy(o => o);
-			var header = new List<string> { "" }.Concat(years.Select(o => o.ToString())).ToList();
-			rows.Add(header);
 
-			foreach (var accountId in allAccounts)
+			var rows = CreateRows(o => FloorLastNumSignigicant(o, 3));
+			var csv = string.Join("\n", rows.Select(r => string.Join("\t", r)));
+
+			List<List<string>> CreateRows(Func<int, int> grouping)
 			{
-				var row = new List<string>();
-				row.Add($"{accountId}");
-				rows.Add(row);
-				foreach (var year in years)
+				var grouped = allAccounts.GroupBy(grouping);
+				var rows = new List<List<string>>();
+				var header = new List<string> { "" }.Concat(years.Select(o => o.ToString())).ToList();
+				rows.Add(header);
+				foreach (var group in grouped)
 				{
-					var inYear = all.Single(o => o.Year == year);
-					var found = inYear.Results.SingleOrDefault(o => o.AccountId == accountId);
-					row.Add(found == null ? "0" : $"{(int)found.Amount}");
+					var row = new List<string>();
+					var rowKey = group.Key;
+					row.Add($"{rowKey}");
+					rows.Add(row);
+
+					foreach (var year in years)
+					{
+						var inYear = all.Single(o => o.Year == year);
+						var found = inYear.Results.Where(o => grouping(o.AccountId) == rowKey);
+						row.Add(found.Any() ? $"{(int)found.Sum(o => o.Amount)}" : "0");
+					}
 				}
+				return rows;
 			}
 
-			var csv = string.Join("\n", rows.Select(r => string.Join("\t", r)));
+			int FloorLastNumSignigicant(int value, int numSignificant)
+			{
+				var pow = (int)Math.Pow(10, numSignificant);
+				return (value / pow) * pow;
+			}
 		}
 
 		[Fact]
