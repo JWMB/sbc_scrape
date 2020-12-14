@@ -105,7 +105,7 @@ namespace Scrape.Main.Tests
 			var sie = await SBCExtensions.ReadSIEFiles(new[] { sieFile }.Select(file => Tools.GetOutputFolder("SIE", file)));
 			var vouchers = sie.SelectMany(o => o.Children).OfType<VoucherRecord>().ToList();
 
-			var result = InvoiceSIEMatch.MatchLB_SLR(vouchers, summaries);
+			var result = InvoiceSIEMatch.MatchLB_SLR(vouchers, summaries.Select(InvoiceCommonData.FromInvoiceSummary).ToList());
 
 			var missing = result.Matches.Where(o => o.SLR.Voucher == null).ToList();
 			//Assert.IsFalse(missing.Any());
@@ -117,10 +117,25 @@ namespace Scrape.Main.Tests
 			var tmp2 = result.UnmatchedSLRShouldHaveOtherTrail.ToList();
 			var tmp = result.Matches.Where(o => !o.MatchedAllExpected).ToList();
 
+
 			var dir = Tools.GetOutputFolder("sbc_html");
 			var sbcInvoices = new sbc_scrape.SBC.InvoiceSource().ReadAll(dir).Where(o => o.RegisteredDate.Year == year);
-			//await foreach (var sbcRows in new sbc_scrape.SBC.InvoiceSource().ReadAllAsync(dir))
-			//	tmp.AddRange(sbcRows.Where(o => o.RegisteredDate.Year == year);
+			var slrs = vouchers.Where(o => o.VoucherType == VoucherType.SLR).ToList();
+			// SBC Invoice are easy to match to SLRs - by SerialNumber / VerNum
+			var mwslr = sbcInvoices.Select(inv => new { Invoice = inv, SLR = slrs.FirstOrDefault(o => o.SerialNumber == inv.VerNum) });
+			Assert.IsFalse(mwslr.Any(o => o.SLR == null));
+			var idsToRemove = mwslr.Select(o => o.SLR.Id).ToList();
+			result.UnmatchedSLR.RemoveAll(o => idsToRemove.Contains(o.Id));
+
+			// match with MediusFlow by SLR
+			var joined = result.Matches.Join(mwslr, mf => mf.SLR.Voucher.SerialNumber, sbc => sbc.SLR.SerialNumber, (mf, sbc) => new { MF = mf, SBC = sbc.Invoice }).ToList();
+
+			//var commoned = sbcInvoices.Select(InvoiceCommonData.FromSBCInvoice).ToList();
+			//var tmpXX = result.Matches.Select(o =>
+			//	new { Medius = o, SBC = commoned.Where(s => s.InvoiceDate == o.Invoice.InvoiceDate && s.GrossAmount == o.Invoice.GrossAmount && s.AccountId == o.Invoice.AccountId).ToList() })
+			//	.Where(o => o.SBC.Count() != 1).ToList();
+
+			var match2 = InvoiceSIEMatch.MatchLB_SLR(vouchers, sbcInvoices.Select(InvoiceCommonData.FromSBCInvoice).ToList());
 
 			// https://varbrf.sbc.se/Portalen/Ekonomi/Revisor/Underlagsparm/
 		}
