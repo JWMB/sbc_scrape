@@ -153,7 +153,7 @@ namespace sbc_scrape
 							{
 								//Remove (some) combination of invoices/receipts to see if we get a match
 								for (int numToRemove = 0; numToRemove <= Math.Min(4, invrecsForDate.Count - 2); numToRemove++)
-									foreach (var list in GenerateCombos(invrecsForDate, numToRemove))
+									foreach (var list in Combinatorics.GenerateCombos(invrecsForDate, numToRemove))
 									{
 										var tmp = invrecsForDate.Except(list);
 										if (tmp.Sum(o => o.Amount) == -tx.Amount)
@@ -198,53 +198,6 @@ namespace sbc_scrape
 			return allMatchedTransactions;
 		}
 
-		public static IEnumerable<List<T>> GenerateCombos<T>(List<T> items, int numItems)
-		{
-			if (numItems < 1)
-			{
-				yield return new List<T>();
-			}
-			else if (numItems == items.Count)
-			{
-				yield return items;
-			}
-			else
-			{
-				var indices = new List<int>();
-				for (int i = 0; i < numItems; i++)
-					indices.Add(i);
-				var lastIndex = numItems - 1;
-				while (true)
-				{
-					yield return indices.Select(i => items[i]).ToList();
-					if (indices[lastIndex] < items.Count - 1)
-						indices[lastIndex]++;
-					else
-					{
-						var indexToMove = lastIndex;
-						while (true) //Find which index to reset to:
-						{
-							indexToMove--;
-							if (indexToMove < 0)
-								break;
-							var start = indices[indexToMove];
-							if (start < indices[indexToMove + 1] - 1)
-								break;
-						}
-						if (indexToMove < 0)
-							break;
-						var startX = indices[indexToMove];
-						for (int i = indexToMove; i < numItems; i++)
-							indices[i] = startX + i - indexToMove + 1;
-						if (indices[0] == items.Count - numItems)
-						{
-							yield return indices.Select(i => items[i]).ToList();
-							break;
-						}
-					}
-				}
-			}
-		}
 
 		public class InvoiceAndOrReceipt
 		{

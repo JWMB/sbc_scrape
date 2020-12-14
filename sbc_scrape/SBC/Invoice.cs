@@ -31,22 +31,30 @@ namespace sbc_scrape.SBC
 					.ToDictionary(k => k.Key, k => k.Value.Replace($"{k.Key} ", ""));
 
 			var culture = new System.Globalization.CultureInfo("sv-SE");
-			return ParseDocument(html, r => new Invoice
+			return ParseDocument(html, r =>
 			{
-				RegisteredDate = DateTime.Parse(r[0]),
-				PaymentDate = string.IsNullOrWhiteSpace(r[1]) ? (DateTime?)null : DateTime.Parse(r[1]),
-				Supplier = r[2],
-				LevNr = r[3],
-				AccountId = int.Parse(r[4]),
-				AccountName = accountNames.GetValueOrDefault(int.Parse(r[4]), "N/A"),
-				Amount = ParseDecimal(r[5]),
-				InvoiceLink = r[6]
-			}, new string[] { "Ver serie", "Ver nr" }).ToList();
+				var colIndex = -1;
+				return new Invoice
+				{
+					VerSeries = r[++colIndex].Trim(),
+					VerNum = int.Parse(r[++colIndex]),
+					RegisteredDate = DateTime.Parse(r[++colIndex]),
+					PaymentDate = string.IsNullOrWhiteSpace(r[++colIndex]) ? (DateTime?)null : DateTime.Parse(r[colIndex]),
+					Supplier = r[++colIndex],
+					LevNr = r[++colIndex],
+					AccountId = int.Parse(r[++colIndex]),
+					AccountName = accountNames.GetValueOrDefault(int.Parse(r[colIndex]), "N/A"),
+					Amount = ParseDecimal(r[++colIndex]),
+					InvoiceLink = r[++colIndex]
+				};
+			}, new string[] { }).ToList();
 		}
 	}
 
 	public class Invoice
 	{
+		public string VerSeries { get; set; }
+		public int VerNum { get; set; }
 		public DateTime RegisteredDate { get; set; }
 		public DateTime? PaymentDate { get; set; }
 		public string Supplier { get; set; }
@@ -55,6 +63,11 @@ namespace sbc_scrape.SBC
 		public string AccountName { get; set; }
 		public decimal Amount { get; set; }
 		public string InvoiceLink { get; set; }
+
+		public override string ToString()
+		{
+			return $"{RegisteredDate.ToShortDateString()} {Amount} {AccountId} {Supplier}";
+		}
 
 		public MediusFlowAPI.InvoiceSummary ToSummary()
 		{

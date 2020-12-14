@@ -59,9 +59,12 @@ namespace sbc_scrape.SBC
 			var skipColumnIndices = skipColumns?.Select(c => columnNames.IndexOf(c)).Where(i => i >= 0).ToList() ?? new List<int>();
 
 
-			var parsedRows = rows.Skip(1).Select(r => r.ChildNodes.Where(n => n.Name == "td").ToList())
-				.Select(row => row.Where((r, i) => !skipColumnIndices.Contains(i)).Select(c => {
-					return c.FirstChild.Name == "a" ? c.FirstChild.GetAttributeValue("href", "") : HtmlEntity.DeEntitize(c.InnerText);
+			var parsedRows = rows.Skip(1)
+				.Select(r => r.ChildNodes.Where(n => n.Name == "td").ToList())
+				.Select(row => row.Where((r, i) => !skipColumnIndices.Contains(i))
+					.Select(c => {
+						var hasLink = c.ChildNodes.SingleOrDefault(o => o.Name == "a");
+						return hasLink != null ? hasLink.GetAttributeValue("href", "") : HtmlEntity.DeEntitize(c.InnerText);
 				}).ToList()).ToList();
 
 
