@@ -9,23 +9,122 @@ using System.Threading.Tasks;
 
 namespace Scrape.Main.Tests
 {
-	//public struct Match
-	//{
-	//	public InvoiceSummary Invoice { get; private set; }
-	//	public VoucherRecord LB { get; private set; }
-	//	public VoucherRecord SLR { get; private set; }
+	public class InvoiceMatch
+	{
+		public InvoiceSummary Invoice { get; set; }
+		public VoucherOrReason LB { get; set; }
+		public VoucherOrReason SLR { get; set; }
 
-	//	public Match()
+		public bool MatchedAllExpected { get => LB.FoundOrValidReason && SLR.FoundOrValidReason; }
+
+		public InvoiceMatch(InvoiceSummary invoice, VoucherOrReason lb, VoucherOrReason slr)
+		{
+			Invoice = invoice;
+			LB = lb;
+			SLR = slr;
+		}
+
+		public override string ToString()
+		{
+			return $"{Invoice} {MatchedAllExpected} {(MatchedAllExpected ? "" : $"LB:{LB.MissingReason} SLR:{SLR.MissingReason}")}";
+		}
+	}
+
+	public enum VoucherMissingReason
+	{
+		Unknown,
+		DateRange,
+		InvoiceNotProcessed
+	}
+
+	public struct VoucherOrReason
+	{
+		public VoucherRecord? Voucher { get; private set; }
+		public VoucherMissingReason? MissingReason { get; private set; }
+		public bool FoundOrValidReason { get => Voucher != null || MissingReason != VoucherMissingReason.Unknown; }
+		public VoucherOrReason(VoucherRecord voucher)
+		{
+			Voucher = voucher;
+			MissingReason = null;
+		}
+		public VoucherOrReason(VoucherMissingReason reason)
+		{
+			Voucher = null;
+			MissingReason = reason;
+		}
+	}
+
+	public class MatchingResult
+	{
+		public List<InvoiceMatch> Matches { get; set; } = new List<InvoiceMatch>();
+		public List<VoucherRecord> UnmatchedSLR { get; set; } = new List<VoucherRecord>();
+		public List<VoucherRecord> UnmatchedLB { get; set; } = new List<VoucherRecord>();
+
+		public IEnumerable<VoucherRecord> UnmatchedSLRShouldHaveOtherTrail
+		{
+			get
+			{
+				// SLR Voucher transactions with no accounts between 30000-80000, but with >80000 - these don't have any corresponding invoices
+				Func<VoucherRecord, bool> is8plusOnly = voucher =>
+					voucher.Transactions.Any(t => t.AccountId >= 80000)
+					&& voucher.Transactions.Any(t => t.AccountId >= 30000 && t.AccountId < 80000) == false;
+
+				return UnmatchedSLR.Where(o => is8plusOnly(o) == false);
+			}
+		}
+	}
+
+	//public class InvoiceCommonData
+	//{
+	//	public LocalDate InvoiceDate { get; set; }
+	//	public LocalDate DueDate { get; set; }
+	//	public LocalDate? FinalPostingingDate { get; set; }
+	//	public decimal GrossAmount { get; set; }
+	//	public string Supplier { get; set; }
+	//	public int AccountId { get; set; }
+
+	//	public object OriginalObject { get; set; }
+
+	//	public static InvoiceCommonData FromInvoiceSummary(InvoiceSummary invoice)
 	//	{
+	//		return new InvoiceCommonData
+	//		{
+	//			InvoiceDate = LocalDate.FromDateTime(invoice.InvoiceDate.Value),
+	//			DueDate = LocalDate.FromDateTime(invoice.DueDate.Value),
+	//			FinalPostingingDate = invoice.FinalPostingingDate == null ? null : LocalDate.FromDateTime(invoice.FinalPostingingDate.Value),
+	//			GrossAmount = invoice.GrossAmount,
+	//			Supplier = invoice.Supplier,
+	//			AccountId = (int)invoice.AccountId.Value,
+	//			OriginalObject = invoice,
+	//			//Id = invoice.Id,
+	//		};
+	//	}
+	//	public static InvoiceCommonData FromSBCInvoice(sbc_scrape.SBC.Invoice invoice)
+	//	{
+	//		return new InvoiceCommonData
+	//		{
+	//			InvoiceDate = LocalDate.FromDateTime(invoice.RegisteredDate),
+	//			DueDate = LocalDate.FromDateTime(invoice.PaymentDate.Value),
+	//			FinalPostingingDate = null,
+	//			GrossAmount = invoice.Amount,
+	//			Supplier = invoice.Supplier,
+	//			AccountId = invoice.AccountId,
+	//			OriginalObject = invoice,
+	//			//Id = invoice.VerSeries
+	//		};
 	//	}
 	//}
 
 	public class InvoiceSIEMatch
 	{
-		public static void XX(List<VoucherRecord> vouchers, List<InvoiceSummary> summaries)
+		public static MatchingResult MatchLB_SLR(List<VoucherRecord> vouchers, List<InvoiceSummary> summaries)
 		{
-			Func<string, string, bool> fuzzyMatchCompanyName = (invoiceSupplier, voucherCompany) =>
-invoiceSupplier.EndsWith(voucherCompany) && voucherCompany.Length >= invoiceSupplier.Length * 0.4 && voucherCompany.Length > 6;
+			var result = new MatchingResult();
+			var matches = summaries.Select(o => new InvoiceMatch(o, new VoucherOrReason(VoucherMissingReason.Unknown), new VoucherOrReason(VoucherMissingReason.Unknown))).ToList();
+
+			bool FuzzyMatchCompanyName(string invoiceSupplier, string voucherCompany) =>
+				voucherCompany.Length > 25 && invoiceSupplier.Contains(voucherCompany)
+				|| invoiceSupplier.EndsWith(voucherCompany) && voucherCompany.Length >= invoiceSupplier.Length * 0.4 && voucherCompany.Length > 6;
 
 			var matchSLRResult = Match(
 				vouchers.Where(o => o.VoucherType == VoucherType.SLR),
@@ -35,58 +134,71 @@ invoiceSupplier.EndsWith(voucherCompany) && voucherCompany.Length >= invoiceSupp
 						&& invoice.Supplier == voucher.CompanyName,
 
 					(invoice, voucher) => Math.Abs(Period.Between(LocalDate.FromDateTime(invoice.InvoiceDate.Value), voucher.Date, PeriodUnits.Days).Days) <= 2
-						&& fuzzyMatchCompanyName(invoice.Supplier, voucher.CompanyName),
+						&& FuzzyMatchCompanyName(invoice.Supplier, voucher.CompanyName),
 				},
 				(invoice, voucher) => voucher.Transactions.Single(t => t.AccountId == 24400).Amount == -invoice.GrossAmount
 			);
 
-			if (matchSLRResult.UnmatchedInvoices.Any())
-			{
-				throw new Exception($"Unmatched invoices: {string.Join("\n", matchSLRResult.UnmatchedInvoices)}");
-			}
-			// Note: SLR Voucher transactions with no accounts between 30000-80000, but with >80000 - these don't have any corresponding invoices
-			Func<VoucherRecord, bool> is8plusOnly = voucher =>
-				voucher.Transactions.Any(t => t.AccountId >= 80000)
-				&& voucher.Transactions.Any(t => t.AccountId >= 30000 && t.AccountId < 80000) == false;
-
-			var shouldAppearInReceiptsOrOtherSBCSource = matchSLRResult.UnmatchedVouchers.Where(o => is8plusOnly(o) == false).ToList();
-
-			// Only unmatched SLRs in vouchers after this:
-			vouchers = vouchers.Where(o => o.VoucherType != VoucherType.SLR).Concat(matchSLRResult.UnmatchedVouchers).ToList();
+			//if (matchSLRResult.UnmatchedInvoices.Any())
+			//{
+			//	throw new Exception($"Unmatched invoices: {string.Join("\n", matchSLRResult.UnmatchedInvoices)}");
+			//}
+			// Set in result
+			matchSLRResult.Matched.ForEach(o => matches.First(r => r.Invoice.Id == o.Item1.Id).SLR = new VoucherOrReason(o.Item2));
+			result.UnmatchedSLR = matchSLRResult.UnmatchedVouchers;
 
 
-			Func<InvoiceSummary, IEnumerable<LocalDate>> getProbableDates = invoice => new[] { invoice.DueDate, invoice.FinalPostingingDate }.OfType<DateTime>().Select(LocalDate.FromDateTime);
+			IEnumerable<LocalDate> GetProbableDates(InvoiceSummary invoice) => new[] { invoice.DueDate, invoice.FinalPostingingDate }.OfType<DateTime>().Select(LocalDate.FromDateTime);
+			bool GetDateInRange(int days, int minInc, int maxEx) => days >= minInc && days < maxEx;
 			// LB matches:
 			var matchLBResult = Match(vouchers.Where(o => o.VoucherType == VoucherType.LB), summaries,
 				new List<MatchDelegate> {
-					(invoice, voucher) => getProbableDates(invoice).Max() == voucher.Date
+					(invoice, voucher) => GetProbableDates(invoice).Max() == voucher.Date
 						&& invoice.Supplier == voucher.CompanyName,
 
-					(invoice, voucher) => Period.Between(getProbableDates(invoice).Min(), voucher.Date, PeriodUnits.Days).Days <= 20
-						&& fuzzyMatchCompanyName(invoice.Supplier, voucher.CompanyName),
+					(invoice, voucher) => GetDateInRange(Period.Between(GetProbableDates(invoice).Min(), voucher.Date, PeriodUnits.Days).Days, 0, 20)
+						&& FuzzyMatchCompanyName(invoice.Supplier, voucher.CompanyName),
 
-					(invoice, voucher) => Period.Between(getProbableDates(invoice).Min(), voucher.Date, PeriodUnits.Days).Days <= 40
-						&& fuzzyMatchCompanyName(invoice.Supplier, voucher.CompanyName),
+					//(invoice, voucher) => {
+					//	//if (invoice.GrossAmount == 3938 && invoice.Supplier.StartsWith("Nyr")
+					//	//	&& voucher.CompanyName.StartsWith("Nyr")) System.Diagnostics.Debugger.Break();
+					//	return GetDateInRange(Period.Between(GetProbableDates(invoice).Min(), voucher.Date, PeriodUnits.Days).Days, 0, 20)
+					//	&& fuzzyMatchCompanyName(invoice.Supplier, voucher.CompanyName); },
 
-					(invoice, voucher) => Period.Between(getProbableDates(invoice).Max(), voucher.Date, PeriodUnits.Days).Days <= 40
-						&& fuzzyMatchCompanyName(invoice.Supplier, voucher.CompanyName),
+					(invoice, voucher) => GetDateInRange(Period.Between(GetProbableDates(invoice).Min(), voucher.Date, PeriodUnits.Days).Days, -1, 40)
+						&& FuzzyMatchCompanyName(invoice.Supplier, voucher.CompanyName),
+
+					(invoice, voucher) => GetDateInRange(Period.Between(GetProbableDates(invoice).Max(), voucher.Date, PeriodUnits.Days).Days, 0, 40)
+						&& FuzzyMatchCompanyName(invoice.Supplier, voucher.CompanyName),
 				},
 				(invoice, voucher) => voucher.Transactions.Single(t => t.AccountId == 24400).Amount == invoice.GrossAmount
 			);
+
+			// Set in result
+			matchLBResult.Matched.ForEach(o => matches.First(r => r.Invoice.Id == o.Item1.Id).LB = new VoucherOrReason(o.Item2));
+
 			if (matchLBResult.UnmatchedInvoices.Any())
 			{
+				matchLBResult.UnmatchedInvoices.Where(o => o.FinalPostingingDate == null)
+					.ToList()
+					.ForEach(o => matches.First(r => r.Invoice.Id == o.Id).LB = new VoucherOrReason(VoucherMissingReason.InvoiceNotProcessed));
+
+
 				var latestVoucherDate = vouchers.Max(o => o.Date).PlusDays(-3);
-				var unexplained = matchLBResult.UnmatchedInvoices.Where(o => LocalDate.FromDateTime(o.DueDate.Value) < latestVoucherDate).ToList();
-				if (unexplained.Any())
-				{ }
+				matchLBResult.UnmatchedInvoices.Where(o => o.FinalPostingingDate != null)
+					.Where(o => LocalDate.FromDateTime(o.DueDate.Value) > latestVoucherDate)
+					.ToList()
+					.ForEach(o => matches.First(r => r.Invoice.Id == o.Id).LB = new VoucherOrReason(VoucherMissingReason.DateRange));
 			}
 			if (matchLBResult.UnmatchedVouchers.Any())
 			{
 				var earliestInvoiceDueDate = summaries.Min(o => LocalDate.FromDateTime(o.DueDate.Value));
 				var unexplained = matchLBResult.UnmatchedVouchers.Where(o => o.Date >= earliestInvoiceDueDate).ToList();
-				if (unexplained.Any())
-				{ }
+				result.UnmatchedLB = unexplained;
 			}
+
+			result.Matches = matches;
+			return result;
 		}
 
 		public static MatchResult Match(IEnumerable<VoucherRecord> vouchers, IEnumerable<InvoiceSummary> invoices,

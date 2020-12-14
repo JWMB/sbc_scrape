@@ -90,19 +90,39 @@ namespace Scrape.Main.Tests
 		[TestMethod]
 		public async Task MatchMediusFlowWithSIE()
 		{
+			var year = 2020;
 			var store = new FileSystemKVStore(Tools.GetOutputFolder());
 
 			var invoiceStore = new SBCScan.InvoiceStore(store);
 			var files = await invoiceStore.GetKeysParsed();
-			var invoices = (await Task.WhenAll(files.Where(o => o.RegisteredDate.Year >= 2020).Select(async o => await invoiceStore.Get(o)).ToList())).ToList();
+			var invoices = (await Task.WhenAll(files.Where(o => o.RegisteredDate.Year == year).Select(async o => await invoiceStore.Get(o)).ToList())).ToList();
 			invoices = invoices.Where(o => o.IsRejected == false).ToList();
 
-			var summaries = invoices.Select(o => InvoiceSummary.Summarize(o)).Where(o => o.InvoiceDate.Value.Year >= 2020).ToList();
+			var summaries = invoices.Select(o => InvoiceSummary.Summarize(o)).Where(o => o.InvoiceDate.Value.Year == year).ToList();
 
-			var sie = await SBCExtensions.ReadSIEFiles(new[] { "output_20201209.se" }.Select(file => Tools.GetOutputFolder("SIE", file)));
+			var sieFolder = Tools.GetOutputFolder("SIE");
+			var sieFile = new DirectoryInfo(sieFolder).GetFiles($"output_{year}*.se").First().Name;
+			var sie = await SBCExtensions.ReadSIEFiles(new[] { sieFile }.Select(file => Tools.GetOutputFolder("SIE", file)));
 			var vouchers = sie.SelectMany(o => o.Children).OfType<VoucherRecord>().ToList();
 
-			InvoiceSIEMatch.XX(vouchers, summaries);
+			var result = InvoiceSIEMatch.MatchLB_SLR(vouchers, summaries);
+
+			var missing = result.Matches.Where(o => o.SLR.Voucher == null).ToList();
+			//Assert.IsFalse(missing.Any());
+
+			// Some urgent invoices go (by request) direct to payment, without passing MediusFlow (e.g. 2020 "Office for design", "Stenbolaget")
+			// The same goes for SBCs own periodical invoices and bank/interest payments
+			// These should be found here: https://varbrf.sbc.se/Portalen/Ekonomi/Utforda-betalningar/
+			var tmp1 = result.UnmatchedSLR;
+			var tmp2 = result.UnmatchedSLRShouldHaveOtherTrail.ToList();
+			var tmp = result.Matches.Where(o => !o.MatchedAllExpected).ToList();
+
+			var dir = Tools.GetOutputFolder("sbc_html");
+			var sbcInvoices = new sbc_scrape.SBC.InvoiceSource().ReadAll(dir).Where(o => o.RegisteredDate.Year == year);
+			//await foreach (var sbcRows in new sbc_scrape.SBC.InvoiceSource().ReadAllAsync(dir))
+			//	tmp.AddRange(sbcRows.Where(o => o.RegisteredDate.Year == year);
+
+			// https://varbrf.sbc.se/Portalen/Ekonomi/Revisor/Underlagsparm/
 		}
 
 		[TestMethod]
