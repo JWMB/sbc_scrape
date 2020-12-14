@@ -54,6 +54,11 @@ namespace MediusFlowAPI
 
 		static readonly System.Globalization.CultureInfo Culture = new System.Globalization.CultureInfo("en-US");
 		static readonly Regex rxSimplifyAuthor = new Regex(@"(?<name>(\w+\s){1,2})\s?\((\d{5,6}|SYSTEM)\)");
+
+		public override string ToString()
+		{
+			return $"{InvoiceDate?.ToShortDateString()} {Supplier} {GrossAmount}";
+		}
 		public static InvoiceSummary Summarize(InvoiceFull invoice, string invoiceTexts = null)
 		{
 			var iv = invoice.Invoice;

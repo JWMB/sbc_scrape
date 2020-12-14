@@ -2,6 +2,7 @@ using MediusFlowAPI;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using NodaTime;
 using sbc_scrape;
 using Scrape.IO.Storage;
 using SIE;
@@ -17,16 +18,6 @@ namespace Scrape.Main.Tests
 	[TestClass]
 	public class UnitTest1
 	{
-		private string GetOutputFolder() => Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped");
-
-		async Task<List<sbc_scrape.SBC.Invoice>> LoadSBCInvoices(Func<int, bool> accountFilter)
-		{
-			var dir = Path.Join(GetOutputFolder(), "sbc_html");
-			var tmp = new List<sbc_scrape.SBC.Invoice>();
-			await foreach (var sbcRows in new sbc_scrape.SBC.InvoiceSource().ReadAllAsync(dir))
-				tmp.AddRange(sbcRows.Where(o => accountFilter(o.AccountId)));
-			return tmp;
-		}
 
 		InvoiceFull CreateInvoiceFull(DateTime date, string supplier)
 		{
@@ -76,7 +67,7 @@ namespace Scrape.Main.Tests
 		[TestMethod]
 		public async Task MyTestMethod()
 		{
-			var store = new FileSystemKVStore(GetOutputFolder());
+			var store = new FileSystemKVStore(Tools.GetOutputFolder());
 
 			var invoiceStore = new SBCScan.InvoiceStore(store);
 			var alreadyScraped = await invoiceStore.GetKeysParsed();
@@ -97,14 +88,30 @@ namespace Scrape.Main.Tests
 		}
 
 		[TestMethod]
+		public async Task MatchMediusFlowWithSIE()
+		{
+			var store = new FileSystemKVStore(Tools.GetOutputFolder());
+
+			var invoiceStore = new SBCScan.InvoiceStore(store);
+			var files = await invoiceStore.GetKeysParsed();
+			var invoices = (await Task.WhenAll(files.Where(o => o.RegisteredDate.Year >= 2020).Select(async o => await invoiceStore.Get(o)).ToList())).ToList();
+			invoices = invoices.Where(o => o.IsRejected == false).ToList();
+
+			var summaries = invoices.Select(o => InvoiceSummary.Summarize(o)).Where(o => o.InvoiceDate.Value.Year >= 2020).ToList();
+
+			var sie = await SBCExtensions.ReadSIEFiles(new[] { "output_20201209.se" }.Select(file => Tools.GetOutputFolder("SIE", file)));
+			var vouchers = sie.SelectMany(o => o.Children).OfType<VoucherRecord>().ToList();
+
+			InvoiceSIEMatch.XX(vouchers, summaries);
+		}
+
+		[TestMethod]
 		public async Task TestMethod1()
 		{
 			Func<int, bool> accountFilter = accountId => accountId.ToString().StartsWith("45");
 
 			//Load SBC invoices
-			var fromSBC = new List<SBCVariant>();
-			{
-				fromSBC = (await LoadSBCInvoices(accountFilter)).Select(o => new SBCVariant {
+			var fromSBC = (await Tools.LoadSBCInvoices(accountFilter)).Select(o => new SBCVariant {
 					AccountId = o.AccountId,
 					Amount = o.Amount,
 					CompanyName = o.Supplier,
@@ -112,15 +119,14 @@ namespace Scrape.Main.Tests
 					DateFinalized = o.PaymentDate.HasValue ? NodaTime.LocalDate.FromDateTime(o.PaymentDate.Value) : (NodaTime.LocalDate?)null,
 					Source = o,
 				}).ToList();
-			}
 
 			//Load SIE vouchers
 			List<TransactionMatched> fromSIE;
 			{
 				var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
-				var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
+				var sieDir = Tools.GetOutputFolder("SIE");
 				var roots = await SBCExtensions.ReadSIEFiles(files.Select(file => Path.Combine(sieDir, file)));
-				var allVouchers = roots.SelectMany(o => o.Children).Where(o => o is VoucherRecord).Cast<VoucherRecord>();
+				var allVouchers = roots.SelectMany(o => o.Children).OfType<VoucherRecord>();
 
 				var matchResult = MatchSLRResult.MatchSLRVouchers(allVouchers, VoucherRecord.DefaultIgnoreVoucherTypes);
 				fromSIE = TransactionMatched.FromVoucherMatches(matchResult, TransactionMatched.RequiredAccountIds).Where(o => accountFilter(o.AccountId)).ToList();
@@ -247,7 +253,7 @@ namespace Scrape.Main.Tests
 		[TestMethod]
 		public async Task DownloadedGetAmounts()
 		{
-			var invoices = await LoadSBCInvoices(accountId => accountId.ToString().StartsWith("45"));
+			var invoices = await Tools.LoadSBCInvoices(accountId => accountId.ToString().StartsWith("45"));
 			//DownloadManagement(invoices);
 			var filenames = GenerateFilenames(invoices);
 			var sorted = string.Join("\n", filenames.OrderBy(o => o.extendedFilename).Select(o => $"{o.extendedFilename}\t{o.invoice.Amount}\t{o.invoice.AccountId}"));
@@ -276,7 +282,7 @@ namespace Scrape.Main.Tests
 		}
 		void DownloadManagement(List<sbc_scrape.SBC.Invoice> fromSBC)
 		{
-			var downloadDir = new DirectoryInfo(Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "maintenance"));
+			var downloadDir = new DirectoryInfo(Path.Join(Tools.GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "maintenance"));
 			var filenames = GenerateFilenames(fromSBC);
 			var problems = new List<string>();
 			foreach (var (invoice, filename, extendedFilename) in filenames)
@@ -307,14 +313,5 @@ download([{links}]);
 			script = script.Replace("{info}", string.Join("\n", fromSBC.Select(o => $"{o.RegisteredDate:yyyy-MM-dd}\t{o.Amount}\t{o.Supplier}\t{o.InvoiceLink}")));
 			//PaymentDate
 		}
-
-		string GetCurrentOrSolutionDirectory()
-		{
-			var sep = "\\" + Path.DirectorySeparatorChar;
-			var rx = new System.Text.RegularExpressions.Regex($@".*(?={sep}[^{sep}]+{sep}bin)");
-			var m = rx.Match(Directory.GetCurrentDirectory());
-			return m.Success ? m.Value : Directory.GetCurrentDirectory();
-		}
-
 	}
 }
