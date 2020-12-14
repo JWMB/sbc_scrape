@@ -14,60 +14,126 @@ namespace SIE.Tests
 	public class UnitTest1
 	{
 		[Fact]
-		public async Task ToCsv()
+		public void ParseLine()
 		{
-			var roots = await ReadSIEFiles();
-			var all = roots.Select(root => {
-				var period = root.Children.FirstOrDefault(c => c.Tag == "RAR") as UnknownRecord;
-				Assert.True(period != null);
-				Assert.True(period.Data.Length > 2);
-				Debug.WriteLine(period.Data[2]);
-				var year = int.Parse(period.Data[2].Substring(0, 4));
-				var res = root.Children.Where(c => c.Tag == "RES").OfType<UnknownRecord>();
-				return new
-				{
-					Year = year,
-					Results = res.Select(r =>
-					{
-						return new
-						{
-							AccountId = int.Parse(r.Data[2].Substring(0, 2)), //int.Parse(r.Data[2]),
-							Amount = SIERecord.ParseDecimal(r.Data[3])
-						};
-					}).GroupBy(o => o.AccountId).Select(o => new { AccountId = o.Key, Amount = o.Sum(p => p.Amount) }).ToList()
-				};
-			}).ToList();
-
-			var allAccounts = all.SelectMany(o => o.Results.Select(p => p.AccountId)).Distinct().OrderBy(o => o);
-
-			var rows = new List<List<string>>();
-
-			var years = all.Select(o => o.Year).OrderBy(o => o);
-			var header = new List<string> { "" }.Concat(years.Select(o => o.ToString())).ToList();
-			rows.Add(header);
-
-			foreach (var accountId in allAccounts)
-			{
-				var row = new List<string>();
-				row.Add($"{accountId}");
-				rows.Add(row);
-				foreach (var year in years)
-				{
-					var inYear = all.Single(o => o.Year == year);
-					var found = inYear.Results.SingleOrDefault(o => o.AccountId == accountId);
-					row.Add(found == null ? "0" : $"{(int)found.Amount}");
-				}
-			}
-
-			var csv = string.Join("\n", rows.Select(r => string.Join("\t", r)));
+			var items = SIERecord.ParseLine("1 2 \"string num 1\" asdd \"string num 2 !\" item");
+			Assert.Equal(6, items.Length);
 		}
 
 		[Fact]
-		public async Task TestX()
+		public void ParseAddress()
+		{
+			var items = SIERecord.ParseLine(@"#ADRESS ""SvenSvensson"" ""Box 21"" ""21120   MALM�"" ""040 - 12345""");
+			var record = new AddressRecord();
+			record.Read(items);
+
+			Assert.Equal("040 - 12345", record.PhoneNumber);
+		}
+
+
+		static (IEnumerable<T> onlyIn1, IEnumerable<T> onlyIn2, IEnumerable<T> intersection) GetListDiffs<T>(IEnumerable<T> e1, IEnumerable<T> e2)
+		{
+			var intersection = e1.Intersect(e2);
+			return (e1.Except(intersection), e2.Except(intersection), intersection);
+		}
+		static (List<T1> onlyIn1, List<T2> onlyIn2)
+			GetListDiffs<T1, T2, V>(IEnumerable<T1> e1, Func<T1, V> getter1,
+			IEnumerable<T2> e2, Func<T2, V> getter2)
+		{
+			var vals2 = e2.Select(getter2).ToList();
+			var onlyIn1 = new List<T1>();
+			var e2Copy = new List<T2>(e2);
+			foreach (var e in e1)
+			{
+				var val = getter1(e);
+				var index = vals2.IndexOf(val);
+				if (index >= 0)
+				{
+					vals2.RemoveAt(index);
+					e2Copy.RemoveAt(index);
+				}
+				else
+				{
+					onlyIn1.Add(e);
+				}
+			}
+			return (onlyIn1, e2Copy);
+		}
+
+		[Fact]
+		public async Task CheckIntegrity()
+		{
+			var year = 2020;
+			var roots = await Tools.ReadSIEFiles(new[] { "output_20201209.se" });
+			var allVouchers = roots.SelectMany(o => o.Children).OfType<VoucherRecord>();
+
+			var resultRecords = roots.SelectMany(o => o.Children).OfType<ResultRecord>();
+
+			{
+				// Unique Id for every voucher - NOTE currently just within a year!
+				Assert.False(allVouchers.GroupBy(o => o.Id).Where(o => o.Count() > 1).Any());
+			}
+
+			{
+				// Sum of all transactions within a voucher is 0
+				var vouchersWithNonZeroSumTransactions = allVouchers.Select(o => new { Voucher = o, TxSum = o.Transactions.Sum(t => t.Amount) }).Where(o => o.TxSum != 0);
+				Assert.False(vouchersWithNonZeroSumTransactions.Any());
+			}
+
+			{
+				var slrs = allVouchers.Where(o => o.VoucherType == VoucherType.SLR);
+
+				// All SLR should have transaction to 24400
+				Assert.False(slrs.Where(o => o.Transactions.Any(t => t.AccountId == 24400) == false).Any());
+			}
+			{
+				var lbs = allVouchers.Where(o => o.VoucherType == VoucherType.LB);
+
+				// All SLR should have transaction to 24400
+				Assert.False(lbs.Where(o => o.Transactions.Any(t => t.AccountId == 24400) == false).Any());
+			}
+
+
+			var balanceRecordsByAccount = roots.SelectMany(o => o.Children).OfType<BalanceRecord>().GroupBy(o => o.AccountId);
+			var inOuts = balanceRecordsByAccount.Select(o => new
+			{
+				AccountId = o.Key,
+				In = o.FirstOrDefault(p => p is IngoingBalanceRecord)?.Amount ?? 0,
+				Out = o.FirstOrDefault(p => p is OutgoingBalanceRecord)?.Amount ?? 0
+			});
+			var balanceChanges = inOuts.Select(o => new { AccountId = o.AccountId, Change = o.Out - o.In }).ToDictionary(o => o.AccountId, o => o.Change);
+
+			{
+				// Sums of transactions per AccountId equals RES record values
+				var summedTransactions = allVouchers.SelectMany(o => o.Transactions)
+					.GroupBy(o => o.AccountId)
+					.Select(g => new { AccountId = g.Key, Sum = g.Sum(o => o.Amount) })
+					.OrderBy(g => g.AccountId);
+
+				// IB/UB (Balance) records only include < 30000
+				var balanceVsTransactions = summedTransactions.Where(o => o.AccountId < 30000)
+					.Select(o => new { AccountId = o.AccountId, Diff = o.Sum - balanceChanges.GetValueOrDefault(o.AccountId, 0) }).ToList();
+				Assert.DoesNotContain(balanceVsTransactions, o => o.Diff != 0);
+
+				// RES records don't include accounts < 30000
+				var summedRESTransactions = summedTransactions.Where(o => o.AccountId >= 30000);
+				var (onlyInTx, onlyInRes) = GetListDiffs(summedRESTransactions, o => o.AccountId, resultRecords, o => o.AccountId);
+				// Any transactions with accountIds not present in RES should be 0 (probably incorrectly booked)
+				Assert.DoesNotContain(onlyInTx, o => o.Sum != 0);
+				// All RES record accounts are present in transactions
+				Assert.False(onlyInRes.Any());
+
+				var diffs = resultRecords.Select(rr => new { AccountId = rr.AccountId, Diff = rr.Amount - summedRESTransactions.First(v => v.AccountId == rr.AccountId).Sum });
+				Assert.DoesNotContain(diffs, o => o.Diff != 0);
+			}
+		}
+
+		[Fact]
+		public async Task TestGetSalaries()
 		{
 			var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
-			var roots = await ReadSIEFiles(files);
-			var allVouchers = roots.SelectMany(o => o.Children).Where(o => o is VoucherRecord).Cast<VoucherRecord>();
+			var roots = await Tools.ReadSIEFiles(files);
+			var allVouchers = roots.SelectMany(o => o.Children).OfType<VoucherRecord>();
 
 			var ma = string.Join("\n", allVouchers.Where(o => o.VoucherTypeCode == "MA").OrderBy(o => o.Date).Select(o => o.ToHierarchicalString()));
 
@@ -77,12 +143,19 @@ namespace SIE.Tests
 			//var salaries = allVouchers.Where(o => o.VoucherType == VoucherType.Salary).OrderBy(o => o.Date).ToList();
 		}
 
+		[Fact]
+		public async Task Experiment()
+		{
+			var root = (await Tools.ReadSIEFiles(new[] { "output_20201209.se" })).First();
+			var byType = root.Children.OfType<VoucherRecord>().GroupBy(v => v.VoucherTypeCode).ToDictionary(g => g.Key, g => g.ToList());
+		}
+
 
 		[Fact]
 		public async Task TestCreateMatched()
 		{
 			var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
-			var roots = await ReadSIEFiles(files); // new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
+			var roots = await Tools.ReadSIEFiles(files);
 			var allAccountTypes = roots.SelectMany(o => o.Children).OfType<AccountRecord>().GroupBy(o => o.AccountId).ToDictionary(o => o.Key, o => string.Join(" | ", o.Select(o => o.AccountName).Distinct()));
 
 			var allVouchers = roots.SelectMany(o => o.Children).OfType<VoucherRecord>();
@@ -108,7 +181,7 @@ namespace SIE.Tests
 		public async Task Test1()
 		{
 			var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
-			var roots = await ReadSIEFiles(files); // new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
+			var roots = await Tools.ReadSIEFiles(files); // new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
 			var allVouchers = roots.SelectMany(o => o.Children).OfType<VoucherRecord>();
 
 			var annoyingAccountIds = new[] { 24400, 26410 }.ToList();
@@ -157,81 +230,6 @@ namespace SIE.Tests
 			//		funcModifyTransactions = val => val;
 			//	return voucher.ToString() + "\n\t" + string.Join("\n\t", funcModifyTransactions(voucher.Transactions).Select(t => t.ToString()));
 			//}
-		}
-
-		[Fact]
-		public void ParseLine()
-		{
-			var items = SIERecord.ParseLine("1 2 \"string num 1\" asdd \"string num 2 !\" item");
-			Assert.Equal(6, items.Length);
-		}
-
-		private class AccountInfo
-		{
-			public string Name { get; set; } = string.Empty;
-			public string Source { get; set; } = string.Empty;
-		}
-
-		[Fact]
-		public async Task GetAccounts()
-		{
-			var roots = await ReadSIEFiles(new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
-			var result = roots.SelectMany(o => o.Children.OfType<AccountRecord>()).GroupBy(o => o.AccountId).Select(o => o.First()).ToDictionary(o => o.AccountId, o => new AccountInfo { Name = o.AccountName, Source = "SIE" });
-			//string.Join("\n",  Select(o => $"{o.AccountId}\t{o.AccountName}"));
-
-			var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
-			var tmp = File.ReadAllText(Path.Combine(sieDir, "accountsexport.txt"));
-			var xx = tmp.Split('\n').Skip(1).Where(o => o.Length > 0).Select(line => line.Split('\t')).ToDictionary(o => int.Parse(o[0]), o => o[1].Trim());
-
-			foreach (var kv in xx)
-			{
-				if (!result.ContainsKey(kv.Key))
-					result.Add(kv.Key, new AccountInfo { Name = $"{kv.Value}", Source = "" });
-				else
-				{
-					result[kv.Key].Source = "";
-					if (result[kv.Key].Name != kv.Value)
-						result[kv.Key].Name += $" - {kv.Value}";
-				}
-			}
-
-			var str = string.Join("\n", result.Keys.OrderBy(o => o).Select(o => $"{o}\t{result[o].Name}\t{result[o].Source}"));
-		}
-
-		[Fact]
-		public void ParseAddress()
-		{
-			var items = SIERecord.ParseLine(@"#ADRESS ""SvenSvensson"" ""Box 21"" ""21120   MALM�"" ""040 - 12345""");
-			var record = new AddressRecord();
-			record.Read(items);
-			
-			Assert.Equal("040 - 12345", record.PhoneNumber);
-		}
-
-		async Task<List<RootRecord>> ReadSIEFiles(IEnumerable<string>? files = null)
-		{
-			var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
-			if (files == null)
-				files = new DirectoryInfo(sieDir).GetFiles("*.se").Select(o => o.Name);
-			return await SBCExtensions.ReadSIEFiles(files.Select(file => Path.Combine(sieDir, file)));
-
-			//var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
-			//var tasks = files.Select(async file => await SIERecord.Read(Path.Combine(sieDir, file)));
-			//await Task.WhenAll(tasks);
-			//var result = tasks.Select(o => o.Result).ToList();
-
-			//result.SelectMany(o => o.Children).OfType<VoucherRecord>().SelectMany(o => o.Transactions).ToList()
-			//	.ForEach(o => o.PreProcessCompanyName());
-
-			//return result;
-		}
-
-		string GetCurrentOrSolutionDirectory()
-		{
-			var sep = "\\" + Path.DirectorySeparatorChar;
-			var rx = new System.Text.RegularExpressions.Regex($@".*(?={sep}[^{sep}]+{sep}bin)");
-			var m = rx.Match(Directory.GetCurrentDirectory());
-			return m.Success ? m.Value : Directory.GetCurrentDirectory();
 		}
 	}
 }

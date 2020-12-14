@@ -8,72 +8,6 @@ using System.Text.RegularExpressions;
 
 namespace SIE
 {
-	public class VoucherType
-	{
-		public string Code { get; private set; }
-		public string Name { get; private set; }
-
-		private VoucherType(string code, string name)
-		{
-			Code = code;
-			Name = name;
-		}
-		public override string ToString()
-		{
-			return $"{Code} ({Name})";
-		}
-
-		private static Dictionary<string, VoucherType> _lookup = new Dictionary<string, VoucherType>();
-		private static Dictionary<string, VoucherType> Lookup
-		{
-			get
-			{
-				if (!_lookup.Any())
-				{
-					_lookup = new[] {
-							new VoucherType("AR", nameof(AR)),
-							new VoucherType("AV", nameof(AV)),
-							new VoucherType("BS", nameof(BS)),
-							new VoucherType("CR", nameof(CR)),
-							new VoucherType("FAS", nameof(FAS)),
-							new VoucherType("KB", nameof(KB)),
-							new VoucherType("KR", nameof(KR)),
-							new VoucherType("SLR", nameof(SLR)),
-							new VoucherType("LON", nameof(Salary)),
-							new VoucherType("LAN", nameof(LAN)),
-							new VoucherType("LR", nameof(TaxAndExpense)),
-							new VoucherType("LB", nameof(LB)),
-							new VoucherType("PE", nameof(Accrual)),
-							new VoucherType("RV", nameof(Revision)),
-							new VoucherType("MA", nameof(Anulled)),
-						}.ToDictionary(o => o.Code, o => o);
-				}
-				return _lookup;
-			}
-		}
-
-		public static VoucherType AR { get => Lookup["AR"]; }
-		public static VoucherType AV { get => Lookup["AV"]; }
-		public static VoucherType BS { get => Lookup["BS"]; }
-		public static VoucherType CR { get => Lookup["CR"]; }
-		public static VoucherType KB { get => Lookup["KB"]; } //Expense?
-		public static VoucherType KR { get => Lookup["KR"]; } //Expense?
-		public static VoucherType FAS { get => Lookup["FAS"]; }
-		public static VoucherType SLR { get => Lookup["SLR"]; }
-		public static VoucherType Salary { get => Lookup["LON"]; }
-		public static VoucherType LAN { get => Lookup["LAN"]; }
-		public static VoucherType TaxAndExpense { get => Lookup["LR"]; }
-		public static VoucherType LB { get => Lookup["LB"]; }
-		public static VoucherType Accrual { get => Lookup["PE"]; }
-		public static VoucherType Revision { get => Lookup["RV"]; }
-		public static VoucherType Anulled { get => Lookup["MA"]; }
-
-		public static VoucherType GetByCode(string code)
-		{
-			return Lookup.GetValueOrDefault(code, null) ?? throw new NotImplementedException($"{code}");
-		}
-	}
-
 	/*
 Common pattern:
 
@@ -100,6 +34,8 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 	[DebuggerDisplay("{Tag} {VoucherTypeCode} {FormatDate(Date)} {GetTransactionsMaxAmount()} {GetTransactionsCompanyName()}")]
 	public class VoucherRecord : SIERecord, IWithChildren
 	{
+		public override string Tag { get => "VER"; }
+
 		//#VER AR6297 1 20190210 ""
 		//{
 		//	#TRANS 27180 {} -2047.00 20190210 "Skatteverket"
@@ -112,8 +48,6 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 		public int SerialNumber { get; set; }
 		public LocalDate Date { get; set; }
 		public string Unknown2 { get; set; } = string.Empty;
-
-		public override string Tag { get => "VER"; }
 
 		public List<SIERecord> Children { get; set; } = new List<SIERecord>();
 
@@ -131,6 +65,9 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 		/// Will throw an exception if multiple names found (e.g. in end-of-year revision vouchers)
 		/// </summary>
 		public string CompanyName { get => Transactions.Select(o => o.CompanyName).Where(o => !string.IsNullOrEmpty(o)).Distinct().SingleOrDefault() ?? string.Empty; }
+
+		public string Id { get => $"{Series}_{SerialNumber}"; }
+		public string Series { get => $"{VoucherTypeCode}{VoucherForId}"; }
 
 		public override void Read(string[] cells)
 		{
@@ -220,7 +157,6 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 		/// 1**** and 2**** accounts
 		/// </summary>
 		public bool IsAdminAccount { get => AccountId / 10000 <= 2; } //TODO: better name
-
 
 		public override string ToString() => $"{Tag} {AccountId} {Unknown} {Amount} {FormatDate(Date)} {CompanyId}{(string.IsNullOrEmpty(CompanyId) ? "" : ":")}{CompanyName}";
 

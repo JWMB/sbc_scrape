@@ -52,7 +52,7 @@ namespace SIE
 
 		public static async Task<RootRecord> Read(StreamReader sr)
 		{
-			var types = typeof(SIERecord).Assembly.GetTypes().Where(t => typeof(SIERecord).IsAssignableFrom(t)).ToList();
+			var types = typeof(SIERecord).Assembly.GetTypes().Where(t => typeof(SIERecord).IsAssignableFrom(t) && !t.IsAbstract).ToList();
 			var excludeTypes = new[] { typeof(SIERecord), typeof(RootRecord), typeof(UnknownRecord) };
 			types = types.Except(excludeTypes).ToList();
 
@@ -149,8 +149,6 @@ namespace SIE
 				if (type == typeof(int))
 					converted = int.Parse(val);
 				else if (type == typeof(decimal))
-					converted = decimal.Parse(val);
-				else if (type == typeof(decimal))
 					converted = ParseDecimal(val);
 				else if (type == typeof(LocalDate))
 					converted = ParseDate(val);
@@ -164,7 +162,7 @@ namespace SIE
 			}
 			catch (Exception ex)
 			{
-				if (defaultValueElseThrow == null) throw ex;
+				if (defaultValueElseThrow == null) throw new FormatException($"Couldn't parse {val} to {type.Name}", ex);
 				return defaultValueElseThrow;
 			}
 		}
@@ -211,6 +209,56 @@ namespace SIE
 		}
 		public override string ToString() => string.Join("\t", Data);
 	}
+
+	public class ReportPeriodRecord : SIERecord
+	{
+		public override string Tag { get => "RAR"; }
+
+		public int YearOffset { get; set; }
+		public LocalDate Start { get; set; }
+		public LocalDate End { get; set; }
+
+		public override void Read(string[] cells)
+		{
+			Populate(cells.Skip(1), new[] { nameof(YearOffset), nameof(Start), nameof(End) });
+		}
+	}
+
+	public abstract class BalanceRecord : SIERecord
+	{
+		public int YearOffset { get; set; }
+		public int AccountId { get; set; }
+		public decimal Amount { get; set; }
+
+		public override void Read(string[] cells)
+		{
+			Populate(cells.Skip(1), new[] { nameof(YearOffset), nameof(AccountId), nameof(Amount) });
+		}
+		public override string ToString() => $"{Tag} {YearOffset} {AccountId} {Amount}";
+	}
+	public class IngoingBalanceRecord : BalanceRecord
+	{
+		public override string Tag { get => "IB"; }
+	}
+	public class OutgoingBalanceRecord : BalanceRecord
+	{
+		public override string Tag { get => "UB"; }
+	}
+
+	public class ResultRecord : SIERecord
+	{
+		public override string Tag { get => "RES"; }
+
+		public int YearOffset { get; set; }
+		public int AccountId { get; set; }
+		public decimal Amount { get; set; }
+
+		public override void Read(string[] cells)
+		{
+			Populate(cells.Skip(1), new[] { nameof(YearOffset), nameof(AccountId), nameof(Amount) });
+		}
+	}
+
 
 	public class AddressRecord : SIERecord
 	{
