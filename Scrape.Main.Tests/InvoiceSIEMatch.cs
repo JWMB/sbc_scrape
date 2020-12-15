@@ -15,6 +15,7 @@ namespace Scrape.Main.Tests
 		public VoucherOrReason LB { get; set; }
 		public VoucherOrReason SLR { get; set; }
 
+		public string SbcInvoiceLink { get; set; }
 		public bool MatchedAllExpected { get => LB.FoundOrValidReason && SLR.FoundOrValidReason; }
 
 		public InvoiceMatch(InvoiceSummary invoice, VoucherOrReason lb, VoucherOrReason slr)
@@ -73,47 +74,6 @@ namespace Scrape.Main.Tests
 			}
 		}
 	}
-
-	//public class InvoiceCommonData
-	//{
-	//	public LocalDate InvoiceDate { get; set; }
-	//	public LocalDate DueDate { get; set; }
-	//	public LocalDate? FinalPostingingDate { get; set; }
-	//	public decimal GrossAmount { get; set; }
-	//	public string Supplier { get; set; }
-	//	public int AccountId { get; set; }
-
-	//	public object OriginalObject { get; set; }
-
-	//	public static InvoiceCommonData FromInvoiceSummary(InvoiceSummary invoice)
-	//	{
-	//		return new InvoiceCommonData
-	//		{
-	//			InvoiceDate = LocalDate.FromDateTime(invoice.InvoiceDate.Value),
-	//			DueDate = LocalDate.FromDateTime(invoice.DueDate.Value),
-	//			FinalPostingingDate = invoice.FinalPostingingDate == null ? null : LocalDate.FromDateTime(invoice.FinalPostingingDate.Value),
-	//			GrossAmount = invoice.GrossAmount,
-	//			Supplier = invoice.Supplier,
-	//			AccountId = (int)invoice.AccountId.Value,
-	//			OriginalObject = invoice,
-	//			//Id = invoice.Id,
-	//		};
-	//	}
-	//	public static InvoiceCommonData FromSBCInvoice(sbc_scrape.SBC.Invoice invoice)
-	//	{
-	//		return new InvoiceCommonData
-	//		{
-	//			InvoiceDate = LocalDate.FromDateTime(invoice.RegisteredDate),
-	//			DueDate = LocalDate.FromDateTime(invoice.PaymentDate.Value),
-	//			FinalPostingingDate = null,
-	//			GrossAmount = invoice.Amount,
-	//			Supplier = invoice.Supplier,
-	//			AccountId = invoice.AccountId,
-	//			OriginalObject = invoice,
-	//			//Id = invoice.VerSeries
-	//		};
-	//	}
-	//}
 
 	public class InvoiceSIEMatch
 	{

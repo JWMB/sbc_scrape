@@ -105,7 +105,11 @@ namespace Scrape.Main.Tests
 			var sie = await SBCExtensions.ReadSIEFiles(new[] { sieFile }.Select(file => Tools.GetOutputFolder("SIE", file)));
 			var vouchers = sie.SelectMany(o => o.Children).OfType<VoucherRecord>().ToList();
 
-			var result = InvoiceSIEMatch.MatchLB_SLR(vouchers, summaries.Select(InvoiceCommonData.FromInvoiceSummary).ToList());
+			//var accountChanged = vouchers.Where(o => o.VoucherType == VoucherType.SLR)
+			//	.Where(o => o.Transactions.GroupBy(t => t.AccountId).Any(t => t.Select(tt => Math.Sign(tt.Amount)).Distinct().Count() > 1))
+			//	.ToList();
+
+			var result = InvoiceSIEMatch.MatchLB_SLR(vouchers, summaries);
 
 			var missing = result.Matches.Where(o => o.SLR.Voucher == null).ToList();
 			//Assert.IsFalse(missing.Any());
@@ -113,6 +117,7 @@ namespace Scrape.Main.Tests
 			// Some urgent invoices go (by request) direct to payment, without passing MediusFlow (e.g. 2020 "Office for design", "Stenbolaget")
 			// The same goes for SBCs own periodical invoices and bank/interest payments
 			// These should be found here: https://varbrf.sbc.se/Portalen/Ekonomi/Utforda-betalningar/
+			// Actually, this is just a view for SLR records - with an additional link for the invoice
 			var tmp1 = result.UnmatchedSLR;
 			var tmp2 = result.UnmatchedSLRShouldHaveOtherTrail.ToList();
 			var tmp = result.Matches.Where(o => !o.MatchedAllExpected).ToList();
@@ -120,24 +125,48 @@ namespace Scrape.Main.Tests
 
 			var dir = Tools.GetOutputFolder("sbc_html");
 			var sbcInvoices = new sbc_scrape.SBC.InvoiceSource().ReadAll(dir).Where(o => o.RegisteredDate.Year == year);
-			var slrs = vouchers.Where(o => o.VoucherType == VoucherType.SLR).ToList();
-			// SBC Invoice are easy to match to SLRs - by SerialNumber / VerNum
-			var mwslr = sbcInvoices.Select(inv => new { Invoice = inv, SLR = slrs.FirstOrDefault(o => o.SerialNumber == inv.VerNum) });
-			Assert.IsFalse(mwslr.Any(o => o.SLR == null));
-			var idsToRemove = mwslr.Select(o => o.SLR.Id).ToList();
-			result.UnmatchedSLR.RemoveAll(o => idsToRemove.Contains(o.Id));
+			// check integrity
+			{
+				var byVerNum = sbcInvoices.GroupBy(o => $"{year}_{o.VerNum}").ToDictionary(g => g.Key, g => g.ToList());
+				var differentLinksSameVerNum = byVerNum.Where(o => o.Value.Select(p => p.InvoiceLink).Distinct().Count() > 2);
+				Assert.IsFalse(differentLinksSameVerNum.Any());
 
-			// match with MediusFlow by SLR
-			var joined = result.Matches.Join(mwslr, mf => mf.SLR.Voucher.SerialNumber, sbc => sbc.SLR.SerialNumber, (mf, sbc) => new { MF = mf, SBC = sbc.Invoice }).ToList();
+				var invoiceKeys = byVerNum.Select(o => o.Key).ToList();
+				var slrs = vouchers.Where(o => o.VoucherType == VoucherType.SLR).ToList();
+				var slrKeys = slrs.Select(o => $"{year}_{o.SerialNumber}").ToList();
+				// All Invoices should exist as SLRs:
+				Assert.IsFalse(invoiceKeys.Except(slrKeys).Any());
+				// SLRs don't exist as Invoice until payed, so no need to check the other way around
+			}
 
-			//var commoned = sbcInvoices.Select(InvoiceCommonData.FromSBCInvoice).ToList();
-			//var tmpXX = result.Matches.Select(o =>
-			//	new { Medius = o, SBC = commoned.Where(s => s.InvoiceDate == o.Invoice.InvoiceDate && s.GrossAmount == o.Invoice.GrossAmount && s.AccountId == o.Invoice.AccountId).ToList() })
-			//	.Where(o => o.SBC.Count() != 1).ToList();
-
-			var match2 = InvoiceSIEMatch.MatchLB_SLR(vouchers, sbcInvoices.Select(InvoiceCommonData.FromSBCInvoice).ToList());
+			string GetProperSN(VoucherRecord v) => $"{v.Date.Year}_{v.SerialNumber}";
+			var matchesBySLR = result.Matches.Select(m => new { Key = GetProperSN(m.SLR.Voucher), Value = m }).ToDictionary(o => o.Key, o => o.Value);
+			var fullResult = vouchers.Where(o => o.VoucherType == VoucherType.SLR).Select(slr =>
+			{
+				var sbcInv = sbcInvoices.FirstOrDefault(o => o.RegisteredDate.Year == slr.Date.Year && o.VerNum == slr.SerialNumber);
+				var info = new InvoiceInfo { SLR = slr, SbcImageLink = sbcInv?.InvoiceLink };
+				if (matchesBySLR.TryGetValue(GetProperSN(slr), out var found))
+				{
+					info.Invoice = found.Invoice;
+					info.LB = found.LB.Voucher;
+				}
+				return info;
+			}).ToList();
 
 			// https://varbrf.sbc.se/Portalen/Ekonomi/Revisor/Underlagsparm/
+		}
+
+		public class InvoiceInfo
+		{
+			public VoucherRecord SLR { get; set; }
+			public VoucherRecord? LB { get; set; }
+			public InvoiceSummary? Invoice { get; set; }
+			public string? SbcImageLink { get; set; }
+
+			public override string ToString()
+			{
+				return $"{SLR.Date.ToSimpleDateString()} {SLR.CompanyName} {SLR.GetTransactionsMaxAmount()} {(Invoice == null ? "" : "INV")} {(SbcImageLink == null ? "" : "IMG")}";
+			}
 		}
 
 		[TestMethod]
