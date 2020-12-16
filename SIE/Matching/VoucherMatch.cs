@@ -6,10 +6,6 @@ using System.Text;
 
 namespace SIE.Matching
 {
-	class VoucherMatch
-	{
-	}
-
 	public class MatchSLRResult
 	{
 		//public List<(VoucherRecord slr, VoucherRecord other)> Matches { get; set; } = new List<(VoucherRecord slr, VoucherRecord other)>();

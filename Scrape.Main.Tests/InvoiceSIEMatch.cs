@@ -77,7 +77,7 @@ namespace Scrape.Main.Tests
 
 	public class InvoiceSIEMatch
 	{
-		public static MatchingResult MatchLB_SLR(List<VoucherRecord> vouchers, List<InvoiceSummary> summaries)
+		public static MatchingResult MatchLB_SLR(List<VoucherRecord> vouchers, List<InvoiceSummary> summaries, Dictionary<string, string>? alternativeCompanyNames = null)
 		{
 			var result = new MatchingResult();
 			var matches = summaries.Select(o => new InvoiceMatch(o, new VoucherOrReason(VoucherMissingReason.Unknown), new VoucherOrReason(VoucherMissingReason.Unknown))).ToList();
@@ -86,16 +86,24 @@ namespace Scrape.Main.Tests
 				voucherCompany.Length > 25 && invoiceSupplier.Contains(voucherCompany)
 				|| invoiceSupplier.EndsWith(voucherCompany) && voucherCompany.Length >= invoiceSupplier.Length * 0.4 && voucherCompany.Length > 6;
 
+			bool MatchCompanyName(string invoiceSupplier, string voucherCompany) => invoiceSupplier == voucherCompany;
+			bool MatchCompanyNameReplacements(string invoiceSupplier, string voucherCompany) => alternativeCompanyNames.GetValueOrDefault(invoiceSupplier, invoiceSupplier) == voucherCompany;
+
+			Func<string, string, bool> matchCompanyName = alternativeCompanyNames == null ? MatchCompanyName : MatchCompanyNameReplacements;
+
+
+			var searchMethods = new List<MatchDelegate> {
+				(invoice, voucher) => LocalDate.FromDateTime(invoice.InvoiceDate.Value) == voucher.Date
+					&& matchCompanyName(invoice.Supplier, voucher.CompanyName),
+
+				(invoice, voucher) => Math.Abs(Period.Between(LocalDate.FromDateTime(invoice.InvoiceDate.Value), voucher.Date, PeriodUnits.Days).Days) <= 2
+					&& FuzzyMatchCompanyName(invoice.Supplier, voucher.CompanyName),
+			};
+
 			var matchSLRResult = Match(
 				vouchers.Where(o => o.VoucherType == VoucherType.SLR),
 				summaries,
-				new List<MatchDelegate> {
-					(invoice, voucher) => LocalDate.FromDateTime(invoice.InvoiceDate.Value) == voucher.Date
-						&& invoice.Supplier == voucher.CompanyName,
-
-					(invoice, voucher) => Math.Abs(Period.Between(LocalDate.FromDateTime(invoice.InvoiceDate.Value), voucher.Date, PeriodUnits.Days).Days) <= 2
-						&& FuzzyMatchCompanyName(invoice.Supplier, voucher.CompanyName),
-				},
+				searchMethods,
 				(invoice, voucher) => voucher.Transactions.Single(t => t.AccountId == 24400).Amount == -invoice.GrossAmount
 			);
 
@@ -114,7 +122,7 @@ namespace Scrape.Main.Tests
 			var matchLBResult = Match(vouchers.Where(o => o.VoucherType == VoucherType.LB), summaries,
 				new List<MatchDelegate> {
 					(invoice, voucher) => GetProbableDates(invoice).Max() == voucher.Date
-						&& invoice.Supplier == voucher.CompanyName,
+						&& matchCompanyName(invoice.Supplier, voucher.CompanyName),
 
 					(invoice, voucher) => GetDateInRange(Period.Between(GetProbableDates(invoice).Min(), voucher.Date, PeriodUnits.Days).Days, 0, 20)
 						&& FuzzyMatchCompanyName(invoice.Supplier, voucher.CompanyName),

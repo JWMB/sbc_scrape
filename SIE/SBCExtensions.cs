@@ -10,7 +10,7 @@ namespace SIE
 {
 	public static class SBCExtensions
 	{
-		static readonly List<Regex> CompanyNameRx = new List<Regex> {
+		private static readonly List<Regex> CompanyNameRx = new List<Regex> {
 			new Regex(@"^(P?\d+)(?::)(.+)"),
 			new Regex(@"([^;]+);(.+)"),
 			new Regex(@"^(\d{2})\/(.+)"),
@@ -23,18 +23,23 @@ namespace SIE
 				tx.CompanyName = replacement;
 			else
 			{
-				foreach (var rx in CompanyNameRx)
+				tx.SeparateCompanyNameToIdAndName();
+			}
+		}
+		public static void SeparateCompanyNameToIdAndName(this TransactionRecord tx)
+		{
+			foreach (var rx in CompanyNameRx)
+			{
+				var m = rx.Match(tx.CompanyName);
+				if (m.Success)
 				{
-					var m = rx.Match(tx.CompanyName);
-					if (m.Success)
-					{
-						tx.CompanyId = m.Groups[1].Value;
-						tx.CompanyName = m.Groups[2].Value.Trim();
-						break;
-					}
+					tx.CompanyId = m.Groups[1].Value;
+					tx.CompanyName = m.Groups[2].Value.Trim();
+					break;
 				}
 			}
 		}
+
 		public static void PostProcessCompanyName(this TransactionRecord tx)
 		{
 			if (tx.CompanyName == "Blp Skyddsrum AB")
@@ -61,19 +66,32 @@ namespace SIE
 			return name;
 		}
 
-
-		public static async Task<List<RootRecord>> ReadSIEFiles(IEnumerable<string> files)
+		public enum ProcessCompanyNameMode
+		{
+			None,
+			SeparateIdAndName,
+			SeparateAndReplace,
+		}
+		public static async Task<List<RootRecord>> ReadSIEFiles(IEnumerable<string> files, ProcessCompanyNameMode processCompanyNames = ProcessCompanyNameMode.SeparateIdAndName)
 		{
 			var tasks = files.Select(async file => await SIERecord.Read(file));
 			await Task.WhenAll(tasks);
 			var result = tasks.Select(o => o.Result).ToList();
 
-			var vouchers = result.SelectMany(o => o.Children).OfType<VoucherRecord>();
-			vouchers.SelectMany(o => o.Transactions).ToList().ForEach(o => o.PreProcessCompanyName());
+			if (processCompanyNames == ProcessCompanyNameMode.SeparateAndReplace)
+			{
+				var vouchers = result.SelectMany(o => o.Children).OfType<VoucherRecord>();
+				vouchers.SelectMany(o => o.Transactions).ToList().ForEach(o => o.PreProcessCompanyName());
 
-			VoucherRecord.NormalizeCompanyNames(vouchers);
+				VoucherRecord.NormalizeCompanyNames(vouchers);
 
-			vouchers.SelectMany(o => o.Transactions).ToList().ForEach(o => o.PostProcessCompanyName());
+				vouchers.SelectMany(o => o.Transactions).ToList().ForEach(o => o.PostProcessCompanyName());
+			}
+			else if (processCompanyNames == ProcessCompanyNameMode.SeparateIdAndName)
+			{
+				var vouchers = result.SelectMany(o => o.Children).OfType<VoucherRecord>();
+				vouchers.SelectMany(o => o.Transactions).ToList().ForEach(o => o.SeparateCompanyNameToIdAndName());
+			}
 
 			return result;
 		}

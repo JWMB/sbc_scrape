@@ -44,7 +44,7 @@ namespace Scrape.Main.Tests
 		public async Task MatchSbcHtmlAndSIE()
 		{
 			var year = 2020;
-			var roots = await SBCExtensions.ReadSIEFiles(new[] { "output_20201209.se" }.Select(file => Tools.GetOutputFolder("SIE", file)));
+			var roots = await SBCExtensions.ReadSIEFiles(new[] { "output_20201209.se" }.Select(file => Tools.GetOutputFolder("SIE", file)),  SBCExtensions.ProcessCompanyNameMode.SeparateIdAndName);
 			var allVouchers = roots.SelectMany(o => o.Children).OfType<VoucherRecord>();
 
 			var resultRecords = roots.SelectMany(o => o.Children).OfType<ResultRecord>();

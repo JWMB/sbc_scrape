@@ -61,10 +61,20 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 				TransactionsNonAdmin.GroupBy(o => $"{o.AccountId}{Math.Abs(o.Amount)}")
 				.Where(o => o.ToList().Sum(p => p.Amount) != 0).SelectMany(o => o.ToList()).ToList(); }
 
-		/// <summary>
-		/// Will throw an exception if multiple names found (e.g. in end-of-year revision vouchers)
-		/// </summary>
-		public string CompanyName { get => Transactions.Select(o => o.CompanyName).Where(o => !string.IsNullOrEmpty(o)).Distinct().SingleOrDefault() ?? string.Empty; }
+		///// <summary>
+		///// Will throw an exception if multiple names found (e.g. in end-of-year revision vouchers)
+		///// </summary>
+		//public string CompanyName { get => Transactions.Select(o => o.CompanyName).Where(o => !string.IsNullOrEmpty(o)).Distinct().SingleOrDefault() ?? string.Empty; }
+
+		private string? _companyNameCalced = null;
+		public string CompanyName
+		{
+			get {
+				if (_companyNameCalced == null)
+					_companyNameCalced = Transactions.Select(o => o.CompanyName).OrderByDescending(o => o.Length).First();
+				return _companyNameCalced;
+			}
+		}
 
 		public string Id { get => $"{Series}_{SerialNumber}"; }
 		public string Series { get => $"{VoucherTypeCode}{VoucherForId}"; }

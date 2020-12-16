@@ -11,6 +11,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace Scrape.Main.Tests
@@ -90,21 +91,34 @@ namespace Scrape.Main.Tests
 		[TestMethod]
 		public async Task MatchMediusFlowWithSIE()
 		{
-			var year = 2020;
+			var years = new[] { 2020 }; //2019, 
 			var store = new FileSystemKVStore(Tools.GetOutputFolder());
 
 			var invoiceStore = new SBCScan.InvoiceStore(store);
 			var files = await invoiceStore.GetKeysParsed();
-			var invoices = (await Task.WhenAll(files.Where(o => o.RegisteredDate.Year == year).Select(async o => await invoiceStore.Get(o)).ToList())).ToList();
+			var invoices = (await Task.WhenAll(files.Where(o => years.Contains(o.RegisteredDate.Year)).Select(async o => await invoiceStore.Get(o)).ToList())).ToList();
 			invoices = invoices.Where(o => o.IsRejected == false).ToList();
 
-			var summaries = invoices.Select(o => InvoiceSummary.Summarize(o)).Where(o => o.InvoiceDate.Value.Year == year).ToList();
+			var summaries = invoices.Select(o => InvoiceSummary.Summarize(o)).Where(o => years.Contains(o.InvoiceDate.Value.Year)).ToList();
 
 			var sieFolder = Tools.GetOutputFolder("SIE");
-			var sieFile = new DirectoryInfo(sieFolder).GetFiles($"output_{year}*.se").First().Name;
-			var sie = await SBCExtensions.ReadSIEFiles(new[] { sieFile }.Select(file => Tools.GetOutputFolder("SIE", file)));
+			var sieFiles = new DirectoryInfo(sieFolder).GetFiles($"output_*.se").Select(o => o.Name).Where(o => years.Any(p => o.Contains(p.ToString())));
+			var sie = await SBCExtensions.ReadSIEFiles(sieFiles.Select(file => Tools.GetOutputFolder("SIE", file)));
 			var vouchers = sie.SelectMany(o => o.Children).OfType<VoucherRecord>().ToList();
 
+			{
+				var slrsWithout24400 = vouchers.Where(o => o.VoucherType == VoucherType.SLR).Where(o => o.Transactions.Any(t => t.AccountId == 24400) == false);
+				Assert.IsFalse(slrsWithout24400.Any());
+			}
+			{
+				// SLR/LB shouldn't have different companynames on transactions (only if shortened)
+				foreach (var item in vouchers.Where(o => o.VoucherType == VoucherType.SLR || o.VoucherType == VoucherType.LB))
+				{
+					var names = item.Transactions.Select(o => o.CompanyName).Distinct().OrderBy(o => o.Length).ToList();
+					for (int i = 1; i < names.Count(); i++)
+						Assert.IsTrue(names[i].StartsWith(names[i - 1]));
+				}
+			}
 			//var accountChanged = vouchers.Where(o => o.VoucherType == VoucherType.SLR)
 			//	.Where(o => o.Transactions.GroupBy(t => t.AccountId).Any(t => t.Select(tt => Math.Sign(tt.Amount)).Distinct().Count() > 1))
 			//	.ToList();
@@ -112,37 +126,64 @@ namespace Scrape.Main.Tests
 			var result = InvoiceSIEMatch.MatchLB_SLR(vouchers, summaries);
 
 			var missing = result.Matches.Where(o => o.SLR.Voucher == null).ToList();
-			//Assert.IsFalse(missing.Any());
+			Assert.IsFalse(missing.Any());
 
 			// Some urgent invoices go (by request) direct to payment, without passing MediusFlow (e.g. 2020 "Office for design", "Stenbolaget")
 			// The same goes for SBCs own periodical invoices and bank/interest payments
 			// These should be found here: https://varbrf.sbc.se/Portalen/Ekonomi/Utforda-betalningar/
 			// Actually, this is just a view for SLR records - with an additional link for the invoice
-			var tmp1 = result.UnmatchedSLR;
-			var tmp2 = result.UnmatchedSLRShouldHaveOtherTrail.ToList();
-			var tmp = result.Matches.Where(o => !o.MatchedAllExpected).ToList();
+			//var tmp1 = result.UnmatchedSLR;
+			//var tmp2 = result.UnmatchedSLRShouldHaveOtherTrail.ToList();
+			//var tmp = result.Matches.Where(o => !o.MatchedAllExpected).ToList();
 
 
 			var dir = Tools.GetOutputFolder("sbc_html");
-			var sbcInvoices = new sbc_scrape.SBC.InvoiceSource().ReadAll(dir).Where(o => o.RegisteredDate.Year == year);
+			var sbcInvoices = new sbc_scrape.SBC.InvoiceSource().ReadAll(dir).Where(o => years.Contains(o.RegisteredDate.Year));
 			// check integrity
 			{
-				var byVerNum = sbcInvoices.GroupBy(o => $"{year}_{o.VerNum}").ToDictionary(g => g.Key, g => g.ToList());
+				var byVerNum = sbcInvoices.GroupBy(o => $"{o.RegisteredDate.Year}_{o.VerNum}").ToDictionary(g => g.Key, g => g.ToList());
 				var differentLinksSameVerNum = byVerNum.Where(o => o.Value.Select(p => p.InvoiceLink).Distinct().Count() > 2);
 				Assert.IsFalse(differentLinksSameVerNum.Any());
 
 				var invoiceKeys = byVerNum.Select(o => o.Key).ToList();
 				var slrs = vouchers.Where(o => o.VoucherType == VoucherType.SLR).ToList();
-				var slrKeys = slrs.Select(o => $"{year}_{o.SerialNumber}").ToList();
+				var slrKeys = slrs.Select(o => $"{o.Date.Year}_{o.SerialNumber}").ToList();
 				// All Invoices should exist as SLRs:
 				Assert.IsFalse(invoiceKeys.Except(slrKeys).Any());
-				// SLRs don't exist as Invoice until payed, so no need to check the other way around
+				// Note: Invoices correspondeing to SLRs are created only when payed, so no need to check the other way around
 			}
 
+			var lbs = vouchers.Where(o => o.VoucherType == VoucherType.LB).ToList();
+			{
+				// Integrity
+				var lbNo24400 = lbs.Where(o => o.Transactions.Any(t => t.AccountId == 24400) == false);
+				Assert.IsFalse(lbNo24400.Any());
+			}
+
+			// try getting LBs for sbcInvoices
+			// tricky thing with sbcInvoices - one row for each non-admin transaction in SLRs
+			var sbcInvoiceToLB = sbcInvoices.Where(o => o.PaymentDate != null).GroupBy(o => $"{o.RegisteredDate.Year}_{o.VerNum}")//.Select(o => new { A = 1, Sum = o.Sum(v => v.Amount) });
+				.Select(grp =>
+				{
+					var invoiceSum = grp.Sum(v => v.Amount);
+					var paymentDate = LocalDate.FromDateTime(grp.First().PaymentDate.Value);
+					return new
+					{
+						Invoice = grp.First(),
+						LBs = lbs.Where(l => l.Date == paymentDate && l.Transactions.First(t => t.AccountId == 24400).Amount == invoiceSum).ToList()
+					};
+				});
+			var sbcInvoiceToSingleLB = sbcInvoiceToLB.Where(o => o.LBs.Count == 1).ToDictionary(o => o.Invoice.VerNum, o => o.LBs.Single());
+			var sbcMatchedLBSNs = sbcInvoiceToSingleLB.Select(o => GetProperSN(o.Value)).ToList();
+			var stillUnmatchedLBs = result.UnmatchedLB.Where(o => !sbcMatchedLBSNs.Contains(GetProperSN(o))).ToList();
+
 			string GetProperSN(VoucherRecord v) => $"{v.Date.Year}_{v.SerialNumber}";
-			var matchesBySLR = result.Matches.Select(m => new { Key = GetProperSN(m.SLR.Voucher), Value = m }).ToDictionary(o => o.Key, o => o.Value);
+			var matchesBySLR = result.Matches.Where(o => o.SLR.Voucher != null)
+				.Select(m => new { Key = GetProperSN(m.SLR.Voucher), Value = m })
+				.ToDictionary(o => o.Key, o => o.Value);
 			var fullResult = vouchers.Where(o => o.VoucherType == VoucherType.SLR).Select(slr =>
 			{
+				// TODO: should we have multiple rows if SLR has >1 non-admin transaction?
 				var sbcInv = sbcInvoices.FirstOrDefault(o => o.RegisteredDate.Year == slr.Date.Year && o.VerNum == slr.SerialNumber);
 				var info = new InvoiceInfo { SLR = slr, SbcImageLink = sbcInv?.InvoiceLink };
 				if (matchesBySLR.TryGetValue(GetProperSN(slr), out var found))
@@ -150,9 +191,54 @@ namespace Scrape.Main.Tests
 					info.Invoice = found.Invoice;
 					info.LB = found.LB.Voucher;
 				}
+				if (info.LB == null && sbcInv != null)
+				{
+					if (sbcInvoiceToSingleLB.TryGetValue(sbcInv.VerNum, out var lb))
+						info.LB = lb;
+				}
 				return info;
-			}).ToList();
+			}).OrderByDescending(o => o.RegisteredDate).ToList();
 
+			var accountIdToAccountName = sie.First().Children.OfType<AccountRecord>().ToDictionary(o => o.AccountId, o => o.AccountName);
+			foreach (var accountId in accountIdToAccountName.Keys)
+			{
+				var found = summaries.FirstOrDefault(o => o.AccountId == accountId);
+				if (found != null)
+					accountIdToAccountName[accountId] = found.AccountName;
+			}
+			//vouchers.Where(o => o.VoucherType == VoucherType.FAS)
+			var header = new[] {
+				"Date",
+				"Missing",
+				"Amount",
+				"Supplier",
+				"AccountId",
+				"AccountName",
+				"Comments",
+				"InvoiceId",
+				"ReceiptId",
+				"CurrencyDate",
+				"TransactionText",
+				"TransactionRef"
+			};
+			var csv = string.Join("\n", new[] { header }.Concat(
+				fullResult.OrderByDescending(o => o.RegisteredDate)
+				.Select(o => new string[] {
+					o.RegisteredDate.ToSimpleDateString(),
+					"",
+					o.Amount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture),
+					o.SLR.Transactions.First().CompanyName,
+					o.MainAccountId.ToString(),
+					accountIdToAccountName[o.MainAccountId],
+					o.Invoice?.Comments ?? "",
+					o.Invoice?.Id.ToString() ?? "",
+					"", //o.LB?.Id ?? "",
+					o.LB?.Date.ToSimpleDateString() ?? "",
+					"",
+					string.IsNullOrEmpty(o.SbcImageLink) ? "" : $"https://varbrf.sbc.se{o.SbcImageLink}", //https://varbrf.sbc.se/InvoiceViewer.aspx?id=
+				}))
+				.Select(o => string.Join("\t", o))
+			);
 			// https://varbrf.sbc.se/Portalen/Ekonomi/Revisor/Underlagsparm/
 		}
 
@@ -162,6 +248,10 @@ namespace Scrape.Main.Tests
 			public VoucherRecord? LB { get; set; }
 			public InvoiceSummary? Invoice { get; set; }
 			public string? SbcImageLink { get; set; }
+
+			public int MainAccountId => SLR.Transactions.Where(t => t.AccountId >= 30000).OrderByDescending(t => Math.Abs(t.Amount)).First().AccountId;
+			public decimal Amount => -SLR.Transactions.First(t => t.AccountId == 24400).Amount; // ?? LB.Transactions.First(t => t.AccountId == 24400).Amount;
+			public LocalDate RegisteredDate => SLR.Date;
 
 			public override string ToString()
 			{
