@@ -123,7 +123,7 @@ namespace Scrape.Main.Tests
 			//	.Where(o => o.Transactions.GroupBy(t => t.AccountId).Any(t => t.Select(tt => Math.Sign(tt.Amount)).Distinct().Count() > 1))
 			//	.ToList();
 
-			var result = InvoiceSIEMatch.MatchLB_SLR(vouchers, summaries);
+			var result = InvoiceSIEMatch.MatchInvoiceWithLB_SLR(vouchers, summaries);
 
 			var missing = result.Matches.Where(o => o.SLR.Voucher == null).ToList();
 			if (missing.Any())
@@ -143,13 +143,13 @@ namespace Scrape.Main.Tests
 			var sbcInvoices = new sbc_scrape.SBC.InvoiceSource().ReadAll(dir).Where(o => years.Contains(o.RegisteredDate.Year));
 			// check integrity
 			{
-				var byVerNum = sbcInvoices.GroupBy(o => $"{o.RegisteredDate.Year}_{o.VerNum}").ToDictionary(g => g.Key, g => g.ToList());
+				var byVerNum = sbcInvoices.GroupBy(o => o.IdSLR).ToDictionary(g => g.Key, g => g.ToList());
 				var differentLinksSameVerNum = byVerNum.Where(o => o.Value.Select(p => p.InvoiceLink).Distinct().Count() > 2);
 				Assert.IsFalse(differentLinksSameVerNum.Any());
 
 				var invoiceKeys = byVerNum.Select(o => o.Key).ToList();
 				var slrs = vouchers.Where(o => o.VoucherType == VoucherType.SLR).ToList();
-				var slrKeys = slrs.Select(o => $"{o.Date.Year}_{o.SerialNumber}").ToList();
+				var slrKeys = slrs.Select(o => o.Id).ToList();
 				// All Invoices should exist as SLRs:
 				Assert.IsFalse(invoiceKeys.Except(slrKeys).Any());
 				// Note: Invoices correspondeing to SLRs are created only when payed, so no need to check the other way around
@@ -164,7 +164,7 @@ namespace Scrape.Main.Tests
 
 			// try getting LBs for sbcInvoices
 			// tricky thing with sbcInvoices - one row for each non-admin transaction in SLRs
-			var sbcInvoiceToLB = sbcInvoices.Where(o => o.PaymentDate != null).GroupBy(o => $"{o.RegisteredDate.Year}_{o.VerNum}")//.Select(o => new { A = 1, Sum = o.Sum(v => v.Amount) });
+			var sbcInvoiceToLB = sbcInvoices.Where(o => o.PaymentDate != null).GroupBy(o => o.IdSLR)//.Select(o => new { A = 1, Sum = o.Sum(v => v.Amount) });
 				.Select(grp =>
 				{
 					var invoiceSum = grp.Sum(v => v.Amount);
@@ -179,7 +179,20 @@ namespace Scrape.Main.Tests
 			var sbcMatchedLBSNs = sbcInvoiceToSingleLB.Select(o => o.Value.Id).ToList();
 			var stillUnmatchedLBs = result.UnmatchedLB.Where(o => !sbcMatchedLBSNs.Contains(o.Id)).ToList();
 
-			//string GetProperSN(VoucherRecord v) => $"{v.Date.Year}_{v.SerialNumber}";
+			var sbcMatchedSLRSNs = sbcInvoiceToSingleLB.Select(o => o.Key).ToList();
+			var stillUnmatchedSLRs = result.UnmatchedSLR.Where(o => !sbcMatchedSLRSNs.Contains(o.Id));
+			var matchLB_SLR = stillUnmatchedLBs.Select(o =>
+				new
+				{
+					LB = o,
+					SLRs = stillUnmatchedSLRs
+						.Where(slr => o.Date == slr.Date && o.CompanyName == slr.CompanyName && o.GetTransactionsMaxAmount() == slr.GetTransactionsMaxAmount()).ToList()
+				}).Where(o => o.SLRs.Count == 1).ToDictionary(o => o.SLRs.First().Id, o => o.LB);
+			stillUnmatchedSLRs = stillUnmatchedSLRs.Where(o => !matchLB_SLR.ContainsKey(o.Id));
+			var tmpMatchedLBIds = matchLB_SLR.Values.Select(o => o.Id).ToList();
+			stillUnmatchedLBs = stillUnmatchedLBs.Where(o => !tmpMatchedLBIds.Contains(o.Id)).ToList();
+
+			var lrs = vouchers.Where(o => o.VoucherType == VoucherType.TaxAndExpense).ToList();
 			var matchesBySLR = result.Matches.Where(o => o.SLR.Voucher != null)
 				.Select(m => new { Key = m.SLR.Voucher.Id, Value = m })
 				.ToDictionary(o => o.Key, o => o.Value);
@@ -198,6 +211,10 @@ namespace Scrape.Main.Tests
 				{
 					if (sbcInvoiceToSingleLB.TryGetValue(sbcInv.IdSLR, out var lb))
 						info.LB = lb;
+				}
+				if (info.LB == null && matchLB_SLR.ContainsKey(slr.Id))
+				{
+					info.LB = matchLB_SLR[slr.Id];
 				}
 				return info;
 			}).OrderByDescending(o => o.RegisteredDate).ToList();

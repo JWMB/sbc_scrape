@@ -77,7 +77,8 @@ namespace Scrape.Main.Tests
 
 	public class InvoiceSIEMatch
 	{
-		public static MatchingResult MatchLB_SLR(List<VoucherRecord> vouchers, List<InvoiceSummary> summaries, Dictionary<string, string>? alternativeCompanyNames = null)
+
+		public static MatchingResult MatchInvoiceWithLB_SLR(List<VoucherRecord> vouchers, List<InvoiceSummary> summaries, Dictionary<string, string>? alternativeCompanyNames = null)
 		{
 			var result = new MatchingResult();
 			var matches = summaries.Select(o => new InvoiceMatch(o, new VoucherOrReason(VoucherMissingReason.Unknown), new VoucherOrReason(VoucherMissingReason.Unknown))).ToList();
