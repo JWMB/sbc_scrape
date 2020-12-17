@@ -76,7 +76,7 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 			}
 		}
 
-		public string Id { get => $"{Series}_{SerialNumber}"; }
+		public string Id { get => $"{Date.Year}_{Series}_{SerialNumber}"; }
 		public string Series { get => $"{VoucherTypeCode}{VoucherForId}"; }
 
 		public override void Read(string[] cells)

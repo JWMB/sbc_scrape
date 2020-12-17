@@ -91,7 +91,7 @@ namespace Scrape.Main.Tests
 		[TestMethod]
 		public async Task MatchMediusFlowWithSIE()
 		{
-			var years = new[] { 2020 }; //2019, 
+			var years = new[] { 2019, 2020 }; //
 			var store = new FileSystemKVStore(Tools.GetOutputFolder());
 
 			var invoiceStore = new SBCScan.InvoiceStore(store);
@@ -126,7 +126,9 @@ namespace Scrape.Main.Tests
 			var result = InvoiceSIEMatch.MatchLB_SLR(vouchers, summaries);
 
 			var missing = result.Matches.Where(o => o.SLR.Voucher == null).ToList();
-			Assert.IsFalse(missing.Any());
+			if (missing.Any())
+				System.Diagnostics.Debugger.Break();
+			//Assert.IsFalse(missing.Any());
 
 			// Some urgent invoices go (by request) direct to payment, without passing MediusFlow (e.g. 2020 "Office for design", "Stenbolaget")
 			// The same goes for SBCs own periodical invoices and bank/interest payments
@@ -173,33 +175,34 @@ namespace Scrape.Main.Tests
 						LBs = lbs.Where(l => l.Date == paymentDate && l.Transactions.First(t => t.AccountId == 24400).Amount == invoiceSum).ToList()
 					};
 				});
-			var sbcInvoiceToSingleLB = sbcInvoiceToLB.Where(o => o.LBs.Count == 1).ToDictionary(o => o.Invoice.VerNum, o => o.LBs.Single());
-			var sbcMatchedLBSNs = sbcInvoiceToSingleLB.Select(o => GetProperSN(o.Value)).ToList();
-			var stillUnmatchedLBs = result.UnmatchedLB.Where(o => !sbcMatchedLBSNs.Contains(GetProperSN(o))).ToList();
+			var sbcInvoiceToSingleLB = sbcInvoiceToLB.Where(o => o.LBs.Count == 1).ToDictionary(o => o.Invoice.IdSLR, o => o.LBs.Single());
+			var sbcMatchedLBSNs = sbcInvoiceToSingleLB.Select(o => o.Value.Id).ToList();
+			var stillUnmatchedLBs = result.UnmatchedLB.Where(o => !sbcMatchedLBSNs.Contains(o.Id)).ToList();
 
-			string GetProperSN(VoucherRecord v) => $"{v.Date.Year}_{v.SerialNumber}";
+			//string GetProperSN(VoucherRecord v) => $"{v.Date.Year}_{v.SerialNumber}";
 			var matchesBySLR = result.Matches.Where(o => o.SLR.Voucher != null)
-				.Select(m => new { Key = GetProperSN(m.SLR.Voucher), Value = m })
+				.Select(m => new { Key = m.SLR.Voucher.Id, Value = m })
 				.ToDictionary(o => o.Key, o => o.Value);
 			var fullResult = vouchers.Where(o => o.VoucherType == VoucherType.SLR).Select(slr =>
 			{
 				// TODO: should we have multiple rows if SLR has >1 non-admin transaction?
-				var sbcInv = sbcInvoices.FirstOrDefault(o => o.RegisteredDate.Year == slr.Date.Year && o.VerNum == slr.SerialNumber);
+				//var sbcInv = sbcInvoices.FirstOrDefault(o => o.RegisteredDate.Year == slr.Date.Year && o.VerNum == slr.SerialNumber);
+				var sbcInv = sbcInvoices.FirstOrDefault(o => o.IdSLR == slr.Id);
 				var info = new InvoiceInfo { SLR = slr, SbcImageLink = sbcInv?.InvoiceLink };
-				if (matchesBySLR.TryGetValue(GetProperSN(slr), out var found))
+				if (matchesBySLR.TryGetValue(slr.Id, out var found))
 				{
 					info.Invoice = found.Invoice;
 					info.LB = found.LB.Voucher;
 				}
 				if (info.LB == null && sbcInv != null)
 				{
-					if (sbcInvoiceToSingleLB.TryGetValue(sbcInv.VerNum, out var lb))
+					if (sbcInvoiceToSingleLB.TryGetValue(sbcInv.IdSLR, out var lb))
 						info.LB = lb;
 				}
 				return info;
 			}).OrderByDescending(o => o.RegisteredDate).ToList();
 
-			var accountIdToAccountName = sie.First().Children.OfType<AccountRecord>().ToDictionary(o => o.AccountId, o => o.AccountName);
+			var accountIdToAccountName = sie.SelectMany(s => s.Children.OfType<AccountRecord>()).GroupBy(o => o.AccountId).ToDictionary(o => o.Key, o => o.First().AccountName);
 			foreach (var accountId in accountIdToAccountName.Keys)
 			{
 				var found = summaries.FirstOrDefault(o => o.AccountId == accountId);
@@ -221,6 +224,11 @@ namespace Scrape.Main.Tests
 				"TransactionText",
 				"TransactionRef"
 			};
+			//string ShortenComments(string comments)
+			//{
+			//	var rx = new Regex(@"\w\(\d+\) \(\d{2}-\d{2}");
+			//	"Jonas Beckeman (1325418) (02-15 17:48)"
+			//}
 			var csv = string.Join("\n", new[] { header }.Concat(
 				fullResult.OrderByDescending(o => o.RegisteredDate)
 				.Select(o => new string[] {
@@ -232,7 +240,7 @@ namespace Scrape.Main.Tests
 					accountIdToAccountName[o.MainAccountId],
 					o.Invoice?.Comments ?? "",
 					o.Invoice?.Id.ToString() ?? "",
-					"", //o.LB?.Id ?? "",
+					$"{o.SLR.Series} {o.SLR.SerialNumber}", //o.LB?.Id ?? "",
 					o.LB?.Date.ToSimpleDateString() ?? "",
 					"",
 					string.IsNullOrEmpty(o.SbcImageLink) ? "" : $"https://varbrf.sbc.se{o.SbcImageLink}", //https://varbrf.sbc.se/InvoiceViewer.aspx?id=

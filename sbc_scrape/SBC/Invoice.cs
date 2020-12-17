@@ -64,6 +64,8 @@ namespace sbc_scrape.SBC
 		public decimal Amount { get; set; }
 		public string InvoiceLink { get; set; }
 
+		public string IdSLR => $"{RegisteredDate.Year}_{VerSeries}_{VerNum}";
+
 		public override string ToString()
 		{
 			return $"{RegisteredDate.ToShortDateString()} {Amount} {AccountId} {Supplier}";
