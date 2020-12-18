@@ -107,11 +107,12 @@ namespace Scrape.Main.Tests
 			var vouchers = sie.SelectMany(o => o.Children).OfType<VoucherRecord>().ToList();
 
 			{
-				var slrsWithout24400 = vouchers.Where(o => o.VoucherType == VoucherType.SLR).Where(o => o.Transactions.Any(t => t.AccountId == 24400) == false);
+				var slrsWithout24400 = vouchers.Where(o => o.VoucherType == VoucherType.SLR || o.VoucherType == VoucherType.TaxAndExpense).Where(o => o.Transactions.Any(t => t.AccountId == 24400) == false);
 				Assert.IsFalse(slrsWithout24400.Any());
 			}
 			{
 				// SLR/LB shouldn't have different companynames on transactions (only if shortened)
+				// LR however has one for 24400 (person) and purpose on the other accounts
 				foreach (var item in vouchers.Where(o => o.VoucherType == VoucherType.SLR || o.VoucherType == VoucherType.LB))
 				{
 					var names = item.Transactions.Select(o => o.CompanyName).Distinct().OrderBy(o => o.Length).ToList();
@@ -175,12 +176,13 @@ namespace Scrape.Main.Tests
 						LBs = lbs.Where(l => l.Date == paymentDate && l.Transactions.First(t => t.AccountId == 24400).Amount == invoiceSum).ToList()
 					};
 				});
+			//var sbcInvoiceToSingleLB = sbcInvoiceToLB.Where(o => o.LBs.Count == 1).ToDictionary(o => o.Invoice.IdSLR, o => o.LBs.Single());
 			var sbcInvoiceToSingleLB = sbcInvoiceToLB.Where(o => o.LBs.Count == 1).ToDictionary(o => o.Invoice.IdSLR, o => o.LBs.Single());
-			var sbcMatchedLBSNs = sbcInvoiceToSingleLB.Select(o => o.Value.Id).ToList();
-			var stillUnmatchedLBs = result.UnmatchedLB.Where(o => !sbcMatchedLBSNs.Contains(o.Id)).ToList();
+			var stillUnmatchedLBs = result.UnmatchedLB.Except(sbcInvoiceToSingleLB.Select(o => o.Value)).ToList();
 
 			var sbcMatchedSLRSNs = sbcInvoiceToSingleLB.Select(o => o.Key).ToList();
 			var stillUnmatchedSLRs = result.UnmatchedSLR.Where(o => !sbcMatchedSLRSNs.Contains(o.Id));
+			//var stillUnmatchedSLRs = result.UnmatchedSLR.Except(o => !sbcMatchedSLRSNs.Contains(o.Id));
 			var matchLB_SLR = stillUnmatchedLBs.Select(o =>
 				new
 				{
@@ -191,8 +193,12 @@ namespace Scrape.Main.Tests
 			stillUnmatchedSLRs = stillUnmatchedSLRs.Where(o => !matchLB_SLR.ContainsKey(o.Id));
 			var tmpMatchedLBIds = matchLB_SLR.Values.Select(o => o.Id).ToList();
 			stillUnmatchedLBs = stillUnmatchedLBs.Where(o => !tmpMatchedLBIds.Contains(o.Id)).ToList();
+			//var xxstillUnmatchedLBs = stillUnmatchedLBs.E(o => !tmpMatchedLBIds.Contains(o.Id)).ToList();
 
 			var lrs = vouchers.Where(o => o.VoucherType == VoucherType.TaxAndExpense).ToList();
+			MatchSLR_LB(lrs, stillUnmatchedLBs);
+
+
 			var matchesBySLR = result.Matches.Where(o => o.SLR.Voucher != null)
 				.Select(m => new { Key = m.SLR.Voucher.Id, Value = m })
 				.ToDictionary(o => o.Key, o => o.Value);
@@ -265,6 +271,43 @@ namespace Scrape.Main.Tests
 				.Select(o => string.Join("\t", o))
 			);
 			// https://varbrf.sbc.se/Portalen/Ekonomi/Revisor/Underlagsparm/
+		}
+
+		public void MatchSLR_LB(IEnumerable<VoucherRecord> slrOrlr, IEnumerable<VoucherRecord> lb)
+		{
+			//Func<LocalDate, LocalDate, bool> dateMatch = (lrDate, lbDate) => lrDate == lbDate;
+
+			var dateMatchPasses = new List<Func<LocalDate, LocalDate, bool>>
+			{
+				(lrDate, lbDate) => lrDate == lbDate,
+				(lrDate, lbDate) => Math.Abs(Period.Between(lrDate, lbDate, PeriodUnits.Days).Days) <= 2
+			};
+
+			var properMatches = new List<(VoucherRecord SLRorLR, VoucherRecord LB)>();
+
+			foreach (var dateMatch in dateMatchPasses)
+			{
+				var matches = lb.Select(o =>
+				{
+					var lb_t24400 = o.Transactions.First(t => t.AccountId == 24400);
+					var foundLrs = slrOrlr.Where(l => dateMatch(l.Date, o.Date)).Where(l =>
+					{
+						var lr_t24400 = l.Transactions.First(t => t.AccountId == 24400);
+						return lr_t24400.Amount == -lb_t24400.Amount && lr_t24400.CompanyName == lb_t24400.CompanyName;
+					});
+					return new { LB = o, LRs = foundLrs.ToList() };
+				});
+				properMatches.AddRange(matches.Where(o => o.LRs.Count() == 1).Select(o => (o.LRs.First(), o.LB)));
+			}
+
+			//var matchLB_SLR = lb.Select(o =>
+			//	new
+			//	{
+			//		LB = o,
+			//		SLRs = slrOrlr
+			//			.Where(slr => o.Date == slr.Date && o.CompanyName == slr.CompanyName && o.GetTransactionsMaxAmount() == slr.GetTransactionsMaxAmount()).ToList()
+			//	}).Where(o => o.SLRs.Count == 1).ToDictionary(o => o.SLRs.First().Id, o => o.LB);
+
 		}
 
 		public class InvoiceInfo

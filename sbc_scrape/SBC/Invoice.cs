@@ -141,6 +141,21 @@ namespace sbc_scrape.SBC
 			//return duplicatesRemoved.OrderByDescending(o => o.InvoiceDate).ToList();
 		}
 
+		public override bool Equals(object obj)
+		{
+			return obj is Invoice invoice &&
+				   VerSeries == invoice.VerSeries &&
+				   VerNum == invoice.VerNum &&
+				   RegisteredDate == invoice.RegisteredDate &&
+				   AccountId == invoice.AccountId &&
+				   Amount == invoice.Amount;
+		}
+
+		public override int GetHashCode()
+		{
+			return HashCode.Combine(VerSeries, VerNum, RegisteredDate, AccountId, Amount);
+		}
+
 		public class SBCvsMediusEqualityComparer : IEqualityComparer<MediusFlowAPI.InvoiceSummary>
 		{
 			private readonly List<List<long>> mixedUpAccountIds = GlobalSettings.AppSettings.MixedUpAccountIdsParsed;

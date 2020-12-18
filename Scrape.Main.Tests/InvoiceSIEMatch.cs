@@ -77,7 +77,6 @@ namespace Scrape.Main.Tests
 
 	public class InvoiceSIEMatch
 	{
-
 		public static MatchingResult MatchInvoiceWithLB_SLR(List<VoucherRecord> vouchers, List<InvoiceSummary> summaries, Dictionary<string, string>? alternativeCompanyNames = null)
 		{
 			var result = new MatchingResult();

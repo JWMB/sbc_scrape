@@ -32,7 +32,7 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 
 	//[DebuggerTypeProxy(typeof(VoucherRecordDebugView))]
 	[DebuggerDisplay("{Tag} {VoucherTypeCode} {FormatDate(Date)} {GetTransactionsMaxAmount()} {GetTransactionsCompanyName()}")]
-	public class VoucherRecord : SIERecord, IWithChildren
+	public class VoucherRecord : SIERecord, IWithChildren, IEquatable<VoucherRecord?>
 	{
 		public override string Tag { get => "VER"; }
 
@@ -141,7 +141,35 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 			});
 		}
 
+		public override bool Equals(object? obj)
+		{
+			return Equals(obj as VoucherRecord);
+		}
+
+		public bool Equals(VoucherRecord? other)
+		{
+			return other != null &&
+				   SerialNumber == other.SerialNumber &&
+				   Date.Equals(other.Date) &&
+				   Series == other.Series;
+		}
+
+		public override int GetHashCode()
+		{
+			return HashCode.Combine(SerialNumber, Date, Series);
+		}
+
 		public static VoucherType[] DefaultIgnoreVoucherTypes = new VoucherType[] { VoucherType.AV, VoucherType.BS, VoucherType.FAS, VoucherType.Anulled, VoucherType.Accrual, VoucherType.CR };
+
+		public static bool operator ==(VoucherRecord? left, VoucherRecord? right)
+		{
+			return EqualityComparer<VoucherRecord>.Default.Equals(left, right);
+		}
+
+		public static bool operator !=(VoucherRecord? left, VoucherRecord? right)
+		{
+			return !(left == right);
+		}
 	}
 
 	public class TransactionRecord : SIERecord
