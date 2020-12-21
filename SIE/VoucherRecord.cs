@@ -67,6 +67,7 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 		//public string CompanyName { get => Transactions.Select(o => o.CompanyName).Where(o => !string.IsNullOrEmpty(o)).Distinct().SingleOrDefault() ?? string.Empty; }
 
 		private string? _companyNameCalced = null;
+		public void SetCompanyNameOverride(string name) => _companyNameCalced = name;
 		public string CompanyName
 		{
 			get {
