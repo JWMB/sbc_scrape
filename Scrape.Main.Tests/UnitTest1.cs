@@ -139,6 +139,11 @@ namespace Scrape.Main.Tests
 		[TestMethod]
 		public async Task MatchMediusFlowWithSIE()
 		{
+			// SLR/LR are added when expense is registered, and contains the expense accounts
+			// LB is when it's payed
+			// LB will be dated at or after SLR/LR
+
+			// SLRs company names are supposedly same as LB, but LRs can have
 			var years = new[] { 2017, 2018, 2019, 2020 }; //
 			var store = new FileSystemKVStore(Tools.GetOutputFolder());
 
@@ -263,16 +268,25 @@ namespace Scrape.Main.Tests
 				fullResult.OrderByDescending(o => o.RegisteredDate)
 				.Select(o =>
 				{
+					var supplier = o.SLR.Transactions.First().CompanyName;
+					var comments = o.Invoice != null ? ShortenComments(o.Invoice?.Comments ?? "")
+							: (o.LB?.CompanyName != o.SLR.Transactions.First().CompanyName ? o.LB?.CompanyName : "");
+					if (o.Invoice == null && !string.IsNullOrEmpty(comments))
+					{
+						// in this case SLR "CompanyName" is actually the purpose, and LB has recipient
+						supplier = comments;
+						comments = o.SLR.Transactions.First().CompanyName;
+					}
+
 					var accountChanged = o.SLR.Transactions.GroupBy(t => t.AccountId).Where(t => t.Select(tt => Math.Sign(tt.Amount)).Distinct().Count() > 1);
 					return new string[] {
 						o.RegisteredDate.ToSimpleDateString(),
 						"",
 						o.Amount.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture),
-						o.SLR.Transactions.First().CompanyName,
+						supplier,
 						o.MainAccountId.ToString(),
 						accountIdToAccountName[o.MainAccountId],
-						o.Invoice != null ? ShortenComments(o.Invoice?.Comments ?? "")
-							: (o.LB?.CompanyName != o.SLR.Transactions.First().CompanyName ? o.LB?.CompanyName : ""),
+						comments,
 						o.Invoice?.Id.ToString() ?? "",
 						$"{o.SLR.Series} {o.SLR.SerialNumber}", //o.LB?.Id ?? "",
 						o.LB?.Date.ToSimpleDateString() ?? "",
@@ -332,6 +346,22 @@ namespace Scrape.Main.Tests
 				goodMatches.ForEach(o => result.Add(o.A, o.Item2));
 			}
 			return result;
+		}
+
+		public class ExportRow
+		{
+			public LocalDate Date { get; set; }
+			public string Missing { get; set; }
+			public decimal Amount { get; set; }
+			public string Supplier { get; set; }
+			public int AccountId { get; set; }
+			public string AccountName { get; set; }
+			public string Comments { get; set; }
+			public string InvoiceId { get; set; }
+			public string ReceiptId { get; set; }
+			public LocalDate CurrencyDate { get; set; }
+			public string TransactionText { get; set; }
+			public string TransactionRef { get; set; }
 		}
 
 		public class InvoiceInfo
