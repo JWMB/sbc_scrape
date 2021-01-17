@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace SBCScan.REPL
@@ -33,6 +34,7 @@ namespace SBCScan.REPL
 						new GetImagesCmd(main),
 						new ScrapeCmd(main),
 						new FetchSBCHtml(main),
+						new FetchSIE(main),
 						//new FetchSBCInvoices(main),
 						new UpdateInvoices(main),
 						new UpdateAll(main),
@@ -169,6 +171,46 @@ namespace SBCScan.REPL
 			return null;
 		}
 	}
+
+	class FetchSIE : Command
+	{
+		private readonly Main main;
+		public FetchSIE(Main main) => this.main = main;
+		public override string Id => "fetchsie";
+
+		private static string filenameFormat = "output_YEAR.se";
+		public static List<int> GetExistingYears()
+		{
+			var existing = new DirectoryInfo(GlobalSettings.AppSettings.StorageFolderSIE).GetFiles(filenameFormat.Replace("YEAR", "*"));
+			var rx = new Regex(Regex.Escape(filenameFormat).Replace("YEAR", @"(\d{4})"));
+			return existing.Select(o => rx.Match(o.Name))
+				.Where(o => o.Success)
+				.Select(o => int.Parse(o.Groups[1].Value))
+				.ToList();
+		}
+
+		public override async Task<object> Evaluate(List<object> parms)
+		{
+			var existingYears = GetExistingYears();
+			var numYearsBack = 10;
+			var years = Enumerable.Range(DateTime.Today.Year - numYearsBack, numYearsBack)
+				.Except(existingYears).ToList();
+			if (!years.Contains(DateTime.Today.Year))
+				years.Add(DateTime.Today.Year);
+
+			Console.WriteLine($"Fetch years {string.Join(",", years)}");
+			foreach (var year in years)
+			{
+				Console.WriteLine($"{year}");
+				var data = await main.SBC.FetchSIEFile(year);
+				File.WriteAllText(Path.Combine(
+						GlobalSettings.AppSettings.StorageFolderSIE, filenameFormat.Replace("YEAR", year.ToString())), data);
+			}
+
+			return (object)true;
+		}
+	}
+
 
 	class CreateHouseIndexCmd : Command
 	{

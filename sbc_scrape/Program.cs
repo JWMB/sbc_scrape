@@ -47,6 +47,7 @@ namespace SBCScan
 					};
 				cmds.Add(new ListCmd(cmds));
 
+				FetchSIE.GetExistingYears();
 				var REPLRunner = new Runner(cmds);
 				await REPLRunner.RunREPL(CancellationToken.None);
 			}

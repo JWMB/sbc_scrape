@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using CommonTools;
 
 namespace SBCScan
 {
@@ -44,7 +45,7 @@ namespace SBCScan
 
 			fetcher = new Fetcher(driver, new FileSystemKVStore(settings.StorageFolderDownloadedFiles, extension: ""));
 
-			SBC = new SBCMain(driver);
+			SBC = new SBCMain(driver, fetcher);
 
 			await SBC.Login(settings.LoginPage_BankId, settings.UserLoginId_BankId, settings.UserLogin_BrfId);
 

@@ -27,6 +27,7 @@
     <ProjectReference Include="..\Scrape.IO\Scrape.IO.csproj" />
     <ProjectReference Include="..\Scraper.IO.Selenium\Scrape.IO.Selenium.csproj" />
     <ProjectReference Include="..\SIE\SIE.csproj" />
+    <ProjectReference Include="..\Tools\CommonTools.csproj" />
   </ItemGroup>
 
   <ItemGroup>

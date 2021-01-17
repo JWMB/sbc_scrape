@@ -16,6 +16,7 @@
     <ProjectReference Include="..\OCR\OCR.csproj" />
     <ProjectReference Include="..\sbc_scrape\sbc_scrape.csproj" />
     <ProjectReference Include="..\SIE\SIE.csproj" />
+    <ProjectReference Include="..\Tools\CommonTools.csproj" />
   </ItemGroup>
 
 </Project>

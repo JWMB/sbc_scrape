@@ -15,10 +15,12 @@ namespace SBCScan.SBC
 	public class SBCMain
 	{
 		private readonly RemoteWebDriver driver;
+		private readonly Fetcher fetcher;
 
-		public SBCMain(RemoteWebDriver driver)
+		public SBCMain(RemoteWebDriver driver, Fetcher fetcher)
 		{
 			this.driver = driver;
+			this.fetcher = fetcher;
 		}
 
 		public async Task Login(string loginUrl, string username, string brfId)
@@ -91,6 +93,67 @@ namespace SBCScan.SBC
 			var js = driver.FindElementsByXPath("//script[contains(., 'antiForgeryToken.init')]").FirstOrDefault()?.GetAttribute("innerText") ?? "";
 			var m = Regex.Match(js, @"(?<=antiForgeryToken\.init.+value=\"")[^\""]+");
 			return m.Value;
+		}
+
+		public async Task<string> FetchSIEFile(int year)
+		{
+			//Load what's in the relevant iFrame:
+			driver.NavigateAndWaitReadyIfNotThere("https://varbrf.sbc.se/eos/hg2/reports/19/?embed=1");
+			var scriptWithDef = driver.FindElement(By.XPath("//script[@id='report-layout-str']"));
+			var json = Newtonsoft.Json.Linq.JObject.Parse(scriptWithDef.GetAttribute("innerHTML"));
+			var nodes = json.SelectTokens("$..widgets..data.nodes[*]");
+			var opop = nodes.Where(n => n.Value<string>("title").StartsWith(year.ToString())).FirstOrDefault();
+			var idForSelectedYear = opop.Value<string>("id");
+
+			return await GetSIEForId(idForSelectedYear);
+
+			//var url = "https://varbrf.sbc.se/Portalen/Ekonomi/Revisor/SIE/";
+			//driver.NavigateAndWaitReadyIfNotThere(url);
+
+			//"regions": {
+			//			"top": {
+			//				"rows": [
+			//			{
+			//				 "widgets": [
+			//                  "data": {
+			//				"nodes": [
+			//								{
+			//					"disabled": false,
+			//                                       "level": 0,
+			//                                       "selected": false,
+			//                                       "id": "__nochoice__",
+			//                                       "title": "Inget val"
+			//								},
+
+
+			//var yearDropdown = "//div[contains(@class, 'tiki-dropdown')]/button";
+			//var buttonSelectYear = driver.FindElement(By.XPath(yearDropdown));
+			//buttonSelectYear.Click();
+
+			//var selectedYearElement = driver.FindElement(By.XPath($"//div[contains(@class, 'tiki-dropdown-optionsview')]//li[contains(text(), '{year}')]"));
+			//var idForSelectedYear = selectedYearElement.GetAttribute("id");
+			//selectedYearElement.Click();
+
+			//var buttonCreate = driver.FindElement(By.XPath("//button[contains(text(), 'Skapa SIE-fil')]"));
+			//buttonCreate.Click();
+
+			async Task<string> GetSIEForId(string id)
+			{
+				var setYearUrl = "https://varbrf.sbc.se/eos/hg2/protocol/list/select/workspaces[19].axes[2]";
+				var config = new Scrape.IO.FetchConfig
+				{
+					Method = Scrape.IO.MethodMode.Post,
+					Headers = new Dictionary<string, string> {
+						{ "Content-Type", "application/x-www-form-urlencoded; charset=UTF-8" }
+					},
+					Body = new Dictionary<string, string> { { "data", $"[\"{id}\"]" } } //$"[\"{id}\"]"
+				};
+				var resultSetYear = await fetcher.Fetch(setYearUrl, config);
+
+				var getSIEUrl = $"https://varbrf.sbc.se/eos/appspecific/Webbeko/extraobjects/SIEExport.php?ws=19&object=extraobjects[1]";
+				var result = await fetcher.Fetch(getSIEUrl, new Scrape.IO.FetchConfig { Method = Scrape.IO.MethodMode.Get });
+				return result.Body?.ToString();
+			}
 		}
 
 		public Task<string> FetchHtmlSource(string urlPath, int year, int monthFrom = 1, int monthTo = 12)

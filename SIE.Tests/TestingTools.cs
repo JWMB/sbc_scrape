@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace SIE.Tests
 {
-	class Tools
+	class TestingTools
 	{
 		public static async Task<List<RootRecord>> ReadSIEFiles(IEnumerable<string>? files = null)
 		{

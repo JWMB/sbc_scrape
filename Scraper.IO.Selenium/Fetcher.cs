@@ -94,9 +94,6 @@ body: {bodyConversion}
 					url += (url.Contains("?") ? "&" : "?") + string.Join("&", parms.Select(o => $"{System.Net.WebUtility.UrlEncode(o.Key)}={System.Net.WebUtility.UrlEncode(o.Value?.ToString() ?? "")}"));
 				config.Body = null;
 			}
-			var body = config.Body == null ? null : JsonConvert.SerializeObject(config.Body);
-
-			static string NullOrQuoted(string? str) => str == null ? "null" : $"'{str}'";
 
 			var script = $@"{additionalScripts}
 fetch('{url}',
@@ -104,7 +101,7 @@ fetch('{url}',
 	method: '{config.Method}',
 	mode: '{config.Mode}',
 	headers: {{ {(config.Headers == null ? "" : string.Join(", ", config.Headers.Select(item => $"'{item.Key}': '{item.Value}'")))} }},
-	body: {NullOrQuoted(body)},
+	body: {FormatBody(config)},
 	credentials: '{config.Credentials}',
 }})
 {responseParsing}
@@ -160,6 +157,37 @@ fetch('{url}',
 			{
 			}
 			return new FetchResponse { Body = response, Headers = null, Status = null };
+		}
+
+		string FormatBody(FetchConfig config)
+		{
+			if (config.Headers?.GetOrDefault("Content-Type", "").ToLower().Contains("x-www-form-urlencoded") == true)
+			{
+				if (config.Body is System.Collections.IDictionary dict)
+					return FormDataFunction(dict);
+				throw new ArgumentException($"forn data but body is not IDictionary ({config.Body?.GetType().Name})");
+			}
+			var body = config.Body == null ? null : JsonConvert.SerializeObject(config.Body);
+
+			return NullOrQuoted(body);
+
+			string NullOrQuoted(string? str) => str == null ? "null" : $"'{str}'";
+
+			string FormDataFunction(System.Collections.IDictionary formData)
+			{
+				var dict = new Dictionary<string, string>();
+				foreach (var item in formData.Keys)
+					if (item != null)
+						dict.Add(NullOrQuoted(item.ToString()), NullOrQuoted(formData[item]?.ToString()));
+
+				return $@"
+function() {{
+	const usp = new URLSearchParams();
+	{string.Join("\n", dict.Select(o => $"usp.append({o.Key}, {o.Value});"))}
+	return usp;
+}}()";
+			}
+
 		}
 	}
 }

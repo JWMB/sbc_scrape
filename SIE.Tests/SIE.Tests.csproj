@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\SIE\SIE.csproj" />
+    <ProjectReference Include="..\Tools\CommonTools.csproj" />
   </ItemGroup>
 
 </Project>

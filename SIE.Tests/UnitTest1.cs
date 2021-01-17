@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using CommonTools;
 using Xunit;
 
 namespace SIE.Tests
@@ -30,41 +31,11 @@ namespace SIE.Tests
 			Assert.Equal("040 - 12345", record.PhoneNumber);
 		}
 
-
-		static (IEnumerable<T> onlyIn1, IEnumerable<T> onlyIn2, IEnumerable<T> intersection) GetListDiffs<T>(IEnumerable<T> e1, IEnumerable<T> e2)
-		{
-			var intersection = e1.Intersect(e2);
-			return (e1.Except(intersection), e2.Except(intersection), intersection);
-		}
-		static (List<T1> onlyIn1, List<T2> onlyIn2)
-			GetListDiffs<T1, T2, V>(IEnumerable<T1> e1, Func<T1, V> getter1,
-			IEnumerable<T2> e2, Func<T2, V> getter2)
-		{
-			var vals2 = e2.Select(getter2).ToList();
-			var onlyIn1 = new List<T1>();
-			var e2Copy = new List<T2>(e2);
-			foreach (var e in e1)
-			{
-				var val = getter1(e);
-				var index = vals2.IndexOf(val);
-				if (index >= 0)
-				{
-					vals2.RemoveAt(index);
-					e2Copy.RemoveAt(index);
-				}
-				else
-				{
-					onlyIn1.Add(e);
-				}
-			}
-			return (onlyIn1, e2Copy);
-		}
-
 		[Fact]
 		public async Task CheckIntegrity()
 		{
 			var year = 2020;
-			var roots = await Tools.ReadSIEFiles(new[] { "output_20201209.se" });
+			var roots = await TestingTools.ReadSIEFiles(new[] { "output_20201209.se" });
 			var allVouchers = roots.SelectMany(o => o.Children).OfType<VoucherRecord>();
 
 			var resultRecords = roots.SelectMany(o => o.Children).OfType<ResultRecord>();
@@ -117,11 +88,11 @@ namespace SIE.Tests
 
 				// RES records don't include accounts < 30000
 				var summedRESTransactions = summedTransactions.Where(o => o.AccountId >= 30000);
-				var (onlyInTx, onlyInRes) = GetListDiffs(summedRESTransactions, o => o.AccountId, resultRecords, o => o.AccountId);
+				var diff = summedRESTransactions.GetListDiffs(o => o.AccountId, resultRecords, o => o.AccountId);
 				// Any transactions with accountIds not present in RES should be 0 (probably incorrectly booked)
-				Assert.DoesNotContain(onlyInTx, o => o.Sum != 0);
+				Assert.DoesNotContain(diff.OnlyIn1, o => o.Sum != 0);
 				// All RES record accounts are present in transactions
-				Assert.False(onlyInRes.Any());
+				Assert.False(diff.OnlyIn2.Any());
 
 				var diffs = resultRecords.Select(rr => new { AccountId = rr.AccountId, Diff = rr.Amount - summedRESTransactions.First(v => v.AccountId == rr.AccountId).Sum });
 				Assert.DoesNotContain(diffs, o => o.Diff != 0);
@@ -132,7 +103,7 @@ namespace SIE.Tests
 		public async Task TestGetSalaries()
 		{
 			var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
-			var roots = await Tools.ReadSIEFiles(files);
+			var roots = await TestingTools.ReadSIEFiles(files);
 			var allVouchers = roots.SelectMany(o => o.Children).OfType<VoucherRecord>();
 
 			var ma = string.Join("\n", allVouchers.Where(o => o.VoucherTypeCode == "MA").OrderBy(o => o.Date).Select(o => o.ToHierarchicalString()));
@@ -146,7 +117,7 @@ namespace SIE.Tests
 		[Fact]
 		public async Task Experiment()
 		{
-			var root = (await Tools.ReadSIEFiles(new[] { "output_20201209.se" })).First();
+			var root = (await TestingTools.ReadSIEFiles(new[] { "output_20201209.se" })).First();
 			var byType = root.Children.OfType<VoucherRecord>().GroupBy(v => v.VoucherTypeCode).ToDictionary(g => g.Key, g => g.ToList());
 		}
 
@@ -155,7 +126,7 @@ namespace SIE.Tests
 		public async Task TestCreateMatched()
 		{
 			var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
-			var roots = await Tools.ReadSIEFiles(files);
+			var roots = await TestingTools.ReadSIEFiles(files);
 			var allAccountTypes = roots.SelectMany(o => o.Children).OfType<AccountRecord>().GroupBy(o => o.AccountId).ToDictionary(o => o.Key, o => string.Join(" | ", o.Select(o => o.AccountName).Distinct()));
 
 			var allVouchers = roots.SelectMany(o => o.Children).OfType<VoucherRecord>();
@@ -181,7 +152,7 @@ namespace SIE.Tests
 		public async Task Test1()
 		{
 			var files = Enumerable.Range(2010, 10).Select(o => $"output_{o}.se");
-			var roots = await Tools.ReadSIEFiles(files); // new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
+			var roots = await TestingTools.ReadSIEFiles(files); // new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
 			var allVouchers = roots.SelectMany(o => o.Children).OfType<VoucherRecord>();
 
 			var annoyingAccountIds = new[] { 24400, 26410 }.ToList();

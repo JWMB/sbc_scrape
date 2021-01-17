@@ -20,7 +20,7 @@ namespace SIE.Tests
 		[Fact]
 		public async Task ResultatRakningCsv()
 		{
-			var roots = await Tools.ReadSIEFiles();
+			var roots = await TestingTools.ReadSIEFiles();
 			var all = roots.Select(root => {
 				var period = root.Children.OfType<ReportPeriodRecord>().FirstOrDefault();
 				if (period == null)
@@ -69,11 +69,11 @@ namespace SIE.Tests
 		[Fact]
 		public async Task GetAccounts()
 		{
-			var roots = await Tools.ReadSIEFiles(new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
+			var roots = await TestingTools.ReadSIEFiles(new[] { "output_2016.se", "output_2017.se", "output_2018.se" });
 			var result = roots.SelectMany(o => o.Children.OfType<AccountRecord>()).GroupBy(o => o.AccountId).Select(o => o.First()).ToDictionary(o => o.AccountId, o => new AccountInfo { Name = o.AccountName, Source = "SIE" });
 			//string.Join("\n",  Select(o => $"{o.AccountId}\t{o.AccountName}"));
 
-			var sieDir = Path.Join(Tools.GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
+			var sieDir = Path.Join(TestingTools.GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
 			var tmp = File.ReadAllText(Path.Combine(sieDir, "accountsexport.txt"));
 			var xx = tmp.Split('\n').Skip(1).Where(o => o.Length > 0).Select(line => line.Split('\t')).ToDictionary(o => int.Parse(o[0]), o => o[1].Trim());
 

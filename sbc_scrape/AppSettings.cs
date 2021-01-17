@@ -20,6 +20,7 @@ namespace SBCScan
 		public string StorageFolderDownloadedFiles { get; set; }
 		public string PathToTesseract { get; set; }
 		public string StorageFolderSbcHtml { get; set; }
+		public string StorageFolderSIE { get; set; }
 
 
 		public string MixedUpAccountIds { get; set; }
@@ -32,6 +33,7 @@ namespace SBCScan
 			StorageFolderDownloadedFiles = PathExtensions.Parse(StorageFolderDownloadedFiles);
 			PathToTesseract = PathExtensions.Parse(PathToTesseract);
 			StorageFolderSbcHtml = PathExtensions.Parse(StorageFolderSbcHtml);
+			StorageFolderSIE = PathExtensions.Parse(StorageFolderSIE);
 		}
 	}
 
