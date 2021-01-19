@@ -156,6 +156,11 @@ namespace SBCScan.REPL
 				File.WriteAllText(Path.Combine(
 					GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(src.FilenamePattern, year)), html);
 			}
+
+			{
+				var sieCmd = new FetchSIE(main);
+				await sieCmd.Evaluate();
+			}
 		}
 
 	}
@@ -191,23 +196,30 @@ namespace SBCScan.REPL
 
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			var existingYears = GetExistingYears();
-			var numYearsBack = 10;
-			var years = Enumerable.Range(DateTime.Today.Year - numYearsBack, numYearsBack)
-				.Except(existingYears).ToList();
-			if (!years.Contains(DateTime.Today.Year))
-				years.Add(DateTime.Today.Year);
+			return (object)await Evaluate();
+		}
 
-			Console.WriteLine($"Fetch years {string.Join(",", years)}");
+		public async Task<bool> Evaluate(IEnumerable<int> years = null)
+		{
+			if (years == null)
+			{
+				var existingYears = GetExistingYears();
+				var numYearsBack = 10;
+				years = Enumerable.Range(DateTime.Today.Year - numYearsBack, numYearsBack)
+					.Except(existingYears);
+				if (!years.Contains(DateTime.Today.Year)) // Always update latest year
+					years = years.Concat(new[] { DateTime.Today.Year });
+			}
+
+			Console?.WriteLine($"Fetch SIE for years {string.Join(",", years)}");
 			foreach (var year in years)
 			{
-				Console.WriteLine($"{year}");
+				Console?.WriteLine($"{year}");
 				var data = await main.SBC.FetchSIEFile(year);
 				File.WriteAllText(Path.Combine(
 						GlobalSettings.AppSettings.StorageFolderSIE, filenameFormat.Replace("YEAR", year.ToString())), data);
 			}
-
-			return (object)true;
+			return true;
 		}
 	}
 
