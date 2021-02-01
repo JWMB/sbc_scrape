@@ -9,6 +9,13 @@ namespace SIE.Tests
 {
 	class TestingTools
 	{
+		public static async Task<List<RootRecord>> ReadSIEFiles(IEnumerable<int> years)
+		{
+			var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");
+			var files = years.Select(year => $"output_{year}.se");
+			return await SBCExtensions.ReadSIEFiles(files.Select(file => Path.Combine(sieDir, file)));
+		}
+
 		public static async Task<List<RootRecord>> ReadSIEFiles(IEnumerable<string>? files = null)
 		{
 			var sieDir = Path.Join(GetCurrentOrSolutionDirectory(), "sbc_scrape", "scraped", "SIE");

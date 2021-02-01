@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using Xunit;
 
@@ -15,6 +16,16 @@ namespace SIE.Tests
 		{
 			var exp = (int)Math.Pow(10, insignificantDigits);
 			return val / exp * exp;
+		}
+
+		[Fact]
+		public async Task ResultatRakningCsvX()
+		{
+			var numYears = 10;
+			var lastYear = DateTime.Now.Year - 1;
+			var years = Enumerable.Range(lastYear - numYears + 1, numYears);
+			var sie = await TestingTools.ReadSIEFiles(years);
+			var csv = SIE.Exports.ResultatRakningCsv(sie);
 		}
 
 		[Fact]

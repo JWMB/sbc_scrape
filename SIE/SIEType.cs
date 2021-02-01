@@ -44,10 +44,34 @@ namespace SIE
 
 		public static async Task<RootRecord> Read(string path)
 		{
-			Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
-			var encoding = Encoding.GetEncoding(865); // "IBM865");
+			var encoding = DetectEncoding(path);
 			using var sr = new StreamReader(path, encoding);
 			return await Read(sr);
+		}
+
+		private static Encoding DetectEncoding(string path)
+		{
+			//var bufLen = 1024;
+			//var buf = new byte[bufLen];
+			//using (var fs = File.OpenRead(path))
+			//{
+			//	var read = fs.Read(buf, 0, bufLen);
+			//	for (int i = 0; i < read; i++)
+			//	{
+			//		//if (buf[i] == (byte)0x10)
+			//	}
+			//	fs.Close();
+			//}
+
+			//foreach (var line in lines)
+			//{
+			//	if (line.StartsWith("#KONTO 11110"))
+			//	{ }
+			//	if (line.StartsWith("#KONTO 11201"))
+			//		break;
+			//}
+			Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+			return Encoding.GetEncoding(865); // "IBM865");
 		}
 
 		public static async Task<RootRecord> Read(StreamReader sr)
