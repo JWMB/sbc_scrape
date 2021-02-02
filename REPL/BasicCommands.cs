@@ -76,11 +76,6 @@ namespace REPL
 		public override string Id => "csv";
 		public override Task<object> Evaluate(List<object> parms)
 		{
-			var cultureInfo = (System.Globalization.CultureInfo)System.Globalization.CultureInfo.CurrentCulture.Clone();
-			cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
-			cultureInfo.NumberFormat.NumberGroupSeparator = "";
-			var conf = new CsvHelper.Configuration.CsvConfiguration(cultureInfo) { Delimiter = "\t" };
-
 			if (parms.Count > 1 && parms[1] is string str) // Deserialize
 			{
 				var typeName = parms[0] as string;
@@ -90,16 +85,28 @@ namespace REPL
 					throw new ArgumentException($"Type not found: {typeName}");
 
 				using var reader = new StringReader(str);
-				using var csv = new CsvHelper.CsvReader(reader, conf);
+				using var csv = new CsvHelper.CsvReader(reader, GetDefaultCsvConfig());
 				return Task.FromResult<object>(csv.GetRecords(type).ToList());
 			}
 
 			using (var writer = new StringWriter())
-			using (var csv = new CsvHelper.CsvWriter(writer, conf))
+			using (var csv = new CsvHelper.CsvWriter(writer, GetDefaultCsvConfig()))
 			{
 				csv.WriteRecords(parms[0] as IEnumerable<object>);
 				return Task.FromResult<object>(writer.ToString());
 			}
+		}
+
+		public static CsvHelper.Configuration.CsvConfiguration GetDefaultCsvConfig()
+		{
+			var cultureInfo = (System.Globalization.CultureInfo)System.Globalization.CultureInfo.CurrentCulture.Clone();
+			cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
+			cultureInfo.NumberFormat.NumberGroupSeparator = "";
+			var conf = new CsvHelper.Configuration.CsvConfiguration(cultureInfo) {
+				Delimiter = "\t",
+			};
+			//conf.TypeConverterCache.AddConverter<NodaTime>
+			return conf;
 		}
 	}
 

@@ -4,10 +4,8 @@ using SIE;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
-namespace Scrape.Main.Tests
+namespace sbc_scrape.Joining
 {
 	public class InvoiceMatch
 	{

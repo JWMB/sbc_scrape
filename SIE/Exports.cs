@@ -92,6 +92,8 @@ namespace SIE
 				{ "Financial:OutgoingInterest", "Räntekostnader och liknande resultatposter" },
 				{ "Financial:Sum", "Summa finansiella poster" },
 				{ "ResultPostFinancials", "RESULTAT EFTER FINANSIELLA POSTER" },
+				{ "ResultPreFinExDepreciation", "" },
+				{ "ResultPostFinExDepreciation", "Resultat ex. avskriningar" },
 				{ "IncomeTax", "Statlig inkomstskatt" }
 			};
 

@@ -93,14 +93,6 @@ namespace Scrape.Main.Tests
 				return $"{v}\n\t\t" + string.Join("\n\t\t", v.Transactions.Select(o => $"{o.Amount} {o.CompanyName}"));
 			}
 			var dbg = string.Join("\n", withDate.Select(o => $"{o.Item1.ToSimpleDateString()}\t{o.Item2}"));
-			//var optop = transactions.Select(tx => {
-			//	var exactMatch = new List<VoucherRecord>();
-			//	var sameDate = unusedVouchers.Where(o => o.Date == NodaTime.LocalDate.FromDateTime(tx.AccountingDate)).ToList();
-			//	return (tx, sameDate);
-			//});
-			//var dbg = string.Join("\n",
-			//	optop.Select(o => $"{(o.Item2.Any() == true ? "1" : "0")}\t{o.Item1} {o.Item1.CurrencyDate.ToShortDateString()}\n\t{string.Join("\n\t", o.Item2.Select(v => FullVoucher(v)))}") //$"{v.VoucherTypeCode} {v.GetTransactionsCompanyName()} {v.GetTransactionsMaxAmount()}"))}")
-			//	);
 
 			var invoices = new InvoiceSource().ReadAll(htmlFolder).Where(r => r.RegisteredDate.Year == year).ToList();
 			var receipts = new ReceiptsSource().ReadAll(htmlFolder).Where(r => r.Date.Year == year).ToList();
