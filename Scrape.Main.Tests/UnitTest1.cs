@@ -174,20 +174,25 @@ namespace Scrape.Main.Tests
 				{
 					Delimiter = "\t",
 				};
-				conf.TypeConverterCache.AddConverter<LocalDate>(new LocalTimeConverter());
+				conf.TypeConverterCache.AddConverter<LocalDate>(new CustomConverter<LocalDate?> { FromObject = value => value == null ? "" : value.Value.ToSimpleDateString() });
 				return conf;
 			}
 		}
-		class LocalTimeConverter : CsvHelper.TypeConversion.ITypeConverter
+
+		class CustomConverter<T> : CsvHelper.TypeConversion.ITypeConverter
 		{
+			public Func<T, string>? FromObject { get; set; } = null;
+			public Func<string, T>? FromString { get; set; } = null;
+
 			public object ConvertFromString(string text, CsvHelper.IReaderRow row, CsvHelper.Configuration.MemberMapData memberMapData)
 			{
-				throw new NotImplementedException();
+				if (FromString == null) throw new NotImplementedException();
+				return FromString(text);
 			}
-
 			public string ConvertToString(object value, CsvHelper.IWriterRow row, CsvHelper.Configuration.MemberMapData memberMapData)
 			{
-				return value == null ? "" : ((LocalDate)value).ToSimpleDateString();
+				if (FromObject == null) throw new NotImplementedException();
+				return FromObject((T)value);
 			}
 		}
 
