@@ -35,6 +35,10 @@ namespace REPL
 				+ string.Join("\n",
 				commands.Select(c => $"{c.GetType().Name.Replace("Cmd", "")}: {c.Id}\n{c.Help}")));
 		}
+		public Task<string> Evaluate(int someValue)
+		{
+			return Task.FromResult($"Hello {someValue}");
+		}
 	}
 
 	//TODO: will require switching from Console.ReadLine
@@ -85,28 +89,36 @@ namespace REPL
 					throw new ArgumentException($"Type not found: {typeName}");
 
 				using var reader = new StringReader(str);
-				using var csv = new CsvHelper.CsvReader(reader, GetDefaultCsvConfig());
+				using var csv = new CsvHelper.CsvReader(reader, CsvConfig);
 				return Task.FromResult<object>(csv.GetRecords(type).ToList());
 			}
 
 			using (var writer = new StringWriter())
-			using (var csv = new CsvHelper.CsvWriter(writer, GetDefaultCsvConfig()))
+			using (var csv = new CsvHelper.CsvWriter(writer, CsvConfig))
 			{
 				csv.WriteRecords(parms[0] as IEnumerable<object>);
 				return Task.FromResult<object>(writer.ToString());
 			}
 		}
 
-		public static CsvHelper.Configuration.CsvConfiguration GetDefaultCsvConfig()
+		private static CsvHelper.Configuration.CsvConfiguration? csvConfig;
+		public static CsvHelper.Configuration.CsvConfiguration CsvConfig
 		{
-			var cultureInfo = (System.Globalization.CultureInfo)System.Globalization.CultureInfo.CurrentCulture.Clone();
-			cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
-			cultureInfo.NumberFormat.NumberGroupSeparator = "";
-			var conf = new CsvHelper.Configuration.CsvConfiguration(cultureInfo) {
-				Delimiter = "\t",
-			};
-			//conf.TypeConverterCache.AddConverter<NodaTime>
-			return conf;
+			get
+			{
+				if (csvConfig == null)
+				{
+					var cultureInfo = (System.Globalization.CultureInfo)System.Globalization.CultureInfo.CurrentCulture.Clone();
+					cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
+					cultureInfo.NumberFormat.NumberGroupSeparator = "";
+					csvConfig = new CsvHelper.Configuration.CsvConfiguration(cultureInfo)
+					{
+						Delimiter = "\t",
+					};
+				}
+				return csvConfig;
+			}
+			set { csvConfig = value; }
 		}
 	}
 

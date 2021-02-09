@@ -62,7 +62,20 @@ namespace REPL
 			object? result = null;
 			try
 			{
-				result = await found.Evaluate(input.Skip(skip).Cast<object>().ToList());
+				var actualArguments = input.Skip(skip).Cast<object>().ToList();
+				var method = Binding.BindMethod(found.GetType().GetMethods().Where(o => o.Name == nameof(Command.Evaluate)), actualArguments);
+				if (method != null)
+				{
+					var task = (Task)method.Invoke(found, actualArguments.ToArray());
+					await task.ConfigureAwait(false);
+
+					var resultProperty = task.GetType().GetProperty("Result");
+					result = resultProperty.GetValue(task);
+				}
+				else
+				{
+					result = await found.Evaluate(actualArguments);
+				}
 			}
 			catch (Exception ex)
 			{
