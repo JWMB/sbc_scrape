@@ -46,6 +46,7 @@ namespace sbc_scrape.Joining
 
 			var summaries = invoices.Select(o => InvoiceSummary.Summarize(o)).Where(o => years.Contains(o.InvoiceDate.Value.Year)).ToList();
 
+			// TODO: hardcoded!!
 			var companyAliases = new Dictionary<string, string> {
 				{ "Sita Sverige AB", "SUEZ Recycling AB" },
 				{ "Fortum Värme", "Stockholm Exergi" }
@@ -55,7 +56,14 @@ namespace sbc_scrape.Joining
 
 			var missing = result.Matches.Where(o => o.SLR.Voucher == null).ToList();
 			if (missing.Any())
-				System.Diagnostics.Debugger.Break();
+			{
+				// Ignore those with payment later than latest found payment:
+				var latestDate = vouchers.Where(o => o.VoucherType == VoucherType.SLR).Max(o => o.Date).ToDateTimeUnspecified();
+				if (missing.Any(o => o.Invoice.DueDate < latestDate))
+				{
+					System.Diagnostics.Debugger.Break();
+				}
+			}
 			//Assert.IsFalse(missing.Any());
 
 			// Some urgent invoices go (by request) direct to payment, without passing MediusFlow (e.g. 2020 "Office for design", "Stenbolaget")

@@ -141,7 +141,7 @@ namespace Scrape.Main.Tests
 		[TestMethod]
 		public async Task MatchMediusFlowWithSIE__X()
 		{
-			var years = new[] { 2017, 2018, 2019, 2020 }; //
+			var years = new[] { 2017, 2018, 2019, 2020, 2021 };
 			var store = new FileSystemKVStore(Tools.GetOutputFolder());
 
 			var invoiceStore = new SBCScan.InvoiceStore(store);
