@@ -36,7 +36,7 @@ namespace SBCScan.REPL
 						new FetchSBCHtml(main),
 						new FetchSIE(main),
 						//new FetchSBCInvoices(main),
-						new UpdateInvoices(main),
+						//new UpdateInvoices(main),
 						new UpdateAll(main),
 					});
 			return currentCommandList.Concat(new Command[] { new ListCmd(currentCommandList) });
@@ -132,12 +132,8 @@ namespace SBCScan.REPL
 		public override string Id => "update";
 		public override async Task<object> Evaluate(List<object> parms)
 		{
-			await Execute(main, new HtmlSource[] { new BankTransactionSource(), new ReceiptsSource(), new InvoiceSource() });
-			return null;
-		}
+			var htmlSources = new HtmlSource[] { new BankTransactionSource(), new ReceiptsSource(), new InvoiceSource() };
 
-		public static async Task Execute(Main main, IEnumerable<HtmlSource> htmlSources)
-		{
 			{
 				//MediusFlow
 				//var mediusExisting = await main.MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate.Year == year);
@@ -158,24 +154,27 @@ namespace SBCScan.REPL
 			}
 
 			{
-				var sieCmd = new FetchSIE(main);
-				await sieCmd.Evaluate();
+				// TODO: disable for now b/c of encoding problem with SIE fetch
+				//var sieCmd = new FetchSIE(main);
+				//await sieCmd.Evaluate();
+				Console.WriteLine($"SIE download disabled b/c encdding problem, please download from {SBC.SBCMain.MainUrlSIE}, and move to folder {GlobalSettings.AppSettings.StorageFolderSIE} (see naming convention)");
 			}
-		}
 
-	}
-
-	class UpdateInvoices : Command
-	{
-		private readonly Main main;
-		public UpdateInvoices(Main main) => this.main = main;
-		public override string Id => "updateinvoices";
-		public override async Task<object> Evaluate(List<object> parms)
-		{
-			await UpdateAll.Execute(main, new HtmlSource[] { new InvoiceSource() });
 			return null;
 		}
 	}
+
+	//class UpdateInvoices : Command
+	//{
+	//	private readonly Main main;
+	//	public UpdateInvoices(Main main) => this.main = main;
+	//	public override string Id => "updateinvoices";
+	//	public override async Task<object> Evaluate(List<object> parms)
+	//	{
+	//		await UpdateAll.Execute(main, new HtmlSource[] { new InvoiceSource() });
+	//		return null;
+	//	}
+	//}
 
 	class FetchSIE : Command
 	{

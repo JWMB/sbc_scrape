@@ -28,8 +28,10 @@ Once loaded, run
 ```> scrape [yyyy-MM-dd]```  
 to begin scraping. **TODO: start/end date, reverse**
 
-Invoice json files will be saved in tje ```StorageFolderRoot``` folder.
+Invoice json files will be saved in the ```StorageFolderRoot``` folder.
 Downloaded invoice images (not enabled by default) will be saved in the ```StorageFolderDownloadedFiles``` folder.
+
+> NOTE once initial scrape has been performed ```> update``` will scrape the pages needed
 
 Semicolon can be used to separate commands, e.g.
 ```> init; scrape; createindex > file.csv``` will start the scraping once initialization is done, then store the index to file.

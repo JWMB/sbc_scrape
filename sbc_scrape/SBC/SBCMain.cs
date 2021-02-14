@@ -95,10 +95,11 @@ namespace SBCScan.SBC
 			return m.Value;
 		}
 
+		public static string MainUrlSIE = "https://varbrf.sbc.se/eos/hg2/reports/19/?embed=1";
 		public async Task<string> FetchSIEFile(int year)
 		{
 			//Load what's in the relevant iFrame:
-			driver.NavigateAndWaitReadyIfNotThere("https://varbrf.sbc.se/eos/hg2/reports/19/?embed=1");
+			driver.NavigateAndWaitReadyIfNotThere(MainUrlSIE);
 			var scriptWithDef = driver.FindElement(By.XPath("//script[@id='report-layout-str']"));
 			var json = Newtonsoft.Json.Linq.JObject.Parse(scriptWithDef.GetAttribute("innerHTML"));
 			var nodes = json.SelectTokens("$..widgets..data.nodes[*]");
