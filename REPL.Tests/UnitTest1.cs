@@ -15,32 +15,14 @@ namespace REPL.Tests
 		//[InlineData("Int32", "1")]
 		[InlineData("Single", "1.0")]
 		//[InlineData("String", "abc")]
-		public void X(string result, string arguments)
+		public void Binding_StringArguments(string result, string arguments)
 		{
-			//JsonSerializer.Deserialize("")
-			//System.Text.Json.Serialization.JsonSe
-			var args = arguments.Split(' ').Select(ParseInput);
 			var type = typeof(SomeClass);
-			var methods = type.GetMethods();
-			var bound = Binding.BindMethod(methods, args);
+			var methods = type.GetMethods().ToArray().Where(o => o.Name == nameof(SomeClass.SomeMethod2));
+			var bound = Binding.BindMethod(methods, arguments.Split(' '));
 
 			var parameters = string.Join(",", bound.GetParameters().Select(p => p.ParameterType.Name));
 			parameters.Should().Be(result);
-
-			object ParseInput(string str)
-			{
-				if (double.TryParse(str, System.Globalization.NumberStyles.Any, new System.Globalization.CultureInfo("en-US"), out var @double))
-				{
-					if (int.TryParse(str, out var @int))
-						return @int;
-					return @double;
-				}
-				else if (bool.TryParse(str, out var @bool))
-				{
-					return @bool;
-				}
-				return str;
-			}
 		}
 
 		[Theory]
@@ -49,10 +31,10 @@ namespace REPL.Tests
 		[InlineData("String", "")]
 		[InlineData("Object", 1D)]
 		//Doesn't work [InlineData("Object", 1D, 1f)]
-		public void Test1(string result, params object[] args)
+		public void Binding_TypedArguments(string result, params object[] args)
 		{
 			var type = typeof(SomeClass);
-			var methods = type.GetMethods();
+			var methods = type.GetMethods().ToArray().Where(o => o.Name == nameof(SomeClass.SomeMethod));
 			var bound = Binding.BindMethod(methods, args);
 			bound.Should().NotBeNull();
 			var parameters = string.Join(",", bound.GetParameters().Select(p => p.ParameterType.Name));
@@ -61,28 +43,17 @@ namespace REPL.Tests
 
 		class SomeClass
 		{
-			public async Task<string> SomeMethodAsync(float fract)
-			{
-				return string.Empty;
-			}
+			public async Task<string> SomeMethodAsync(float fract) => "";
 
-			public string SomeMethod(params object[] obj)
-			{
-				return "";
-			}
+			public string SomeMethod(params object[] obj) => "";
+			public string SomeMethod(object obj) => "";
+			public string SomeMethod(string str) => "";
+			public string SomeMethod(int num) => "";
 
-			public string SomeMethod(object obj)
-			{
-				return "";
-			}
-			public string SomeMethod(string str)
-			{
-				return "";
-			}
-			public string SomeMethod(int num)
-			{
-				return "";
-			}
+			public string SomeMethod2(params object[] obj) => "";
+			public string SomeMethod2(object obj) => "";
+			public string SomeMethod2(int num) => "";
+			public string SomeMethod2(float num) => "";
 		}
 	}
 }
