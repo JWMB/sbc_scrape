@@ -11,6 +11,14 @@ namespace REPL.Tests
 {
 	public class UnitTest1
 	{
+		public class GoodDayCmd : Command
+		{
+			public override string Id => "goodday";
+			public Task<string> Evaluate(string name, int age) => Task.FromResult($"Hello {name ?? "Unknown"}! You were born in {DateTime.Today.Year - age}");
+			public override Task<object> Evaluate(List<object> parms) => Task.FromResult<object>($"Hello {parms.FirstOrDefault() ?? "Unknown"}!");
+		}
+
+
 		[Fact]
 		public async Task REPL_Test()
 		{
@@ -18,10 +26,12 @@ namespace REPL.Tests
 					new QuitCmd(),
 					new CSVCmd(),
 					new AddCommandsTestCmd(),
+					new GoodDayCmd()
 					};
 			cmds.Add(new ListCmd(cmds));
 
 			var queue = new Queue<(string, string)>(new[] {
+				("goodday Jonas 47", nameof(GoodDayCmd)),
 				("l", nameof(ListCmd)),
 				("q", nameof(QuitCmd))
 			});
