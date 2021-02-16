@@ -8,7 +8,7 @@ namespace REPL
 {
 	public static class Binding
 	{
-		public static MethodBase BindMethod(IEnumerable<MethodInfo> methods, IEnumerable<object> inputParameters)
+		public static (MethodBase method, object[] arguments) BindMethod(IEnumerable<MethodInfo> methods, IEnumerable<object> inputParameters)
 		{
 			// TODO: we could provide info about which inputs are always strings (e.g. from command line input)
 			// Then we can score methods better
@@ -36,9 +36,12 @@ namespace REPL
 
 			var found = matched.FirstOrDefault();
 			if (found != null)
-				return found.Method;
+				return (found.Method, found.Matched.Select(o => o.converted).ToArray());
 
-			return Type.DefaultBinder.SelectMethod(BindingFlags.Default, methods.ToArray(), inputParameters.Select(o => o == null ? null : o.GetType()).ToArray(), null);
+			//var inp = inputParameters.ToArray();
+			//Type.DefaultBinder.BindToMethod(BindingFlags.Default, methods.ToArray(), ref inp,  System.Globalization.CultureInfo.InvariantCulture, )
+			var method = Type.DefaultBinder.SelectMethod(BindingFlags.Default, methods.ToArray(), inputParameters.Select(o => o == null ? null : o.GetType()).ToArray(), null);
+			return (method, inputParameters.ToArray());
 		}
 
 		public static (int score, object? converted) ScoreTypeMatch(object? input, Type parameterType) //ParameterInfo expected)

@@ -11,6 +11,58 @@ namespace REPL.Tests
 {
 	public class UnitTest1
 	{
+		[Fact]
+		public async Task REPL_Test()
+		{
+			var cmds = new List<Command> {
+					new QuitCmd(),
+					new CSVCmd(),
+					new AddCommandsTestCmd(),
+					};
+			cmds.Add(new ListCmd(cmds));
+
+			var queue = new Queue<(string, string)>(new[] {
+				("l", nameof(ListCmd)),
+				("q", nameof(QuitCmd))
+			});
+			(string, string) currentItem = ("", "");
+
+			var REPLRunner = new Runner(cmds);
+			REPLRunner.CallAndResult += REPLRunner_CallAndResult;
+
+			var reader = new MockInput();
+			reader.OnRead = () => {
+				currentItem = queue.Any() ? queue.Dequeue() : ("q", "");
+				reader.Write(currentItem.Item1 + "\n");
+			};
+			await REPLRunner.RunREPL(reader, System.Threading.CancellationToken.None);
+
+			void REPLRunner_CallAndResult(object sender, Runner.CallAndResultEventArgs e)
+			{
+				if (e.Method.DeclaringType.Name != currentItem.Item2)
+				{
+
+				}
+			}
+		}
+
+		class MockInput : IInputReader
+		{
+			private string buffer = "";
+			public Action? OnRead = null;
+			public void Write(string str)
+			{
+				buffer += str;
+			}
+			public string Read()
+			{
+				OnRead?.Invoke();
+				var result = buffer;
+				buffer = "";
+				return result;
+			}
+		}
+
 		[Theory]
 		//[InlineData("Int32", "1")]
 		[InlineData("Single", "1.0")]
@@ -19,9 +71,9 @@ namespace REPL.Tests
 		{
 			var type = typeof(SomeClass);
 			var methods = type.GetMethods().ToArray().Where(o => o.Name == nameof(SomeClass.SomeMethod2));
-			var bound = Binding.BindMethod(methods, arguments.Split(' '));
+			var (method, args) = Binding.BindMethod(methods, arguments.Split(' '));
 
-			var parameters = string.Join(",", bound.GetParameters().Select(p => p.ParameterType.Name));
+			var parameters = string.Join(",", method.GetParameters().Select(p => p.ParameterType.Name));
 			parameters.Should().Be(result);
 		}
 
@@ -35,9 +87,9 @@ namespace REPL.Tests
 		{
 			var type = typeof(SomeClass);
 			var methods = type.GetMethods().ToArray().Where(o => o.Name == nameof(SomeClass.SomeMethod));
-			var bound = Binding.BindMethod(methods, args);
-			bound.Should().NotBeNull();
-			var parameters = string.Join(",", bound.GetParameters().Select(p => p.ParameterType.Name));
+			var (method, castArgs) = Binding.BindMethod(methods, args);
+			method.Should().NotBeNull();
+			var parameters = string.Join(",", method.GetParameters().Select(p => p.ParameterType.Name));
 			parameters.Should().Be(result);
 		}
 

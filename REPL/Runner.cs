@@ -7,13 +7,21 @@ using System.Threading.Tasks;
 
 namespace REPL
 {
-
 	public class Runner
 	{
 		private readonly NullCmd nullCmd = new NullCmd();
 		private readonly QuitCmd? quitCmd;
 		private IEnumerable<Command> cmds;
 		private readonly ConsoleBase console;
+
+		public class CallAndResultEventArgs : EventArgs
+		{
+			public System.Reflection.MethodBase? Method { get; set; }
+			public List<object> Arguments { get; set; } = new List<object>();
+			public object? Result { get; set; } = null;
+		}
+
+		public event EventHandler<CallAndResultEventArgs> CallAndResult;
 
 		public Runner(IEnumerable<Command> cmds)
 		{
@@ -63,18 +71,21 @@ namespace REPL
 			try
 			{
 				var actualArguments = input.Skip(skip).Cast<object>().ToList();
-				var method = Binding.BindMethod(found.GetType().GetMethods().Where(o => o.Name == nameof(Command.Evaluate)), actualArguments);
+				var methods = found.GetType().GetMethods().Where(o => o.Name == nameof(Command.Evaluate));
+				var (method, castArgs) = Binding.BindMethod(methods, actualArguments);
 				if (method != null)
 				{
-					var task = (Task)method.Invoke(found, actualArguments.ToArray());
+					var task = (Task)method.Invoke(found, castArgs);
 					await task.ConfigureAwait(false);
 
 					var resultProperty = task.GetType().GetProperty("Result");
 					result = resultProperty.GetValue(task);
+					CallAndResult?.Invoke(this, new CallAndResultEventArgs { Method = method, Arguments = castArgs.ToList(), Result = result });
 				}
 				else
 				{
 					result = await found.Evaluate(actualArguments);
+					CallAndResult?.Invoke(this, new CallAndResultEventArgs { Method = methods.First(), Arguments = actualArguments, Result = result });
 				}
 			}
 			catch (Exception ex)
@@ -89,7 +100,7 @@ namespace REPL
 			return (found, result);
 		}
 
-		public async Task RunREPL(CancellationToken cancel)
+		public async Task RunREPL(IInputReader inputReader, CancellationToken cancel)
 		{
 			var listCmd = cmds.FirstOrDefault(c => c is ListCmd);
 			var help = (listCmd == null && quitCmd == null) ? "" : $"{(quitCmd == null ? "" : $"{quitCmd.Id} to quit")} {(listCmd == null ? "" : $"{listCmd.Id} to list commands")}";
@@ -97,11 +108,12 @@ namespace REPL
 
 			var quitting = false;
 
-			IReadConsole readConsole = new ReadConsoleByChar("> ", new List<string> { "l older", "l old" });
-
 			while (!quitting)
 			{
-				var input = readConsole.Read();
+				if (cancel.IsCancellationRequested)
+					return;
+
+				var input = inputReader.Read();
 
 				var lines = input.Trim().Split(';').Select(s => s.Trim()).Where(s => s.Length > 0);
 				foreach (var line in lines)

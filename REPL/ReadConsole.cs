@@ -5,12 +5,12 @@ using System.Text;
 
 namespace REPL
 {
-	public interface IReadConsole
+	public interface IInputReader
 	{
 		string Read();
 	}
 
-	public class ReadConsoleSimple : IReadConsole
+	public class ReadConsoleSimple : IInputReader
 	{
 		private readonly string prompt;
 		public ReadConsoleSimple(string prompt) => this.prompt = prompt;
@@ -21,7 +21,7 @@ namespace REPL
 		}
 	}
 
-	public class ReadConsoleByChar : IReadConsole
+	public class ReadConsoleByChar : IInputReader
 	{
 		//TODO: doesn't handle console window resize
 
