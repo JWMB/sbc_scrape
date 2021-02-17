@@ -11,13 +11,16 @@ namespace REPL.Tests
 {
 	public class UnitTest1
 	{
+		public class GoodDayAsyncCmd : Command
+		{
+			public override string Id => "gooddayasync";
+			public Task<string> Evaluate(string name, int age) => Task.FromResult($"Hello {name ?? "Unknown"}! You were born in {DateTime.Today.Year - age}");
+		}
 		public class GoodDayCmd : Command
 		{
 			public override string Id => "goodday";
-			public Task<string> Evaluate(string name, int age) => Task.FromResult($"Hello {name ?? "Unknown"}! You were born in {DateTime.Today.Year - age}");
-			public override Task<object> Evaluate(List<object> parms) => Task.FromResult<object>($"Hello {parms.FirstOrDefault() ?? "Unknown"}!");
+			public string Evaluate(string name, int age) => $"Hello {name ?? "Unknown"}! You were born in {DateTime.Today.Year - age}";
 		}
-
 
 		[Fact]
 		public async Task REPL_Test()
@@ -26,14 +29,15 @@ namespace REPL.Tests
 					new QuitCmd(),
 					new CSVCmd(),
 					new AddCommandsTestCmd(),
-					new GoodDayCmd()
+					new GoodDayCmd(),
+					new GoodDayAsyncCmd()
 					};
 			cmds.Add(new ListCmd(cmds));
 
 			var queue = new Queue<(string, string)>(new[] {
+				("gooddayasync Jonas 47", nameof(GoodDayAsyncCmd)),
 				("goodday Jonas 47", nameof(GoodDayCmd)),
-				("l", nameof(ListCmd)),
-				("q", nameof(QuitCmd))
+				("l", nameof(ListCmd))
 			});
 			(string, string) currentItem = ("", "");
 
@@ -42,17 +46,14 @@ namespace REPL.Tests
 
 			var reader = new MockInput();
 			reader.OnRead = () => {
-				currentItem = queue.Any() ? queue.Dequeue() : ("q", "");
+				currentItem = queue.Any() ? queue.Dequeue() : ("q", nameof(QuitCmd));
 				reader.Write(currentItem.Item1 + "\n");
 			};
 			await REPLRunner.RunREPL(reader, System.Threading.CancellationToken.None);
 
 			void REPLRunner_CallAndResult(object sender, Runner.CallAndResultEventArgs e)
 			{
-				if (e.Method.DeclaringType.Name != currentItem.Item2)
-				{
-
-				}
+				Assert.Equal(e.Method.DeclaringType.Name, currentItem.Item2);
 			}
 		}
 

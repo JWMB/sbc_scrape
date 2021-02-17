@@ -16,7 +16,7 @@ namespace REPL
 	public abstract class Command
 	{
 		public abstract string Id { get; }
-		public abstract Task<object> Evaluate(List<object> parms);
+		public virtual Task<object> Evaluate(List<object> parms) => Task.FromResult<object>(0);
 
 		public virtual string Help { get; } = string.Empty;
 

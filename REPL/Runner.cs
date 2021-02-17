@@ -75,11 +75,18 @@ namespace REPL
 				var (method, castArgs) = Binding.BindMethod(methods, actualArguments);
 				if (method != null)
 				{
-					var task = (Task)method.Invoke(found, castArgs);
-					await task.ConfigureAwait(false);
+					var m = method as System.Reflection.MethodInfo;
+					if (m?.ReturnType.BaseType == typeof(Task))
+					//if (m?.GetCustomAttributes(typeof(System.Runtime.CompilerServices.AsyncStateMachineAttribute), true).Any() == true)
+					{
+						var task = (Task)method.Invoke(found, castArgs);
+						await task.ConfigureAwait(false);
 
-					var resultProperty = task.GetType().GetProperty("Result");
-					result = resultProperty.GetValue(task);
+						var resultProperty = task.GetType().GetProperty("Result");
+						result = resultProperty.GetValue(task);
+					}
+					else
+						result = method.Invoke(found, castArgs);
 					CallAndResult?.Invoke(this, new CallAndResultEventArgs { Method = method, Arguments = castArgs.ToList(), Result = result });
 				}
 				else
