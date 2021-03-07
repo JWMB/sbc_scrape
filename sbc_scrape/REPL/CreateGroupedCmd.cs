@@ -14,10 +14,10 @@ namespace SBCScan.REPL
 		private readonly Main main;
 		public CreateGroupedCmd(Main main) => this.main = main;
 		public override string Id => "creategrouped";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<object> Evaluate(IEnumerable<InvoiceSummary> input = null)
 		{
 			List<InvoiceSummary> summaries = null;
-			if (parms.FirstOrDefault() is IEnumerable<InvoiceSummary> input)
+			if (input != null)
 				summaries = input.ToList();
 			else
 			{

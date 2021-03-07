@@ -17,11 +17,9 @@ namespace SBCScan.REPL
 		private readonly API api;
 		public GetTaskCmd(API api) => this.api = api;
 		public override string Id => "gettask";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<string> Evaluate(long id)
 		{
-			if (Command.TryParseArgument<long>(parms, 0, out var id))
-				return JsonConvert.SerializeObject(await api.GetTask(id));
-			return $"id '{parms.FirstOrDefault()}' not parseable";
+			return JsonConvert.SerializeObject(await api.GetTask(id));
 		}
 	}
 
@@ -30,7 +28,7 @@ namespace SBCScan.REPL
 		private readonly Main main;
 		public ConvertInvoiceImageFilenameCmd(Main main) => this.main = main;
 		public override string Id => "convii";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<string> Evaluate()
 		{
 			Console.WriteLine("0%");
 			var summaries = await main.MediusFlow.LoadAndTransformInvoicesCallback(o => InvoiceSummary.Summarize(o),
@@ -62,11 +60,9 @@ namespace SBCScan.REPL
 
 		public GetInvoiceCmd(InvoiceScraper scraper) => this.scraper = scraper;
 		public override string Id => "getinvoice";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<object> Evaluate(long id)
 		{
-			if (Command.TryParseArgument<long>(parms, 0, out var id))
-				return JsonConvert.SerializeObject(await scraper.GetInvoice(id));
-			return $"id '{parms.FirstOrDefault()}' not parseable";
+			return JsonConvert.SerializeObject(await scraper.GetInvoice(id));
 		}
 	}
 }

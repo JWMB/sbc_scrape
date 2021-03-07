@@ -45,21 +45,23 @@ namespace SBCScan.REPL
 			return new DateTime(year, month, 1);
 		}
 
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<object> Evaluate(string htmlSourceType = null, DateTime? start = null, DateTime? end = null)
 		{
-			var start = new DateTime(DateTime.Today.Year, 1, 1);
-			var end = new DateTime(start.Year, 12, 1);
-			if (parms.Count > 1)
-			{
-				start = ParseDate(parms[1].ToString()) ?? start;
-				end = new DateTime(start.Year, 12, 1);
-				if (parms.Count > 2)
-					end = ParseDate(parms[2].ToString()) ?? end;
-			}
+			start ??= new DateTime(DateTime.Today.Year, 1, 1);
+			end ??= new DateTime(start.Value.Year, 12, 1);
+			//var start = new DateTime(DateTime.Today.Year, 1, 1);
+			//var end = new DateTime(start.Year, 12, 1);
+			//if (parms.Count > 1)
+			//{
+			//	start = ParseDate(parms[1].ToString()) ?? start;
+			//	end = new DateTime(start.Year, 12, 1);
+			//	if (parms.Count > 2)
+			//		end = ParseDate(parms[2].ToString()) ?? end;
+			//}
 
 			var sources = new List<HtmlSource>();
-			if (parms.Count > 0)
-				sources.Add(GetHtmlSourceInstance(parms[0] as string));
+			if (htmlSourceType != null)
+				sources.Add(GetHtmlSourceInstance(htmlSourceType));
 			else
 				sources.AddRange(new HtmlSource[] { new BankTransactionSource(), new ReceiptsSource(), new InvoiceSource() });
 
@@ -69,7 +71,7 @@ namespace SBCScan.REPL
 			{
 				try
 				{
-					result.Add(await Execute(main, src, start, end));
+					result.Add(await Execute(main, src, start.Value, end.Value));
 				}
 				catch (Exception ex)
 				{

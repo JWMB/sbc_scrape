@@ -20,7 +20,7 @@ namespace SBCScan.REPL
 			this.main = main;
 		}
 		public override string Id => "join";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<List<JoinedRow>> Evaluate()
 		{
 			Console.WriteLine("0");
 			var invoices = (await main.LoadInvoices(includeOCRd: false, (i, l) => {
@@ -136,7 +136,7 @@ namespace SBCScan.REPL
 			return byInvRec;
 		}
 
-		class JoinedRow
+		public class JoinedRow
 		{
 			public DateTime Date { get; set; }
 			public string Missing { get; set; }

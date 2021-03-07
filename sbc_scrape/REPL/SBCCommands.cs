@@ -65,7 +65,7 @@ namespace SBCScan.REPL
 		private readonly Main main;
 		public CreateIndexCmd(Main main) => this.main = main;
 		public override string Id => "createindex";
-		public async Task<List<InvoiceSummary>> Evaluate(List<object> parms)
+		public async Task<List<InvoiceSummary>> Evaluate()
 		{
 			return await LoadInvoicesConsole(Console, main);
 			//Console.WriteLine("0");
