@@ -10,18 +10,18 @@ namespace REPL
 	public class NullCmd : Command
 	{
 		public override string Id => "";
-		public override Task<object> Evaluate(List<object> parms)
+		public string Evaluate(List<object> parms)
 		{
-			return Task.FromResult<object>(parms.Count == 0 ? "" : $"{parms.First()} not found");
+			return parms.Count == 0 ? "" : $"{parms.First()} not found";
 		}
 	}
 
 	public class QuitCmd : Command, IQuitCommand
 	{
 		public override string Id => "q";
-		public override Task<object> Evaluate(List<object> parms)
+		public string Evaluate()
 		{
-			return Task.FromResult<object>("Goodbye!");
+			return "Goodbye!";
 		}
 	}
 	public class ListCmd : Command
@@ -29,11 +29,11 @@ namespace REPL
 		private readonly IEnumerable<Command> commands;
 		public override string Id => "l";
 		public ListCmd(IEnumerable<Command> commands) => this.commands = commands;
-		public override Task<object> Evaluate(List<object> parms)
+		public string Evaluate()
 		{
-			return Task.FromResult<object>("Available commands:\n"
+			return "Available commands:\n"
 				+ string.Join("\n",
-				commands.Select(c => $"{c.GetType().Name.Replace("Cmd", "")}: {c.Id}\n{c.Help}")));
+				commands.Select(c => $"{c.GetType().Name.Replace("Cmd", "")}: {c.Id}\n{c.Help}"));
 		}
 		public Task<string> Evaluate(int someValue)
 		{
@@ -78,25 +78,24 @@ namespace REPL
 	{
 		public CSVCmd() { }
 		public override string Id => "csv";
-		public override Task<object> Evaluate(List<object> parms)
+		public Task<object> Evaluate(string typeName, string str)
 		{
-			if (parms.Count > 1 && parms[1] is string str) // Deserialize
-			{
-				var typeName = parms[0] as string;
-				var type = AppDomain.CurrentDomain.GetAssemblies()
-					.Select(a => a.GetTypes().FirstOrDefault(t => t.Name == typeName)).FirstOrDefault(t => t != null);
-				if (type == null)
-					throw new ArgumentException($"Type not found: {typeName}");
+			var type = AppDomain.CurrentDomain.GetAssemblies()
+				.Select(a => a.GetTypes().FirstOrDefault(t => t.Name == typeName)).FirstOrDefault(t => t != null);
+			if (type == null)
+				throw new ArgumentException($"Type not found: {typeName}");
 
-				using var reader = new StringReader(str);
-				using var csv = new CsvHelper.CsvReader(reader, CsvConfig);
-				return Task.FromResult<object>(csv.GetRecords(type).ToList());
-			}
+			using var reader = new StringReader(str);
+			using var csv = new CsvHelper.CsvReader(reader, CsvConfig);
+			return Task.FromResult<object>(csv.GetRecords(type).ToList());
 
+		}
+		public Task<object> Evaluate(IEnumerable<object> objects)
+		{
 			using (var writer = new StringWriter())
 			using (var csv = new CsvHelper.CsvWriter(writer, CsvConfig))
 			{
-				csv.WriteRecords(parms[0] as IEnumerable<object>);
+				csv.WriteRecords(objects);
 				return Task.FromResult<object>(writer.ToString());
 			}
 		}
@@ -129,10 +128,10 @@ namespace REPL
 
 		public WriteFileCmd(string defaultFolder) => this.defaultFolder = defaultFolder;
 		public override string Id => "write";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<string> Evaluate(string path, object value)
 		{
-			var filePath = Path.Combine(defaultFolder, (string)parms[0]);
-			await File.WriteAllTextAsync(filePath, parms[1].ToString());
+			var filePath = Path.Combine(defaultFolder, path);
+			await File.WriteAllTextAsync(filePath, value.ToString());
 			//TODO: where is File.WriteAllTextAsync?
 			//TODO: accept other paths than relative to defaultFolder
 			return filePath;
@@ -144,9 +143,9 @@ namespace REPL
 
 		public ReadFileCmd(string defaultFolder) => this.defaultFolder = defaultFolder;
 		public override string Id => "read";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<byte[]> Evaluate(string path)
 		{
-			var filePath = Path.Combine(defaultFolder, (string)parms[0]);
+			var filePath = Path.Combine(defaultFolder, path);
 			//TODO: where is File.ReadAllTextAsync?
 			//TODO: accept other paths than relative to defaultFolder
 			return await File.ReadAllBytesAsync(filePath);
@@ -158,13 +157,13 @@ namespace REPL
 		private readonly string defaultFolder;
 		public WriteFiles(string defaultFolder) => this.defaultFolder = defaultFolder;
 		public override string Id => "writefiles";
-		public override Task<object> Evaluate(List<object> parms)
+		public string Evaluate(object dictParm)
 		{
 			//var folder = Path.Combine(defaultFolder, (string)parms[0]);
 			var folder = defaultFolder;
 
 			var result = new List<(string, long)>();
-			var dictParm = parms[0];
+			//var dictParm = parms[0];
 			var t = dictParm.GetType();
 			if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Dictionary<,>) && t.GetGenericArguments()[0] == typeof(string))
 			{
@@ -176,7 +175,7 @@ namespace REPL
 					result.Add((filePath, dict[key].ToString().Length));
 				}
 			}
-			return Task.FromResult<object>(string.Join("\n", result.Select(r => $"{r.Item1}: {r.Item2}")));
+			return string.Join("\n", result.Select(r => $"{r.Item1}: {r.Item2}"));
 		}
 	}
 }

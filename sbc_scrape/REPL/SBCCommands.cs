@@ -19,7 +19,7 @@ namespace SBCScan.REPL
 		private readonly Main main;
 		public InitCmd(Main main) => this.main = main;
 		public override string Id => "init";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<string> Evaluate()
 		{
 			await main.Init();
 			return "Initialized session";
@@ -48,7 +48,7 @@ namespace SBCScan.REPL
 		private readonly Main main;
 		public GetAccountsListCmd(Main main) => this.main = main;
 		public override string Id => "accounts";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<string> Evaluate()
 		{
 			var invoices = await CreateIndexCmd.LoadInvoicesConsole(Console, main); // (await main.LoadInvoices(includeOCRd: false, (i, l) => Console.RewriteLine($"{i}/{l}"))).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 			var tmp = invoices.GroupBy(o => o.AccountId).ToDictionary(o => o.Key, o => new { Total = o.Sum(g => g.GrossAmount), Names = o.Select(g => g.AccountName).Distinct() });
@@ -65,9 +65,9 @@ namespace SBCScan.REPL
 		private readonly Main main;
 		public CreateIndexCmd(Main main) => this.main = main;
 		public override string Id => "createindex";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<List<InvoiceSummary>> Evaluate(List<object> parms)
 		{
-			return await CreateIndexCmd.LoadInvoicesConsole(Console, main);
+			return await LoadInvoicesConsole(Console, main);
 			//Console.WriteLine("0");
 			//return (await main.LoadInvoices(includeOCRd: false, (i, l) => Console.RewriteLine($"{i}/{l}"))).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
 			//return (await main.LoadInvoices(true)).OrderByDescending(r => r.InvoiceDate ?? new DateTime(1900, 1, 1)).ToList();
@@ -89,9 +89,9 @@ namespace SBCScan.REPL
 	{
 		public ObjectToFilenameAndObject() { }
 		public override string Id => "o2fo";
-		public override Task<object> Evaluate(List<object> parms)
+		public object Evaluate(IEnumerable<object> ienum)
 		{
-			var ienum = parms[0] as System.Collections.IEnumerable;
+			//var ienum = parms[0] as System.Collections.IEnumerable;
 			var result = new Dictionary<string, object>();
 			foreach (var item in ienum)
 			{
@@ -101,7 +101,7 @@ namespace SBCScan.REPL
 					result.Add(filename, JsonConvert.SerializeObject(isum, Formatting.Indented));
 				}
 			}
-			return Task.FromResult<object>(result);
+			return result;
 		}
 	}
 
@@ -110,7 +110,7 @@ namespace SBCScan.REPL
 		private readonly string defaultFolder;
 		public ReadSBCHtml(string defaultFolder) => this.defaultFolder = defaultFolder;
 		public override string Id => "sbc";
-		public override Task<object> Evaluate(List<object> parms)
+		public object Evaluate()
 		{
 			//if (!parms.Any())
 			//	throw new ArgumentException("No HTML Source type defined");
@@ -119,9 +119,9 @@ namespace SBCScan.REPL
 			var result = src.ReadAllObjects(defaultFolder);
 			if (src is InvoiceSource invSrc)
 			{
-				result = result.Select(r => (r as Invoice).ToSummary()).Cast<object>().ToList();
+				return result.Select(r => (r as Invoice).ToSummary()).ToList();
 			}
-			return Task.FromResult<object>(result);
+			throw new NotImplementedException("");
 		}
 	}
 
@@ -130,7 +130,7 @@ namespace SBCScan.REPL
 		private readonly Main main;
 		public UpdateAll(Main main) => this.main = main;
 		public override string Id => "update";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task Evaluate()
 		{
 			var htmlSources = new HtmlSource[] { new BankTransactionSource(), new ReceiptsSource(), new InvoiceSource() };
 
@@ -159,8 +159,6 @@ namespace SBCScan.REPL
 				//await sieCmd.Evaluate();
 				Console.WriteLine($"SIE download disabled b/c encdding problem, please download from {SBC.SBCMain.MainUrlSIE}, and move to folder {GlobalSettings.AppSettings.StorageFolderSIE} (see naming convention)");
 			}
-
-			return null;
 		}
 	}
 
@@ -193,11 +191,6 @@ namespace SBCScan.REPL
 				.ToList();
 		}
 
-		public override async Task<object> Evaluate(List<object> parms)
-		{
-			return (object)await Evaluate();
-		}
-
 		public async Task<bool> Evaluate(IEnumerable<int> years = null)
 		{
 			if (years == null)
@@ -228,7 +221,7 @@ namespace SBCScan.REPL
 		private readonly Main main;
 		public CreateHouseIndexCmd(Main main) => this.main = main;
 		public override string Id => "houseindex";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<string> Evaluate()
 		{
 			var summaries = await main.MediusFlow.LoadInvoiceSummaries(ff => ff.InvoiceDate > new DateTime(2001, 1, 1));
 			var withHouses = summaries.Select(s =>
@@ -256,13 +249,14 @@ namespace SBCScan.REPL
 		private readonly Main main;
 		public ScrapeCmd(Main main) => this.main = main;
 		public override string Id => "scrape";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<object> Evaluate(DateTime? start = null, DateTime? end = null)
 		{
-			var dates = parms.Select((p, i) => ParseArgument(parms, i, DateTime.MinValue)).Cast<DateTime?>().ToList();
-			for (int i = dates.Count; i < 2; i++)
-				dates.Add(null);
+			//var dates = parms.Select((p, i) => ParseArgument(parms, i, DateTime.MinValue)).Cast<DateTime?>().ToList();
+			//for (int i = dates.Count; i < 2; i++)
+			//	dates.Add(null);
 
-			var scraped = await main.MediusFlow.Scrape(dates[0], dates[1], saveToDisk: true, goBackwards: false);
+			//var scraped = await main.MediusFlow.Scrape(dates[0], dates[1], saveToDisk: true, goBackwards: false);
+			var scraped = await main.MediusFlow.Scrape(start, end, saveToDisk: true, goBackwards: false);
 			return scraped.Select(iv => $"{iv.Id} {iv.TaskId} {iv.InvoiceDate} {iv.Supplier} {iv.GrossAmount} {iv.AccountId} {iv.AccountName}");
 		}
 	}
@@ -273,7 +267,7 @@ namespace SBCScan.REPL
 
 		public GetImagesCmd(Main main) => this.main = main;
 		public override string Id => "getimages";
-		public override async Task<object> Evaluate(List<object> parms)
+		public async Task<object> Evaluate(List<object> parms)
 		{
 			var invoiceIds = ParseArguments<long?>(parms, null);
 			Func<InvoiceFull.FilenameFormat, bool> invoiceFilter;
@@ -302,9 +296,7 @@ namespace SBCScan.REPL
 	{
 		public override string Id => "ocr";
 
-		public override Task<object> Evaluate(List<object> parms) => Task.FromResult<object>(_Evaluate(parms));
-
-		string _Evaluate(List<object> parms)
+		public string Evaluate()
 		{
 			var folder = new DirectoryInfo(GlobalSettings.AppSettings.StorageFolderDownloadedFiles);
 			var files = folder.GetFiles("*.png");

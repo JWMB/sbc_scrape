@@ -71,7 +71,7 @@ namespace REPL
 			try
 			{
 				var actualArguments = input.Skip(skip).Cast<object>().ToList();
-				var methods = found.GetType().GetMethods().Where(o => o.Name == nameof(Command.Evaluate));
+				var methods = found.GetType().GetMethods().Where(o => o.Name == "Evaluate");
 				var (method, castArgs) = Binding.BindMethod(methods, actualArguments);
 				if (method != null)
 				{
@@ -91,8 +91,9 @@ namespace REPL
 				}
 				else
 				{
-					result = await found.Evaluate(actualArguments);
-					CallAndResult?.Invoke(this, new CallAndResultEventArgs { Method = methods.First(), Arguments = actualArguments, Result = result });
+					throw new Exception("Method not matched");
+					//result = await found.Evaluate(actualArguments);
+					//CallAndResult?.Invoke(this, new CallAndResultEventArgs { Method = methods.First(), Arguments = actualArguments, Result = result });
 				}
 			}
 			catch (Exception ex)
