@@ -76,7 +76,24 @@ namespace REPL
 
 	public class CSVCmd : Command
 	{
-		public CSVCmd() { }
+		private readonly CsvHelper.Configuration.CsvConfiguration? csvConfig;
+
+		public CSVCmd(CsvHelper.Configuration.CsvConfiguration? csvConfig = null)
+		{
+			if (csvConfig == null)
+			{
+				var cultureInfo = (System.Globalization.CultureInfo)System.Globalization.CultureInfo.CurrentCulture.Clone();
+				cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
+				cultureInfo.NumberFormat.NumberGroupSeparator = "";
+				csvConfig = new CsvHelper.Configuration.CsvConfiguration(cultureInfo)
+				{
+					Delimiter = "\t",
+				};
+			}
+
+			this.csvConfig = csvConfig;
+		}
+
 		public override string Id => "csv";
 		public Task<object> Evaluate(string typeName, string str)
 		{
@@ -86,38 +103,18 @@ namespace REPL
 				throw new ArgumentException($"Type not found: {typeName}");
 
 			using var reader = new StringReader(str);
-			using var csv = new CsvHelper.CsvReader(reader, CsvConfig);
+			using var csv = new CsvHelper.CsvReader(reader, csvConfig);
 			return Task.FromResult<object>(csv.GetRecords(type).ToList());
 
 		}
 		public Task<object> Evaluate(IEnumerable<object> objects)
 		{
 			using (var writer = new StringWriter())
-			using (var csv = new CsvHelper.CsvWriter(writer, CsvConfig))
+			using (var csv = new CsvHelper.CsvWriter(writer, csvConfig))
 			{
 				csv.WriteRecords(objects);
 				return Task.FromResult<object>(writer.ToString());
 			}
-		}
-
-		private static CsvHelper.Configuration.CsvConfiguration? csvConfig;
-		public static CsvHelper.Configuration.CsvConfiguration CsvConfig
-		{
-			get
-			{
-				if (csvConfig == null)
-				{
-					var cultureInfo = (System.Globalization.CultureInfo)System.Globalization.CultureInfo.CurrentCulture.Clone();
-					cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
-					cultureInfo.NumberFormat.NumberGroupSeparator = "";
-					csvConfig = new CsvHelper.Configuration.CsvConfiguration(cultureInfo)
-					{
-						Delimiter = "\t",
-					};
-				}
-				return csvConfig;
-			}
-			set { csvConfig = value; }
 		}
 	}
 

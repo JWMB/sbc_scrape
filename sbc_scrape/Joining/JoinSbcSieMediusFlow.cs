@@ -138,24 +138,31 @@ namespace sbc_scrape.Joining
 					accountIdToAccountName[accountId] = found.AccountName;
 			}
 
-			var header = new[] {
-				"Date",
-				"Missing",
-				"Amount",
-				"Supplier",
-				"AccountId",
-				"AccountName",
-				"Comments",
-				"InvoiceId",
-				"ReceiptId",
-				"CurrencyDate",
-				"TransactionText",
-				"TransactionRef"
-			};
+			//var header = new[] {
+			//	"Date",
+			//	"Missing",
+			//	"Amount",
+			//	"Supplier",
+			//	"AccountId",
+			//	"AccountName",
+			//	"Comments",
+			//	"InvoiceId",
+			//	"ReceiptId",
+			//	"CurrencyDate",
+			//	"TransactionText",
+			//	"TransactionRef"
+			//};
 			string ShortenComments(string comments)
 			{
-				var rx = new Regex(@"(?<pid>\s?\(\d+\)\s*)(?!\(\d{2}-\d{2})");
-				return rx.Replace(comments, "");
+				if (string.IsNullOrWhiteSpace(comments?.Trim()))
+					return comments;
+
+				var namePattern = @"(?<firstname>[\w]+)(?<middlenames>\s[\w]+){0,}(?<lastname>\s[\w]+)";
+				var idPattern = @"(?<pid>\s?\(\d+\)\s*)(?!\(\d{2}-\d{2})";
+				return new Regex(namePattern + idPattern).Replace(comments, "${firstname}${lastname}");
+				// First Middle Middle Last (1234567) (12-18 10:51):Projektadministration / konsultation,First Last (1234568) (12-23 13:57):Möte med anbudsgivare - OK!
+				//var rx = new Regex(@"(?<pid>\s?\(\d+\)\s*)(?!\(\d{2}-\d{2})");
+				//return rx.Replace(comments, "");
 			}
 			var rows = //string.Join("\n", new[] { header }.Concat(
 				fullResult.OrderByDescending(o => o.RegisteredDate)
