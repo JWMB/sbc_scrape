@@ -11,24 +11,45 @@ namespace SBCScan.REPL
 {
 	class JoinDataSources : Command
 	{
-		private readonly string defaultFolder;
+		private readonly AppSettings settings;
 		private readonly Main main;
 
-		public JoinDataSources(string defaultFolder, Main main)
+		public JoinDataSources(AppSettings settings, Main main)
 		{
-			this.defaultFolder = defaultFolder;
+			this.settings = settings;
 			this.main = main;
 		}
 		public override string Id => "join";
-		public async Task<List<JoinedRow>> Evaluate()
+
+		public async Task<List<sbc_scrape.Joining.ExportRow>> Evaluate()
+		{
+			var startYear = 2017;
+			var years = Enumerable.Range(startYear, DateTime.Now.Year - startYear);
+
+			//var invoices = await main.MediusFlow.LoadInvoiceSummaries(fl => years.Contains(fl.RegisteredDate.Year));
+			var invoices = await main.MediusFlow.LoadInvoices(fl => years.Contains(fl.RegisteredDate.Year));
+
+			var sieFiles = new System.IO.DirectoryInfo(settings.StorageFolderSIE)
+				.GetFiles($"output_*.se")
+				.Where(o => years.Any(p => o.Name.Contains(p.ToString())))
+				.Select(o => o.FullName);
+			var sie = await SIE.SBCExtensions.ReadSIEFiles(sieFiles);
+
+			var sbcInvoices = new InvoiceSource().ReadAll(settings.StorageFolderSbcHtml).Where(o => years.Contains(o.RegisteredDate.Year)).ToList();
+
+			var joined = sbc_scrape.Joining.JoinSbcSieMediusFlow.MatchMediusFlowWithSIE(years, invoices, sie.ToList(), sbcInvoices);
+			return joined;
+		}
+
+		public async Task<List<JoinedRow>> EvaluateOld()
 		{
 			Console.WriteLine("0");
 			var invoices = (await main.LoadInvoices(includeOCRd: false, (i, l) => {
 				if (l < 100 || i % 20 == 0) Console.RewriteLine($"{i}/{l}");
 			})).Where(o => o.DueDate.HasValue).ToList();
 			//var invoices = (await main.LoadInvoices(false)).Where(o => o.DueDate.HasValue).ToList();
-			var receipts = new ReceiptsSource().ReadAll(defaultFolder);
-			var transactions = new BankTransactionSource().ReadAll(defaultFolder);
+			var receipts = new ReceiptsSource().ReadAll(settings.StorageFolderSbcHtml);
+			var transactions = new BankTransactionSource().ReadAll(settings.StorageFolderSbcHtml);
 
 			//TODO: parms date from
 			var dateRange = (Min: new DateTime(2016, 1, 1), Max: DateTime.Today);
