@@ -157,43 +157,6 @@ namespace Scrape.Main.Tests
 			var sbcInvoices = new InvoiceSource().ReadAll(dir).Where(o => years.Contains(o.RegisteredDate.Year)).ToList();
 
 			var joined = JoinSbcSieMediusFlow.MatchMediusFlowWithSIE(years, invoices, sie.ToList(), sbcInvoices);
-
-			using (var writer = new StringWriter())
-			using (var csv = new CsvHelper.CsvWriter(writer, GetDefaultCsvConfig()))
-			{
-				csv.WriteRecords(joined);
-				var str = writer.ToString();
-			}
-
-			CsvHelper.Configuration.CsvConfiguration GetDefaultCsvConfig()
-			{
-				var cultureInfo = (System.Globalization.CultureInfo)System.Globalization.CultureInfo.CurrentCulture.Clone();
-				cultureInfo.NumberFormat.NumberDecimalSeparator = ".";
-				cultureInfo.NumberFormat.NumberGroupSeparator = "";
-				var conf = new CsvHelper.Configuration.CsvConfiguration(cultureInfo)
-				{
-					Delimiter = "\t",
-				};
-				conf.TypeConverterCache.AddConverter<LocalDate>(new CustomConverter<LocalDate?> { FromObject = value => value == null ? "" : value.Value.ToSimpleDateString() });
-				return conf;
-			}
-		}
-
-		class CustomConverter<T> : CsvHelper.TypeConversion.ITypeConverter
-		{
-			public Func<T, string>? FromObject { get; set; } = null;
-			public Func<string, T>? FromString { get; set; } = null;
-
-			public object ConvertFromString(string text, CsvHelper.IReaderRow row, CsvHelper.Configuration.MemberMapData memberMapData)
-			{
-				if (FromString == null) throw new NotImplementedException();
-				return FromString(text);
-			}
-			public string ConvertToString(object value, CsvHelper.IWriterRow row, CsvHelper.Configuration.MemberMapData memberMapData)
-			{
-				if (FromObject == null) throw new NotImplementedException();
-				return FromObject((T)value);
-			}
 		}
 
 		[TestMethod]
