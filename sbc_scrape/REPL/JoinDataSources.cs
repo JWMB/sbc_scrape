@@ -24,7 +24,7 @@ namespace SBCScan.REPL
 		public async Task<List<sbc_scrape.Joining.ExportRow>> Evaluate()
 		{
 			var startYear = 2017;
-			var years = Enumerable.Range(startYear, DateTime.Now.Year - startYear);
+			var years = Enumerable.Range(startYear, DateTime.Now.Year - startYear + 1);
 
 			//var invoices = await main.MediusFlow.LoadInvoiceSummaries(fl => years.Contains(fl.RegisteredDate.Year));
 			var invoices = await main.MediusFlow.LoadInvoices(fl => years.Contains(fl.RegisteredDate.Year));
