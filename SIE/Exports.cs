@@ -17,6 +17,20 @@ namespace SIE
 				Results = s.Children.OfType<ResultRecord>().ToList()
 			}).ToDictionary(o => o.Year, o => o.Results);
 
+			if (false) // NOPE, prolly not correct
+			{
+				// Seems like maybe "BS" voucher is some kind of revision/correction? Only valid until "finalized" (but not indication of this in file..?)
+				var lastYear = DateTime.Today.Year - 1;
+				var lastYearSie = sie.FirstOrDefault(s => s.Children.OfType<ReportPeriodRecord>().Single().Start.Year == lastYear);
+				if (lastYearSie != null)
+				{
+					var corrections = lastYearSie.Children.OfType<VoucherRecord>().Where(v => v.VoucherType == VoucherType.BS).ToList();
+					var summed = corrections.SelectMany(o => o.TransactionsNonAdminOrCorrections).GroupBy(o => o.AccountId).ToDictionary(g => g.Key, g => g.Sum(p => p.Amount));
+					foreach (var kv in summed)
+						resultsByYear[lastYear].Add(new ResultRecord { AccountId = kv.Key, Amount = -kv.Value });
+				}
+			}
+
 			var accountIdToName = sie.SelectMany(o => o.Children.OfType<AccountRecord>())
 				.GroupBy(o => o.AccountId)
 				.Select(o => new { o.Key, o.First().AccountName })

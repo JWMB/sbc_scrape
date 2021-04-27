@@ -55,7 +55,7 @@ namespace SIE
 
 		public static VoucherType AR { get => Lookup["AR"]; }
 		public static VoucherType AV { get => Lookup["AV"]; } // Devaluation / Avskrivning? (e.g. 11228 Avskr. elanläggning + 78220 Förbättringar)
-		public static VoucherType BS { get => Lookup["BS"]; }
+		public static VoucherType BS { get => Lookup["BS"]; } // Maybe end-of-year corrections before finalizing..?
 		public static VoucherType CR { get => Lookup["CR"]; }
 		public static VoucherType KB { get => Lookup["KB"]; } // Expense?
 		public static VoucherType KR { get => Lookup["KR"]; } // Expense?

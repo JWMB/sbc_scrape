@@ -8,35 +8,74 @@ namespace REPL
 {
 	public static class Binding
 	{
+		class MethodMatchResult
+		{
+			public MethodBase Method { get; set; }
+			public List<(int score, object? converted)> Matched { get; set; }
+			public int TotalScore { get; set; }
+			public bool HasMismatch { get; set; }
+			public int NumOptionalArguments { get; set; }
+		}
+
+		private static MethodMatchResult MatchMethod(MethodBase method, IEnumerable<object> inputParameters, int skipNumOptionals = 0)
+		{
+			var parms = method.GetParameters();
+			var requiredParms = new List<ParameterInfo>(parms);
+			for (int i = 0; i < skipNumOptionals; i++)
+			{
+				var index = parms.Count() - i - 1;
+				if (index < 0)
+					break;
+				if (requiredParms[index].IsOptional == false)
+					break;
+				requiredParms.RemoveAt(index);
+			}
+
+			var numMissingInputs = Math.Max(0, requiredParms.Count() - inputParameters.Count());
+			var extendedInput = inputParameters.Concat(Enumerable.Range(0, numMissingInputs).Select(o => (object?)null));
+			var pairs = extendedInput.Take(requiredParms.Count()).Select((o, i) => new { Input = o, Expected = requiredParms[i] });
+			var matchedPairs = pairs.Select(pair => ScoreTypeMatch(pair.Input, pair.Expected.ParameterType)).ToList();
+			for (int i = requiredParms.Count; i < parms.Count(); i++)
+				matchedPairs.Add((0, Type.Missing)); // Needed for Invoke when optional args
+
+			var numUnusedInputs = Math.Max(0, inputParameters.Count() - requiredParms.Count());
+			return new MethodMatchResult
+			{
+				Method = method,
+				Matched = matchedPairs,
+				TotalScore = matchedPairs.Sum(o => o.score) - numUnusedInputs * 1,
+				HasMismatch = matchedPairs.Any(o => o.score < 0),
+				NumOptionalArguments = method.GetParameters().Count(o => o.IsOptional)
+			};
+		}
+
 		public static (MethodBase method, object[] arguments) BindMethod(IEnumerable<MethodInfo> methods, IEnumerable<object> inputParameters)
 		{
 			// TODO: we could provide info about which inputs are always strings (e.g. from command line input)
 			// Then we can score methods better
-			var matched = methods.Select(method =>
+
+			var numOptionals = 0;
+
+			// Inefficient - no need to re-evaluate methods that don't have any more optionals than already evaluated...
+			while (true)
 			{
-				var parms = method.GetParameters();
+				var matched = methods.Select(method => MatchMethod(method, inputParameters, numOptionals));
 
-				var numMissingInputs = Math.Max(0, parms.Count() - inputParameters.Count());
-				var extendedInput = inputParameters.Concat(Enumerable.Range(0, numMissingInputs).Select(o => (object?)null));
-				var pairs = extendedInput.Take(parms.Count()).Select((o, i) => new { Input = o, Expected = parms[i] });
-				var matchedPairs = pairs.Select(pair => ScoreTypeMatch(pair.Input, pair.Expected.ParameterType)).ToList();
+				var goodMatches = matched
+					.Where(o => !o.HasMismatch)
+					.OrderByDescending(o => o.TotalScore)
+					.ToList();
 
-				var numUnusedInputs = Math.Max(0, inputParameters.Count() - parms.Count());
-				return new
+				if (goodMatches.Any())
 				{
-					Method = method,
-					Matched = matchedPairs,
-					TotalScore = matchedPairs.Sum(o => o.score) - numUnusedInputs * 1,
-					HasMismatch = matchedPairs.Any(o => o.score < 0)
-				};
-			})
-				.Where(o => !o.HasMismatch)
-				.OrderByDescending(o => o.TotalScore)
-				.ToList();
-
-			var found = matched.FirstOrDefault();
-			if (found != null)
-				return (found.Method, found.Matched.Select(o => o.converted).ToArray());
+					var found = matched.First();
+					return (found.Method, found.Matched.Select(o => o.converted).ToArray());
+				}
+				if (numOptionals < matched.Max(o => o.NumOptionalArguments))
+					numOptionals++;
+				else
+					break;
+			}
 
 			//var inp = inputParameters.ToArray();
 			//Type.DefaultBinder.BindToMethod(BindingFlags.Default, methods.ToArray(), ref inp,  System.Globalization.CultureInfo.InvariantCulture, )

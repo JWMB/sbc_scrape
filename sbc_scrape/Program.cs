@@ -3,6 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using NodaTime;
 using REPL;
+using sbc_scrape.REPL;
 using SBCScan.REPL;
 using Scrape.IO;
 using System;
@@ -53,6 +54,7 @@ namespace SBCScan
 					new WriteFiles(outputFolder),
 					new ReadFileCmd(outputFolder),
 					new AddCommandsTestCmd(),
+					new SIEResultsCmd(GlobalSettings.AppSettings)
 					};
 				cmds.Add(new ListCmd(cmds));
 
