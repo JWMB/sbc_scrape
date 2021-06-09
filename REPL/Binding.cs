@@ -68,7 +68,7 @@ namespace REPL
 
 				if (goodMatches.Any())
 				{
-					var found = matched.First();
+					var found = goodMatches.First();
 					return (found.Method, found.Matched.Select(o => o.converted).ToArray());
 				}
 				if (numOptionals < matched.Max(o => o.NumOptionalArguments))
