@@ -41,25 +41,27 @@ namespace sbc_scrape.Joining
 			// LB will be dated at or after SLR/LR
 
 			// SLRs company names are supposedly same as LB, but LRs can have
-			invoices = invoices.Where(o => o.IsRejected == false).ToList();
-			var vouchers = sie.SelectMany(o => o.Children).OfType<VoucherRecord>().ToList();
+			var sieVouchers = sie.SelectMany(o => o.Children).OfType<VoucherRecord>().ToList();
 
-			var summaries = invoices.Select(o => InvoiceSummary.Summarize(o)).Where(o => years.Contains(o.InvoiceDate.Value.Year)).ToList();
+			var invoiceSummaries = invoices.Where(o => o.IsRejected == false)
+				.Select(o => InvoiceSummary.Summarize(o)).Where(o => years.Contains(o.InvoiceDate.Value.Year)).ToList();
 
 			// TODO: hardcoded!!
 			var companyAliases = new Dictionary<string, string> {
 				{ "Sita Sverige AB", "SUEZ Recycling AB" },
-				{ "Fortum Värme", "Stockholm Exergi" }
+				{ "Fortum Värme", "Stockholm Exergi" },
+				{ "Markservice STHLM AB", "Svensk Markservice AB" }
 			};
-			vouchers.Where(o => companyAliases.ContainsKey(o.CompanyName)).ToList().ForEach(o => o.SetCompanyNameOverride(companyAliases[o.CompanyName]));
-			var result = InvoiceSIEMatch.MatchInvoiceWithLB_SLR(vouchers, summaries);
+			sieVouchers.Where(o => companyAliases.ContainsKey(o.CompanyName)).ToList().ForEach(o => o.SetCompanyNameOverride(companyAliases[o.CompanyName]));
+			var result = InvoiceSIEMatch.MatchInvoiceWithLB_SLR(sieVouchers, invoiceSummaries);
 
-			var missing = result.Matches.Where(o => o.SLR.Voucher == null).ToList();
-			if (missing.Any())
+			var missingPayment = result.Matches.Where(o => o.SLR.Voucher == null).ToList();
+			if (missingPayment.Any())
 			{
-				// Ignore those with payment later than latest found payment:
-				var latestDate = vouchers.Where(o => o.VoucherType == VoucherType.SLR).Max(o => o.Date).ToDateTimeUnspecified();
-				if (missing.Any(o => o.Invoice.DueDate < latestDate))
+				// Ignore those with due date later than latest found payment:
+				var latestDate = sieVouchers.Where(o => o.VoucherType == VoucherType.SLR).Max(o => o.Date).ToDateTimeUnspecified();
+				missingPayment = missingPayment.Where(o => o.Invoice.DueDate < latestDate).ToList();
+				if (missingPayment.Any())
 				{
 					System.Diagnostics.Debugger.Break();
 				}
@@ -73,7 +75,7 @@ namespace sbc_scrape.Joining
 
 			// try getting LBs for sbcInvoices
 			// tricky thing with sbcInvoices - one row for each non-admin transaction in SLRs
-			var lbs = vouchers.Where(o => o.VoucherType == VoucherType.LB).ToList();
+			var lbs = sieVouchers.Where(o => o.VoucherType == VoucherType.LB).ToList();
 			var sbcInvoiceToLB = sbcInvoices.Where(o => o.PaymentDate != null).GroupBy(o => o.IdSLR)
 				.Select(grp =>
 				{
@@ -91,7 +93,7 @@ namespace sbc_scrape.Joining
 			var sbcMatchedSLRSNs = sbcInvoiceToSingleLB.Select(o => o.Key).ToList();
 			var stillUnmatchedSLRs = result.UnmatchedSLR.Where(o => !sbcMatchedSLRSNs.Contains(o.Id));
 
-			var vouchersSlrLr = vouchers.Where(o => o.VoucherType == VoucherType.TaxAndExpense).Concat(stillUnmatchedSLRs).ToList();
+			var vouchersSlrLr = sieVouchers.Where(o => o.VoucherType == VoucherType.TaxAndExpense).Concat(stillUnmatchedSLRs).ToList();
 			var matchRemaining = MatchVoucherTypes(vouchersSlrLr, stillUnmatchedLBs, false);
 			var stillUnmatchedSlrLr = vouchersSlrLr.Except(matchRemaining.Select(o => o.Key)).ToList();
 			stillUnmatchedLBs = stillUnmatchedLBs.Except(matchRemaining.Select(o => o.Value)).ToList();
@@ -105,7 +107,7 @@ namespace sbc_scrape.Joining
 			var matchesBySLR = result.Matches.Where(o => o.SLR.Voucher != null)
 				.Select(m => new { Key = m.SLR.Voucher.Id, Value = m })
 				.ToDictionary(o => o.Key, o => o.Value);
-			var fullResult = vouchers.Where(o => o.VoucherType == VoucherType.SLR || o.VoucherType == VoucherType.TaxAndExpense).Select(slr =>
+			var fullResult = sieVouchers.Where(o => o.VoucherType == VoucherType.SLR || o.VoucherType == VoucherType.TaxAndExpense).Select(slr =>
 			{
 				// TODO: should we have multiple rows if SLR has >1 non-admin transaction?
 				//var sbcInv = sbcInvoices.FirstOrDefault(o => o.RegisteredDate.Year == slr.Date.Year && o.VerNum == slr.SerialNumber);
@@ -133,7 +135,7 @@ namespace sbc_scrape.Joining
 			var accountIdToAccountName = sie.SelectMany(s => s.Children.OfType<AccountRecord>()).GroupBy(o => o.AccountId).ToDictionary(o => o.Key, o => o.First().AccountName);
 			foreach (var accountId in accountIdToAccountName.Keys)
 			{
-				var found = summaries.FirstOrDefault(o => o.AccountId == accountId);
+				var found = invoiceSummaries.FirstOrDefault(o => o.AccountId == accountId);
 				if (found != null)
 					accountIdToAccountName[accountId] = found.AccountName;
 			}

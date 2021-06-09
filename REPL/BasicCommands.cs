@@ -97,6 +97,8 @@ namespace REPL
 		public override string Id => "csv";
 		public Task<object> Evaluate(string typeName, string str)
 		{
+			if (string.IsNullOrEmpty(typeName))
+				throw new ArgumentNullException($"{nameof(typeName)}");
 			var type = AppDomain.CurrentDomain.GetAssemblies()
 				.Select(a => a.GetTypes().FirstOrDefault(t => t.Name == typeName)).FirstOrDefault(t => t != null);
 			if (type == null)

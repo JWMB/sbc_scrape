@@ -51,6 +51,7 @@ namespace sbc_scrape.Joining
 			Voucher = null;
 			MissingReason = reason;
 		}
+		public override string ToString() => Voucher?.ToString() ?? MissingReason.ToString();
 	}
 
 	public class MatchingResult

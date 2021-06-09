@@ -219,6 +219,12 @@ namespace SIE
 		public List<SIERecord> Children { get; set; } = new List<SIERecord>();
 		public override string Tag => "ROOT";
 		public override void Read(string[] cells) { }
+
+		public override string ToString()
+		{
+			var reportPeriod = Children.OfType<ReportPeriodRecord>().FirstOrDefault();
+			return $"{Tag} {reportPeriod?.Start.ToSimpleDateString()}";
+		}
 	}
 
 	public class UnknownRecord : SIERecord

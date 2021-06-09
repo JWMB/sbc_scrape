@@ -23,6 +23,14 @@ Start the program. A wild console appears. Run
 This opens Chrome and takes you to the login page (as defined by ```LoginPage_BankId```) so you can authorize using BankID.  **TODO: PID as optional argument to login**  
 The browser then redirects to the ```RedirectUrlMediusFlow``` page. 
 
+If the ChromeDriver does not match your installed Chrome version, you will get an error message similar to this:
+```
+System.InvalidOperationException: session not created: This version of ChromeDriver only supports Chrome version 88
+Current browser version is 91.0.4472.77 with binary path C:\Program Files\Google\Chrome\Application\chrome.exe (SessionNotCreated)
+```
+Update the ChromeDriver nuget package to a matching version.
+
+
 Once loaded, run  
 
 ```> scrape [yyyy-MM-dd]```  

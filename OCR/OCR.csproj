@@ -11,7 +11,7 @@
 
   <ItemGroup>
     <PackageReference Include="PdfSharp" Version="1.51.5185-beta" />
-    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.2" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.3" />
   </ItemGroup>
 
 </Project>
