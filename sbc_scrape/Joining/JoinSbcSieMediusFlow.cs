@@ -34,12 +34,8 @@ namespace sbc_scrape.Joining
 		//	await MatchMediusFlowWithSIE(years, invoices, sie, sbcInvoices);
 		//}
 
-		public static List<ExportRow> MatchMediusFlowWithSIE(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie, List<SBC.Invoice> sbcInvoices)
+		private static (List<InvoiceSummary>, List<VoucherRecord>) PrepareFiltered(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie)
 		{
-			// SLR/LR are added when expense is registered, and contains the expense accounts
-			// LB is when it's payed
-			// LB will be dated at or after SLR/LR
-
 			// SLRs company names are supposedly same as LB, but LRs can have
 			var sieVouchers = sie.SelectMany(o => o.Children).OfType<VoucherRecord>().ToList();
 
@@ -53,6 +49,159 @@ namespace sbc_scrape.Joining
 				{ "Markservice STHLM AB", "Svensk Markservice AB" }
 			};
 			sieVouchers.Where(o => companyAliases.ContainsKey(o.CompanyName)).ToList().ForEach(o => o.SetCompanyNameOverride(companyAliases[o.CompanyName]));
+
+			return (invoiceSummaries, sieVouchers);
+		}
+
+		public static List<MultiSourceRow> Testing(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie, List<SBC.Invoice> sbcInvoices)
+		{
+			var (invoiceSummaries, sieVouchers) = PrepareFiltered(years, invoices, sie);
+
+			var slrs = sieVouchers.Where(voucher => voucher.VoucherType == VoucherType.SLR);
+			var joinedBySlrId = slrs.GroupJoin(sbcInvoices,
+				slr => slr.Id, sbc => sbc.IdSLR,
+				(slr, sbcs) => new { Amount = slr.GetTransactionsMaxAmount(), Date = slr.Date, SLR = slr, SBC = sbcs.ToList() })
+				.ToList();
+
+			var missingSbcs = joinedBySlrId.Where(o => !o.SBC.Any());
+			var allSLRIds = slrs.Select(o => o.Id).ToList();
+			var missingSlrs = sbcInvoices.Where(o => !allSLRIds.Contains(o.IdSLR)).ToList();
+			if (missingSlrs.Any())
+				throw new Exception("missingSlrs!");
+
+			var withMF = invoiceSummaries.GroupJoin(joinedBySlrId,
+				InvoiceKey.From,
+				slr => new InvoiceKey { Date = slr.SLR.Date, Amount = slr.Amount, Company = slr.SLR.CompanyName },
+				(inv, slr) => new { MediusFlow = inv, SLR = slr.Select(o => o.SLR).ToList(), SBC = slr.Select(o => o.SBC).ToList() })
+				.ToList();
+
+			//var oppo = withMF.Where(o => o.SBC.Count() == 1);
+
+			var todoLBs = sieVouchers.Where(voucher => voucher.VoucherType == VoucherType.TaxAndExpense); // always without other references
+			var todoHandleThese = withMF.Where(o => o.SLR.Count > 1)
+				.GroupBy(o => InvoiceKey.From(o.MediusFlow))
+				.ToList();
+
+			var lbs = sieVouchers.Where(voucher => voucher.VoucherType == VoucherType.LB).ToList();
+			var ooppp = lbs.GroupJoin(sbcInvoices,
+				lb => new { Date = (LocalDate?)lb.Date, Amount = lb.GetTransactionsMaxAmount() },
+				sbc => new { Date = sbc.PaymentDate.ToLocalDate(), Amount = sbc.Amount },
+				(lb, sbc) => new { LB = lb, SBC = sbc.ToList() })
+				.ToList();
+
+			return null;
+		}
+		private class InvoiceKey
+		{
+			public LocalDate Date { get; set; }
+			public decimal Amount { get; set; }
+			public string Company { get; set; }
+			public static InvoiceKey From(InvoiceSummary inv) => new InvoiceKey { Date = inv.InvoiceDate.ToLocalDate().Value, Amount = inv.GrossAmount, Company = inv.Supplier };
+		}
+		public static (List<(TInner, TOuter)>, List<TInner>, List<TOuter>) GroupJoinOuters<TInner, TOuter, TCompare>(IEnumerable<TInner> inner, IEnumerable<TOuter> outer,
+			Func<TInner, TCompare> keyInner, Func<TOuter, TCompare> keyOuter) //, Func<TInner, IEnumerable<TOuter>, TResult> selector)
+		{
+			var groupedByInner = inner.GroupJoin(outer, keyInner, keyOuter, (inner, outer) => new { Inner = inner, Outer = outer.ToList() }).ToList();
+			var matched1to1 = groupedByInner.Where(o => o.Outer.Count == 1).Select(o => new { Inner = o.Inner, Outer = o.Outer.First() }).ToList();
+			var multiMatch = groupedByInner.Where(o => o.Outer.Count > 1);
+			var noMatchWithOuter = groupedByInner.Where(o => !o.Outer.Any()).Select(o => o.Inner).ToList();
+			var matchedOuterKeys = groupedByInner.SelectMany(o => o.Outer).Select(keyOuter).ToList();
+			var noMatchWithInner = outer.Where(o => matchedOuterKeys.Contains(keyOuter(o))).ToList();
+
+			return (matched1to1.Select(o => (o.Inner, o.Outer)).ToList(), noMatchWithOuter, noMatchWithInner);
+		}
+
+		public static List<MultiSourceRow> Union(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie, List<SBC.Invoice> sbcInvoices)
+		{
+			var (invoiceSummaries, sieVouchers) = PrepareFiltered(years, invoices, sie);
+
+			var result = new List<MultiSourceRow>()
+				.Concat(invoiceSummaries
+					.Select(o => new MultiSourceRow
+					{
+						InvoiceDate = o.InvoiceDate.ToLocalDate(),
+						DueDate = o.DueDate.ToLocalDate(),
+						PayDate = o.FinalPostingingDate.ToLocalDate(),
+						CompanyName = o.Supplier,
+						Amount = o.GrossAmount,
+						SortDate = o.InvoiceDate.Value.ToLocalDate(),
+						SourceType = "MediusFlow",
+						Id = o.Id.ToString()
+					}))
+				.Concat(sieVouchers
+					.Where(o => o.VoucherType == VoucherType.SLR || o.VoucherType == VoucherType.TaxAndExpense)
+					.Select(o => new MultiSourceRow {
+						InvoiceDate = o.Date,
+						CompanyName = o.CompanyName,
+						Amount = o.VoucherType == VoucherType.SLR ? o.TransactionsNonAdminOrCorrections.Sum(o => o.Amount) : o.GetTransactionsMaxAmount(),
+						SortDate = o.Date, //.PlusDays(30),
+						SourceType = o.VoucherTypeCode,
+						Id = o.Id
+					}))
+				.Concat(sieVouchers
+					.Where(o => o.VoucherType == VoucherType.LB)
+					.Select(o => new MultiSourceRow
+					{
+						InvoiceDate = o.Date,
+						CompanyName = o.CompanyName,
+						Amount = o.GetTransactionsMaxAmount(),
+						SortDate = o.Date.PlusDays(-30),
+						SourceType = o.VoucherTypeCode,
+						Id = o.Id
+					}))
+
+				.Concat(sbcInvoices
+					.Where(o => years.Contains(o.RegisteredDate.Year))
+					.Select(o => new MultiSourceRow
+					{
+						InvoiceDate = o.RegisteredDate.ToLocalDate(),
+						PayDate = o.PaymentDate.ToLocalDate(),
+						CompanyName = o.Supplier,
+						Amount = o.Amount,
+						SortDate = o.RegisteredDate.ToLocalDate(),
+						SourceType = "SBC",
+						Id = o.IdSLR // $"{o.VerSeries}/{o.VerNum}"
+					}))
+				.ToList();
+
+			result = result.OrderByDescending(o => o.SortDate)
+				.ThenBy(o => o.CompanyName)
+				.ThenBy(o => o.Amount).ToList();
+			var csv = string.Join("\n", result.Select(row => string.Join("\t", new[] {
+				DateToString(row.SortDate),
+				row.Amount.ToString("#"),
+				row.SourceType,
+				row.CompanyName,
+				DateToString(row.InvoiceDate),
+				DateToString(row.DueDate),
+				DateToString(row.PayDate),
+				row.Id
+			})));
+			return result;
+
+			string DateToString(LocalDate? date) => date?.ToSimpleDateString(); // .ToString("yyyy-MM-dd");
+		}
+
+		public class MultiSourceRow
+		{
+			public LocalDate SortDate { get; set; } = new LocalDate();
+			public LocalDate? InvoiceDate { get; set; }
+			public LocalDate? DueDate { get; set; }
+			public LocalDate? PayDate { get; set; }
+			public string CompanyName { get; set; } = "";
+			public decimal Amount { get; set; }
+			public string SourceType { get; set; }
+			public string Id { get; set; }
+		}
+
+		public static List<ExportRow> MatchMediusFlowWithSIE(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie, List<SBC.Invoice> sbcInvoices)
+		{
+			// SLR/LR are added when expense is registered, and contains the expense accounts
+			// LB is when it's payed
+			// LB will be dated at or after SLR/LR
+
+			// SLRs company names are supposedly same as LB, but LRs can have
+			var (invoiceSummaries, sieVouchers) = PrepareFiltered(years, invoices, sie);
 			var result = InvoiceSIEMatch.MatchInvoiceWithLB_SLR(sieVouchers, invoiceSummaries);
 
 			var missingPayment = result.Matches.Where(o => o.SLR.Voucher == null).ToList();
