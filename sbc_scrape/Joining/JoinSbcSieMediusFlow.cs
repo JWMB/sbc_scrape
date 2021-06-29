@@ -45,6 +45,7 @@ namespace sbc_scrape.Joining
 			// TODO: hardcoded!!
 			var companyAliases = new Dictionary<string, string> {
 				{ "Sita Sverige AB", "SUEZ Recycling AB" },
+				//{ "PreZero Recycling AB", "SUEZ Recycling AB" },
 				{ "Fortum Värme", "Stockholm Exergi" },
 				{ "Markservice STHLM AB", "Svensk Markservice AB" }
 			};
@@ -58,36 +59,87 @@ namespace sbc_scrape.Joining
 			var (invoiceSummaries, sieVouchers) = PrepareFiltered(years, invoices, sie);
 
 			var slrs = sieVouchers.Where(voucher => voucher.VoucherType == VoucherType.SLR);
-			var joinedBySlrId = slrs.GroupJoin(sbcInvoices,
-				slr => slr.Id, sbc => sbc.IdSLR,
-				(slr, sbcs) => new { Amount = slr.GetTransactionsMaxAmount(), Date = slr.Date, SLR = slr, SBC = sbcs.ToList() })
-				.ToList();
+			// TODO: what about VoucherType.TaxAndExpense? // always without other references
+			var lrs = sieVouchers.Where(voucher => voucher.VoucherType == VoucherType.TaxAndExpense).ToList();
 
-			var missingSbcs = joinedBySlrId.Where(o => !o.SBC.Any());
-			var allSLRIds = slrs.Select(o => o.Id).ToList();
-			var missingSlrs = sbcInvoices.Where(o => !allSLRIds.Contains(o.IdSLR)).ToList();
-			if (missingSlrs.Any())
+			//var aaa = CreateSet(new[] { 1, 2, 3, 4, 5, 5 }, new[] { 0, 3, 4, 4, 5, 6, 7, 7 }, k => k, k => k);
+			//var set = CreateSet(new[] { 1, 2, 3, 4, 5, 5 }, new[] { 0, 3, 4, 4, 5, 6, 7, 7 }, k => k, k => k);
+			var slrToSbc = CreateSet(slrs, sbcInvoices, slr => slr.Id, sbc => sbc.IdSLR);
+			if (slrToSbc.ManyA_To_ManyBs.Any(o => o.Item1.Count > 1))
+				throw new Exception("Multi!");
+
+			var missingSbcs = slrToSbc.OnlyInA;
+			if (slrToSbc.OnlyInB.Any())
 				throw new Exception("missingSlrs!");
 
-			var withMF = invoiceSummaries.GroupJoin(joinedBySlrId,
-				InvoiceKey.From,
-				slr => new InvoiceKey { Date = slr.SLR.Date, Amount = slr.Amount, Company = slr.SLR.CompanyName },
-				(inv, slr) => new { MediusFlow = inv, SLR = slr.Select(o => o.SLR).ToList(), SBC = slr.Select(o => o.SBC).ToList() })
-				.ToList();
-
-			//var oppo = withMF.Where(o => o.SBC.Count() == 1);
-
-			var todoLBs = sieVouchers.Where(voucher => voucher.VoucherType == VoucherType.TaxAndExpense); // always without other references
-			var todoHandleThese = withMF.Where(o => o.SLR.Count > 1)
-				.GroupBy(o => InvoiceKey.From(o.MediusFlow))
-				.ToList();
 
 			var lbs = sieVouchers.Where(voucher => voucher.VoucherType == VoucherType.LB).ToList();
-			var ooppp = lbs.GroupJoin(sbcInvoices,
-				lb => new { Date = (LocalDate?)lb.Date, Amount = lb.GetTransactionsMaxAmount() },
-				sbc => new { Date = sbc.PaymentDate.ToLocalDate(), Amount = sbc.Amount },
-				(lb, sbc) => new { LB = lb, SBC = sbc.ToList() })
-				.ToList();
+			var ooo = CreateSet(lbs, sbcInvoices,
+				lb => new InvoiceKey { Date = lb.Date, Amount = lb.GetTransactionsMaxAmount() },
+				sbc => new InvoiceKey { Date = sbc.PaymentDate.Value.ToLocalDate(), Amount = sbc.Amount });
+			// TODO: join with slrToSbc above
+
+			var mfToJoined = CreateSet(invoiceSummaries, slrToSbc.OneA_To_NoneOrAnyBs,
+				InvoiceKey.From,
+				join1 => new InvoiceKey { Date = join1.A.Date, Amount = join1.A.GetTransactionsMaxAmount(), Company = join1.A.CompanyName });
+
+			var paired = mfToJoined.OneA_To_NoneOrAnyBs;
+			if (mfToJoined.OneA_To_ManyBs.Any())
+				throw new Exception("OneA_To_ManyBs");
+			if (mfToJoined.ManyA_To_ManyBs.Any())
+			{
+				if (mfToJoined.ManyA_To_ManyBs.Any(o => o.As.Count != o.Bs.Count))
+					throw new Exception("Unsalvageble ManyA_To_ManyBs");
+				// separate into pairs
+				foreach (var item in mfToJoined.ManyA_To_ManyBs)
+					for (int i = 0; i < item.As.Count; i++)
+						paired.Add((item.As[i], item.Bs.Skip(i).Take(1).ToList()));
+			}
+			var retyped = paired.Select(o => new { A = o.A, B = o.Bs.SingleOrDefault() });
+
+			var tmp = retyped.Select(o => {
+				return new
+				{
+					SortDate = o.A.InvoiceDate.Value.ToLocalDate(),
+					InvoiceDate = o.A.InvoiceDate.ToLocalDate(),
+					CompanyName = o.A.Supplier,
+					Amount = o.A.GrossAmount,
+					SlrId = o.B.A?.Id,
+					MFId = o.A.Id,
+					Link = string.Join("", o.B.Bs?.Select(s => s.InvoiceLink).Distinct() ?? new List<string>()),
+					//SubCount = o.B.Bs?.Count
+				};
+			}).Concat(mfToJoined.OnlyInB.Select(o => {
+				return new
+				{
+					SortDate = o.A.Date,
+					InvoiceDate = (LocalDate?)o.A.Date,
+					CompanyName = o.A.CompanyName,
+					Amount = o.A.GetTransactionsMaxAmount(),
+					SlrId = o.A.Id,
+					MFId = 0L,
+					Link = string.Join("", o.Bs?.Select(s => s.InvoiceLink).Distinct() ?? new List<string>()),
+					//SubCount = (int?)o.Bs.Count
+				};
+			}));
+
+			var result = tmp.OrderByDescending(o => o.SortDate)
+				.ThenBy(o => o.CompanyName)
+				.ThenBy(o => o.Amount).ToList();
+
+			var csv = string.Join("\n", result.Select(row => string.Join("\t", new[] {
+				DateToString(row.SortDate),
+				row.Amount.ToString("#"),
+				//row.SourceType,
+				row.CompanyName,
+				DateToString(row.InvoiceDate),
+				row.SlrId?.ToString(),
+				row.MFId.ToString(),
+				row.Link.ToString()
+				//DateToString(row.DueDate),
+				//DateToString(row.PayDate),
+				//row.Id
+			})));
 
 			return null;
 		}
@@ -97,19 +149,104 @@ namespace sbc_scrape.Joining
 			public decimal Amount { get; set; }
 			public string Company { get; set; }
 			public static InvoiceKey From(InvoiceSummary inv) => new InvoiceKey { Date = inv.InvoiceDate.ToLocalDate().Value, Amount = inv.GrossAmount, Company = inv.Supplier };
-		}
-		public static (List<(TInner, TOuter)>, List<TInner>, List<TOuter>) GroupJoinOuters<TInner, TOuter, TCompare>(IEnumerable<TInner> inner, IEnumerable<TOuter> outer,
-			Func<TInner, TCompare> keyInner, Func<TOuter, TCompare> keyOuter) //, Func<TInner, IEnumerable<TOuter>, TResult> selector)
-		{
-			var groupedByInner = inner.GroupJoin(outer, keyInner, keyOuter, (inner, outer) => new { Inner = inner, Outer = outer.ToList() }).ToList();
-			var matched1to1 = groupedByInner.Where(o => o.Outer.Count == 1).Select(o => new { Inner = o.Inner, Outer = o.Outer.First() }).ToList();
-			var multiMatch = groupedByInner.Where(o => o.Outer.Count > 1);
-			var noMatchWithOuter = groupedByInner.Where(o => !o.Outer.Any()).Select(o => o.Inner).ToList();
-			var matchedOuterKeys = groupedByInner.SelectMany(o => o.Outer).Select(keyOuter).ToList();
-			var noMatchWithInner = outer.Where(o => matchedOuterKeys.Contains(keyOuter(o))).ToList();
 
-			return (matched1to1.Select(o => (o.Inner, o.Outer)).ToList(), noMatchWithOuter, noMatchWithInner);
+			public override bool Equals(object obj)
+			{
+				return obj is InvoiceKey key &&
+					   Date.Equals(key.Date) &&
+					   Amount == key.Amount &&
+					   Company == key.Company;
+			}
+
+			public override int GetHashCode()
+			{
+				return HashCode.Combine(Date, Amount, Company);
+			}
 		}
+
+		public class Set<TA, TB, TCompare>
+		{
+			public List<(TA A, TB B)> OneA_To_OneB => joined.Values
+				.Where(o => o.Count() == 1 && o.Single().Outer?.Count == 1)
+				.Select(o => (o.Single().Inner, o.Single().Outer.Single() ))
+				.ToList();
+
+			public List<(TA A, List<TB> Bs)> OneA_To_NoneOrAnyBs => joined.Values
+				.Where(o => o.Count() == 1)
+				.Select(o => (o.Single().Inner, outerByKey.GetValueOrDefault(o.Single().Key, new List<TB>())))
+				.ToList();
+
+			public List<(TA A, List<TB> Bs)> OneA_To_AnyBs => joined.Values
+				.Where(o => o.Count() == 1)
+				.Select(o => (o.Single().Inner, outerByKey.GetValueOrDefault(o.Single().Key, new List<TB>())))
+				.Where(o => o.Item2.Any())
+				.ToList();
+
+			public List<(TA A, List<TB> Bs)> OneA_To_ManyBs => joined.Values
+				.Where(o => o.Count() == 1)
+				.Select(o => (o.Single().Inner, outerByKey.GetValueOrDefault(o.Single().Key, new List<TB>())))
+				.Where(o => o.Item2.Count > 1)
+				.ToList();
+
+			public List<(List<TA> As, List<TB> Bs)> ManyA_To_ManyBs => joined.Values
+				.Where(o => o.Count() > 1 || o.Any(p => p.Outer?.Count > 1))
+				.Select(o => (o.Select(p => p.Inner).ToList(), outerByKey.GetValueOrDefault(o.First().Key, new List<TB>()).ToList()))
+				.Where(o => o.Item1.Count > 1 && o.Item2.Count > 1)
+				.ToList();
+
+			public List<TA> OnlyInA => joined.Values
+				.Where(o => o.Count() == 1 && o.Single().Outer?.Any() != true)
+				.Select(o => o.Single().Inner)
+				.ToList();
+
+			public List<TB> OnlyInB => outerByKey
+				.Where(o => !joined.ContainsKey(o.Key))
+				.SelectMany(o => o.Value).ToList();
+
+			private Dictionary<TCompare, List<Join>> joined;
+			private Dictionary<TCompare, List<TB>> outerByKey;
+
+			private class Join
+			{
+				public TCompare Key { get; set; }
+				public TA Inner { get; set; }
+				public List<TB> Outer { get; set; }
+			}
+
+			public static Set<TA, TB, TCompare> Create(IEnumerable<TA> a, IEnumerable<TB> b,
+				Func<TA, TCompare> keyA, Func<TB, TCompare> keyB)
+			{
+				var outerByKey = b.GroupBy(o => keyB(o)).ToDictionary(o => o.Key, o => o.ToList());
+				var joined = a.Select(o => {
+					var key = keyA(o);
+					var found = outerByKey.GetValueOrDefault(key, null);
+					return new Join { Key = key, Inner = o, Outer = found };
+				})
+					.GroupBy(o => o.Key).ToDictionary(o => o.Key, o => o.ToList());
+				var tmp = new Set<TA, TB, TCompare>();
+				tmp.joined = joined;
+				tmp.outerByKey = outerByKey;
+				return tmp;
+			}
+		}
+		public static Set<TA, TB, TCompare> CreateSet<TA, TB, TCompare>(IEnumerable<TA> a, IEnumerable<TB> b,
+				Func<TA, TCompare> keyA, Func<TB, TCompare> keyB)
+		{
+			return Set<TA, TB, TCompare>.Create(a, b, keyA, keyB);
+		}
+
+		//public static (List<(TInner, TOuter)>, List<TInner>, List<TOuter>) GroupJoinOuters<TInner, TOuter, TCompare>(IEnumerable<TInner> inner, IEnumerable<TOuter> outer,
+		//	Func<TInner, TCompare> keyInner, Func<TOuter, TCompare> keyOuter)
+		//{
+		//	var groupedByInner = inner.GroupJoin(outer, keyInner, keyOuter, (inner, outer) => new { Inner = inner, Outer = outer.ToList() }).ToList();
+		//	var matched1to1 = groupedByInner.Where(o => o.Outer.Count == 1).Select(o => new { Inner = o.Inner, Outer = o.Outer.First() }).ToList();
+		//	var multiMatch = groupedByInner.Where(o => o.Outer.Count > 1);
+		//	var noMatchWithOuter = groupedByInner.Where(o => !o.Outer.Any()).Select(o => o.Inner).ToList();
+		//	var matchedOuterKeys = groupedByInner.SelectMany(o => o.Outer).Select(keyOuter).ToList();
+		//	var noMatchWithInner = outer.Where(o => matchedOuterKeys.Contains(keyOuter(o))).ToList();
+
+		//	return (matched1to1.Select(o => (o.Inner, o.Outer)).ToList(), noMatchWithOuter, noMatchWithInner);
+		//}
 
 		public static List<MultiSourceRow> Union(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie, List<SBC.Invoice> sbcInvoices)
 		{
@@ -178,9 +315,9 @@ namespace sbc_scrape.Joining
 				row.Id
 			})));
 			return result;
-
-			string DateToString(LocalDate? date) => date?.ToSimpleDateString(); // .ToString("yyyy-MM-dd");
 		}
+
+		private static string DateToString(LocalDate? date) => date?.ToSimpleDateString(); // .ToString("yyyy-MM-dd");
 
 		public class MultiSourceRow
 		{
