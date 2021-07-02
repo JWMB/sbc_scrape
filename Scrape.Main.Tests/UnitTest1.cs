@@ -169,7 +169,7 @@ namespace Scrape.Main.Tests
 		[TestMethod]
 		public async Task AllSourcesToCSV()
 		{
-			var (years, invoices, sie, sbcInvoices, sbcReceipts) = await Prepare(new[] { 2020 });
+			var (years, invoices, sie, sbcInvoices, sbcReceipts) = await Prepare(new[] { 2017, 2018, 2019, 2020, 2021 });
 			try
 			{
 				JoinSbcSieMediusFlow.Testing(years, invoices, sie, sbcInvoices, sbcReceipts);

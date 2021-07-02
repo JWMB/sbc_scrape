@@ -45,7 +45,13 @@ namespace sbc_scrape.Joining
 					{ "Stockholm Exergi", new List<string> { "Fortum Värme" } },
 					{ "Ellevio AB", new List<string> { "Energikundservice Sverige AB" } },
 					{ "Handelsbanken", new List<string>{ "Stadshypotek AB" } },
-					{ "Stockholms Markkontor", new List<string>{ "Expoateringskontoret Stockholms Markkontor" } }
+					{ "Stockholms Markkontor", new List<string>{ "Expoateringskontoret Stockholms Markkontor" } },
+					{ "Byggrevision Fastighet i Stockholm AB", new List<string>{ "Byggrevision Fastighet i Stock" } },
+					{ "Hyresgästföreningen Region Stockholm", new List<string>{ "Hyresgästföreningen Region Sto" } },
+					{ "iZettle AB - Fakturabetalningar", new List<string>{ "iZettle AB - Fakturabetalninga" } },
+					{ "Beatrice Fejde Revisionsbyrå AB", new List<string>{ "Beatrice Fejde Revisionsbyrå A" } },
+					{ "Larm & Passerkontroll i Stockholm AB", new List<string>{ "Larm & Passerkontroll i Stockh" } },
+					{ "Skärholmens Bil & Trakt", new List<string>{ "Skärholmens Bil & Trak" } },
 				};
 				lookUp = replacements.SelectMany(o => o.Value.Select(p => new { Key = p, Value = o.Key }))
 					.ToDictionary(o => o.Key, o => o.Value);
@@ -63,8 +69,17 @@ namespace sbc_scrape.Joining
 			// 4. 
 
 			// 1. Join SLR -> SBC
+			var mainTransactionAccount = 24400;
 			var slrs = sieVouchers.Where(voucher => voucher.VoucherType == VoucherType.SLR || voucher.VoucherType == VoucherType.TaxAndExpense);
 			// Note: VoucherType.TaxAndExpense are always without other references
+			{
+				var missingMainAccount = slrs.Where(o => !o.Transactions.Any(p => p.AccountId == mainTransactionAccount));
+				if (missingMainAccount.Any())
+					throw new Exception($"Algorithm based on all SLR/LRs having {mainTransactionAccount}");
+			}
+
+			var tmp = slrs.Select(o => new { Item = o, Names = o.Transactions.Select(p => $"{p.CompanyId}{p.CompanyName}").Distinct().ToList() })
+				.Where(o => o.Names.Count > 1).ToList();
 
 			//var aaa = CreateSet(new[] { 1, 2, 3, 4, 5, 5 }, new[] { 0, 3, 4, 4, 5, 6, 7, 7 }, k => k, k => k);
 			//var set = CreateSet(new[] { 1, 2, 3, 4, 5, 5 }, new[] { 0, 3, 4, 4, 5, 6, 7, 7 }, k => k, k => k);
@@ -81,7 +96,7 @@ namespace sbc_scrape.Joining
 			// 2. Join LB -> above result
 			var lbs = sieVouchers.Where(voucher => voucher.VoucherType == VoucherType.LB).ToList();
 			var lbToResult = CreateSet(lbs, result.Where(o => o.SBC.Any()),
-				lb => new InvoiceKey { Amount = lb.GetTransactionsMaxAmount(), Company = lb.Transactions.First().CompanyId, Date = lb.Date },
+				lb => new InvoiceKey { Amount = lb.GetAmountTransactionAccount(mainTransactionAccount), Company = lb.Transactions.First().CompanyId, Date = lb.Date },
 				sbc => new InvoiceKey { Amount = sbc.SBC.First().Amount, Company = sbc.SBC.First().LevNr, Date = sbc.SBC.FirstOrDefault(o => o.PaymentDate != null)?.PaymentDate.Value.ToLocalDate() ?? LocalDate.MaxIsoValue });
 			if (lbToResult.OneA_To_ManyBs.Any())
 				throw new Exception("SBC/LB Multimatch");
@@ -106,8 +121,8 @@ namespace sbc_scrape.Joining
 			// Join MediusFlow -> above result
 			var mfToResult = CreateSet(invoiceSummaries, result.Where(o => o.SLR != null),
 				inv => new InvoiceKey { Date = inv.InvoiceDate.ToLocalDate().Value, Amount = inv.GrossAmount, Company = replacer.Normalize(inv.Supplier) },
-				r => new InvoiceKey { Date = r.SLR.Date, Amount = r.SLR.GetTransactionsMaxAmount(), Company = replacer.Normalize(r.SLR.CompanyName) });
-
+				r => new InvoiceKey { Date = r.SLR.Date, Amount = -r.SLR.GetAmountTransactionAccount(mainTransactionAccount), Company = replacer.Normalize(r.SLR.CompanyName) });
+			//r.SLR.GetTransactionsMaxAmount()
 			if (mfToResult.OneA_To_ManyBs.Any())
 				throw new Exception("OneA_To_ManyBs");
 
@@ -168,19 +183,23 @@ namespace sbc_scrape.Joining
 			result = result.Where(o => !o.IsEmpty()).ToList();
 
 			{
+				// Join with Receipts - very strange data from SBC though, same transaction may have MANY rows with different names?!
 				var withLB = result.Where(o => o.LB != null).ToList();
 				var keyToLB = withLB.GroupBy(o => new { CompanyId = o.LB.Transactions.First().CompanyId, Amount = o.LB.GetTransactionsMaxAmount() })
 					.ToDictionary(o => o.Key, o => o.ToList());
 				var groupedReceipts = receipts.GroupBy(o => new { Amount = o.Amount, Date = o.Date, SupplierId = o.SupplierId }).ToDictionary(o => o.Key, o => o.ToList());
 				foreach (var groupedItem in groupedReceipts)
 				{
-					// seems LB CompanyId starts with some variation of BRF id 0629702 (CompanyIdRecord)
-					var rxBad1 = new Regex(@"[\/!]");
+					// SBC Admins often have strange chars in them, also numbers - probably not the name we want
+					var rxBad1 = new Regex(@"[\/!\""]");
 					var rxBad2 = new Regex(@"\d");
 					var sorted = groupedItem.Value.OrderBy(o => (rxBad1.IsMatch(o.Supplier) ? 2 : 0) + (rxBad2.IsMatch(o.Supplier) ? 1 : 0)).ToList();
 					var item = sorted.First();
-					var found = keyToLB.Where(o => o.Key.Amount == item.Amount
-						&& o.Key.CompanyId.EndsWith(item.SupplierId)).SelectMany(o => o.Value).ToList();
+					// seems LB CompanyId starts with some variation of BRF id (e.g. 0xxxx02 where xxxx is SIE CompanyIdRecord)
+					var found = keyToLB.Where(o => o.Key.Amount == item.Amount && o.Key.CompanyId.EndsWith(item.SupplierId))
+						.SelectMany(o => o.Value)
+						.Where(o => !o.IsEmpty()) // we might have rendered it empty (below)
+						.ToList();
 					if (found.Count() > 1)
 					{
 						found = found.Select(o => new { Item = o, DateDiff = Math.Abs(Period.Between(o.LB.Date, item.Date.ToLocalDate()).Days) })
@@ -199,20 +218,6 @@ namespace sbc_scrape.Joining
 					}
 				}
 			}
-			//var receiptToResult = CreateSet(receipts, result.Where(o => o.LB != null),
-			//	rc => new { CompanyId = rc.SupplierId, Amount = rc.Amount },
-			//	rs => new { CompanyId = rs.LB.Transactions.First().CompanyId, Amount = rs.LB.GetTransactionsMaxAmount() });
-			//receiptToResult.OneA_To_OneB.ForEach(o =>
-			//{
-			//	o.B.Receipt = o.A;
-			//	//var pot1 = result.Where(r => r.Amount == o.A.Amount).ToList();
-			//	var potential = result.Where(r => r.Amount == o.A.Amount && r.SLR != null && r.LB == null && (r.SBC == null || !r.SBC.Any())).ToList();
-			//	if (potential.Count == 1)
-			//	{
-			//		potential.Single().Merge(o.B);
-			//		o.B.MakeEmpty();
-			//	}
-			//});
 			result = result.Where(o => !o.IsEmpty()).ToList();
 
 
@@ -244,6 +249,7 @@ namespace sbc_scrape.Joining
 			}
 
 			var csv = ToCsv(result);
+			return null;
 
 			string ToCsv(IEnumerable<Joined> rows, bool sort = true)
 			{
@@ -268,8 +274,6 @@ namespace sbc_scrape.Joining
 					row.Missing,
 				})));
 			}
-
-			return null;
 		}
 
 		class Joined
@@ -306,7 +310,8 @@ namespace sbc_scrape.Joining
 			public LocalDate? PaymentDate => LB?.Date ?? SBC?.FirstOrDefault()?.PaymentDate.ToLocalDate()
 				?? new[] { MF?.FinalPostingingDate.ToLocalDate(), MF?.DueDate.ToLocalDate() }.Where(o => o != null).Max();
 
-			public string CompanyName => Receipt?.Supplier ?? MF?.Supplier ?? SLR?.CompanyName ?? SBC?.FirstOrDefault()?.Supplier ?? LB?.CompanyName ?? "";
+			public string CompanyName => (SLR?.VoucherTypeCode == "LR" ? Receipt?.Supplier : null) ?? MF?.Supplier ?? SLR?.CompanyName ?? SBC?.FirstOrDefault()?.Supplier ?? LB?.CompanyName ?? "";
+
 			public decimal Amount => SLRTransactionRow?.Amount ?? MF?.GrossAmount ?? SLR?.GetTransactionsMaxAmount() ?? LB?.GetTransactionsMaxAmount()
 				?? (SBC != null && SBC.Any() ? (decimal?)SBC.Sum(o => o.Amount) : null) ?? Receipt?.Amount ?? 0;
 
@@ -314,7 +319,7 @@ namespace sbc_scrape.Joining
 
 			public string Link => string.Join("", SBC?.Select(s => s.InvoiceLink).Distinct() ?? new List<string>());
 
-			public string Comment => $"{((Receipt != null && SLR != null) ? SLR.CompanyName : "")}{InvoiceSummary.ShortenComments(MF?.Comments)}";
+			public string Comment => $"{((Receipt != null && SLR != null) ? SLR.CompanyName : "")} {InvoiceSummary.ShortenComments(MF?.Comments)}{(SLR != null && SLR.Transactions.Count > 1 ? string.Join(",", SLR.Transactions.Skip(1).Select(o => o.CompanyName).Distinct()) : "")}";
 
 			public override string ToString() =>
 				$"{DateToString(SortDate)} {Amount} {CompanyName} {Missing}";

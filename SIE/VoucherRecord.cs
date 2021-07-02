@@ -53,8 +53,7 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 
 		public List<TransactionRecord> Transactions
 		{
-			get => Children.Where(o => o is TransactionRecord).Cast<TransactionRecord>().ToList();
-			set => Children = Children.Where(o => !(o is TransactionRecord)).Concat(value).ToList();
+			get => Children.OfType<TransactionRecord>().ToList();
 		}
 		public IEnumerable<TransactionRecord> TransactionsNonAdmin { get => Transactions.Where(o => !o.IsAdminAccount); }
 		public IEnumerable<TransactionRecord> TransactionsNonAdminOrCorrections { get =>
@@ -96,6 +95,7 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 
 		public string GetTransactionsCompanyName() => Transactions.FirstOrDefault()?.CompanyName ?? string.Empty;
 		public decimal GetTransactionsMaxAmount() => Transactions.Select(o => Math.Abs(o.Amount)).Max();
+		public decimal GetAmountTransactionAccount(int accountId) => Transactions.Where(o => o.AccountId == accountId).Select(o => o.Amount).DefaultIfEmpty(0).Sum();
 
 		public static void NormalizeCompanyNames(IEnumerable<VoucherRecord> vouchers)
 		{
@@ -195,7 +195,7 @@ For each SLR, check 35 days ahead for LB with same amount and same entry for TRA
 		/// <summary>
 		/// 1**** and 2**** accounts
 		/// </summary>
-		public bool IsAdminAccount { get => AccountId / 10000 <= 2; } //TODO: better name
+		public bool IsAdminAccount { get => AccountId <= 26510; } // AccountId / 10000 <= 2 TODO: better name
 
 		public override string ToString() => $"{Tag} {AccountId} {Unknown} {Amount} {FormatDate(Date)} {CompanyId}{(string.IsNullOrEmpty(CompanyId) ? "" : ":")}{CompanyName}";
 
