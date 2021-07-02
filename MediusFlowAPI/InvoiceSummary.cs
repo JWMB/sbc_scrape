@@ -59,6 +59,20 @@ namespace MediusFlowAPI
 		{
 			return $"{InvoiceDate?.ToShortDateString()} {Supplier} {GrossAmount}";
 		}
+
+		public static string ShortenComments(string comments)
+		{
+			if (string.IsNullOrWhiteSpace(comments?.Trim()))
+				return comments;
+
+			var namePattern = @"(?<firstname>[\w]+)(?<middlenames>\s[\w]+){0,}(?<lastname>\s[\w]+)";
+			var idPattern = @"(?<pid>\s?\(\d+\)\s*)(?!\(\d{2}-\d{2})";
+			return new Regex(namePattern + idPattern).Replace(comments, "${firstname}${lastname}");
+			// First Middle Middle Last (1234567) (12-18 10:51):Projektadministration / konsultation,First Last (1234568) (12-23 13:57):Möte med anbudsgivare - OK!
+			//var rx = new Regex(@"(?<pid>\s?\(\d+\)\s*)(?!\(\d{2}-\d{2})");
+			//return rx.Replace(comments, "");
+		}
+
 		public static InvoiceSummary Summarize(InvoiceFull invoice, string invoiceTexts = null)
 		{
 			var iv = invoice.Invoice;

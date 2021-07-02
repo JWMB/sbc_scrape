@@ -14,26 +14,6 @@ namespace sbc_scrape.Joining
 {
 	public class JoinSbcSieMediusFlow
 	{
-		//public async Task MatchMediusFlowWithSIE__X()
-		//{
-		//	var years = new[] { 2017, 2018, 2019, 2020 }; //
-		//	var store = new FileSystemKVStore(Tools.GetOutputFolder());
-
-		//	var invoiceStore = new SBCScan.InvoiceStore(store);
-		//	var files = await invoiceStore.GetKeysParsed();
-		//	var invoices = (await Task.WhenAll(files.Where(o => years.Contains(o.RegisteredDate.Year)).Select(async o => await invoiceStore.Get(o)).ToList())).ToList();
-
-
-		//	var sieFolder = Tools.GetOutputFolder("SIE");
-		//	var sieFiles = new DirectoryInfo(sieFolder).GetFiles($"output_*.se").Select(o => o.Name).Where(o => years.Any(p => o.Contains(p.ToString())));
-		//	var sie = await SBCExtensions.ReadSIEFiles(sieFiles.Select(file => Tools.GetOutputFolder("SIE", file)));
-
-		//	var dir = Tools.GetOutputFolder("sbc_html");
-		//	var sbcInvoices = new SBC.InvoiceSource().ReadAll(dir).Where(o => years.Contains(o.RegisteredDate.Year));
-
-		//	await MatchMediusFlowWithSIE(years, invoices, sie, sbcInvoices);
-		//}
-
 		private static (List<InvoiceSummary>, List<VoucherRecord>) PrepareFiltered(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie)
 		{
 			// SLRs company names are supposedly same as LB, but LRs can have
@@ -42,113 +22,317 @@ namespace sbc_scrape.Joining
 			var invoiceSummaries = invoices.Where(o => o.IsRejected == false)
 				.Select(o => InvoiceSummary.Summarize(o)).Where(o => years.Contains(o.InvoiceDate.Value.Year)).ToList();
 
-			// TODO: hardcoded!!
-			var companyAliases = new Dictionary<string, string> {
-				{ "Sita Sverige AB", "SUEZ Recycling AB" },
-				//{ "PreZero Recycling AB", "SUEZ Recycling AB" },
-				{ "Fortum Värme", "Stockholm Exergi" },
-				{ "Markservice STHLM AB", "Svensk Markservice AB" }
-			};
-			sieVouchers.Where(o => companyAliases.ContainsKey(o.CompanyName)).ToList().ForEach(o => o.SetCompanyNameOverride(companyAliases[o.CompanyName]));
+			//var companyAliases = new Dictionary<string, string> {
+			//	{ "Sita Sverige AB", "SUEZ Recycling AB" },
+			//	//{ "PreZero Recycling AB", "SUEZ Recycling AB" },
+			//	{ "Fortum Värme", "Stockholm Exergi" },
+			//	{ "Markservice STHLM AB", "Svensk Markservice AB" }
+			//};
+			//sieVouchers.Where(o => companyAliases.ContainsKey(o.CompanyName)).ToList().ForEach(o => o.SetCompanyNameOverride(companyAliases[o.CompanyName]));
 
 			return (invoiceSummaries, sieVouchers);
 		}
 
-		public static List<MultiSourceRow> Testing(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie, List<SBC.Invoice> sbcInvoices)
+		class NameNormalizer
+		{
+			private Dictionary<string, string> lookUp;
+			public NameNormalizer()
+			{
+				// TODO: hardcoded!!
+				var replacements = new Dictionary<string, List<string>> {
+					{ "Markservice STHLM AB", new List<string>{ "Svensk Markservice AB" } },
+					{ "SUEZ Recycling AB", new List<string>{ "PreZero Recycling AB", "Sita Sverige AB" } },
+					{ "Stockholm Exergi", new List<string> { "Fortum Värme" } },
+					{ "Ellevio AB", new List<string> { "Energikundservice Sverige AB" } },
+					{ "Handelsbanken", new List<string>{ "Stadshypotek AB" } },
+					{ "Stockholms Markkontor", new List<string>{ "Expoateringskontoret Stockholms Markkontor" } }
+				};
+				lookUp = replacements.SelectMany(o => o.Value.Select(p => new { Key = p, Value = o.Key }))
+					.ToDictionary(o => o.Key, o => o.Value);
+			}
+			public string Normalize(string name) => lookUp.GetValueOrDefault(name, name);
+		}
+
+		public static List<MultiSourceRow> Testing(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie, List<SBC.Invoice> sbcInvoices, List<SBC.Receipt> receipts)
 		{
 			var (invoiceSummaries, sieVouchers) = PrepareFiltered(years, invoices, sie);
 
-			var slrs = sieVouchers.Where(voucher => voucher.VoucherType == VoucherType.SLR);
-			// TODO: what about VoucherType.TaxAndExpense? // always without other references
-			var lrs = sieVouchers.Where(voucher => voucher.VoucherType == VoucherType.TaxAndExpense).ToList();
+			// 1. Join SLR with SBC Invoices - the SBC always have an SLR Id
+			// 2. Join LB with above result (they have the same Date as SBC PaymentDate and same SupplierId).
+			// 3. Join MediusFlow with above result, using Date, Amount and (normalized) Company
+			// 4. 
+
+			// 1. Join SLR -> SBC
+			var slrs = sieVouchers.Where(voucher => voucher.VoucherType == VoucherType.SLR || voucher.VoucherType == VoucherType.TaxAndExpense);
+			// Note: VoucherType.TaxAndExpense are always without other references
 
 			//var aaa = CreateSet(new[] { 1, 2, 3, 4, 5, 5 }, new[] { 0, 3, 4, 4, 5, 6, 7, 7 }, k => k, k => k);
 			//var set = CreateSet(new[] { 1, 2, 3, 4, 5, 5 }, new[] { 0, 3, 4, 4, 5, 6, 7, 7 }, k => k, k => k);
 			var slrToSbc = CreateSet(slrs, sbcInvoices, slr => slr.Id, sbc => sbc.IdSLR);
 			if (slrToSbc.ManyA_To_ManyBs.Any(o => o.Item1.Count > 1))
-				throw new Exception("Multi!");
+				throw new Exception("SLR/SBC Multimatch");
 
-			var missingSbcs = slrToSbc.OnlyInA;
 			if (slrToSbc.OnlyInB.Any())
-				throw new Exception("missingSlrs!");
+				throw new Exception("SBC without SLR");
 
+			var result = slrToSbc.OneA_To_NoneOrAnyBs
+				.Select(o => new Joined { SLR = o.A, SBC = o.Bs }).ToList();
 
+			// 2. Join LB -> above result
 			var lbs = sieVouchers.Where(voucher => voucher.VoucherType == VoucherType.LB).ToList();
-			var ooo = CreateSet(lbs, sbcInvoices,
-				lb => new InvoiceKey { Date = lb.Date, Amount = lb.GetTransactionsMaxAmount() },
-				sbc => new InvoiceKey { Date = sbc.PaymentDate.Value.ToLocalDate(), Amount = sbc.Amount });
-			// TODO: join with slrToSbc above
+			var lbToResult = CreateSet(lbs, result.Where(o => o.SBC.Any()),
+				lb => new InvoiceKey { Amount = lb.GetTransactionsMaxAmount(), Company = lb.Transactions.First().CompanyId, Date = lb.Date },
+				sbc => new InvoiceKey { Amount = sbc.SBC.First().Amount, Company = sbc.SBC.First().LevNr, Date = sbc.SBC.FirstOrDefault(o => o.PaymentDate != null)?.PaymentDate.Value.ToLocalDate() ?? LocalDate.MaxIsoValue });
+			if (lbToResult.OneA_To_ManyBs.Any())
+				throw new Exception("SBC/LB Multimatch");
 
-			var mfToJoined = CreateSet(invoiceSummaries, slrToSbc.OneA_To_NoneOrAnyBs,
-				InvoiceKey.From,
-				join1 => new InvoiceKey { Date = join1.A.Date, Amount = join1.A.GetTransactionsMaxAmount(), Company = join1.A.CompanyName });
+			lbToResult.OneA_To_OneB.ForEach(o => o.B.LB = o.A);
+			lbToResult.OnlyInA.ForEach(o => result.Add(new Joined { LB = o }));
 
-			var paired = mfToJoined.OneA_To_NoneOrAnyBs;
-			if (mfToJoined.OneA_To_ManyBs.Any())
-				throw new Exception("OneA_To_ManyBs");
-			if (mfToJoined.ManyA_To_ManyBs.Any())
+			var soso = lbToResult.JoinedByKey.Where(o => o.Key.Amount == 148).ToList();
+			// TODO: we have Storuman Energi AB -Shb Finans 148 kr 2020_SLR6297_292 2020_SLR6297_294 - but unmatched? We DO have LBs!?
+
+			if (lbToResult.ManyA_To_ManyBs.Any())
 			{
-				if (mfToJoined.ManyA_To_ManyBs.Any(o => o.As.Count != o.Bs.Count))
+				if (lbToResult.ManyA_To_ManyBs.Any(o => o.As.Count != o.Bs.Count))
+					throw new Exception("Unsalvageble ManyA_To_ManyBs");
+				foreach (var item in lbToResult.ManyA_To_ManyBs)
+					for (int i = 0; i < item.As.Count; i++)
+						item.Bs[i].LB = item.As[i];
+			}
+
+			var replacer = new NameNormalizer();
+
+			// Join MediusFlow -> above result
+			var mfToResult = CreateSet(invoiceSummaries, result.Where(o => o.SLR != null),
+				inv => new InvoiceKey { Date = inv.InvoiceDate.ToLocalDate().Value, Amount = inv.GrossAmount, Company = replacer.Normalize(inv.Supplier) },
+				r => new InvoiceKey { Date = r.SLR.Date, Amount = r.SLR.GetTransactionsMaxAmount(), Company = replacer.Normalize(r.SLR.CompanyName) });
+
+			if (mfToResult.OneA_To_ManyBs.Any())
+				throw new Exception("OneA_To_ManyBs");
+
+			mfToResult.OneA_To_OneB.ForEach(o => o.B.MF = o.A);
+			mfToResult.OnlyInA.ForEach(o => result.Add(new Joined { MF = o }));
+
+			if (mfToResult.ManyA_To_ManyBs.Any())
+			{
+				if (mfToResult.ManyA_To_ManyBs.Any(o => o.As.Count != o.Bs.Count))
 					throw new Exception("Unsalvageble ManyA_To_ManyBs");
 				// separate into pairs
-				foreach (var item in mfToJoined.ManyA_To_ManyBs)
+				foreach (var item in mfToResult.ManyA_To_ManyBs)
 					for (int i = 0; i < item.As.Count; i++)
-						paired.Add((item.As[i], item.Bs.Skip(i).Take(1).ToList()));
+						item.Bs[i].MF = item.As[i];
 			}
-			var retyped = paired.Select(o => new { A = o.A, B = o.Bs.SingleOrDefault() });
 
-			var tmp = retyped.Select(o => {
-				return new
+			// Try to pair unmatched LB/SLR (no SBCInvoice was found that could provide link between them)
+			// TODO: If there's a MediusFlow, we could use that to get Payment/Invoice dates which should match LB/SLR records
+			// Ignore before/after plausible period
+			var earliestSLR = result.Where(o => o.SLR != null).Min(o => o.SortDate);
+			var latestLB = result.Where(o => o.LB != null).Max(o => o.SortDate);
+			var fuzzyMatchSelection = result.Where(o => o.SortDate > earliestSLR && o.SortDate < latestLB).ToList();
+			var noSLR = fuzzyMatchSelection.Where(o => o.SLR == null && o.LB != null).ToList();
+			var noLB = fuzzyMatchSelection.Where(o => o.SLR != null && o.LB == null).ToList();
+
+			var byAmountAndName = noSLR.Concat(noLB)
+				.GroupBy(o => $"{replacer.Normalize(o.CompanyName)}/{o.Amount}")
+				.Where(o => o.Count() >= 2)
+				.ToDictionary(o => o.Key, o => o.ToList());
+
+			foreach (var kv in byAmountAndName)
+			{
+				var withLb = kv.Value.Where(o => o.LB != null).ToList();
+				var withSlr = kv.Value.Where(o => o.SLR != null).ToList();
+
+				while (withLb.Any() && withSlr.Any())
 				{
-					SortDate = o.A.InvoiceDate.Value.ToLocalDate(),
-					InvoiceDate = o.A.InvoiceDate.ToLocalDate(),
-					CompanyName = o.A.Supplier,
-					Amount = o.A.GrossAmount,
-					SlrId = o.B.A?.Id,
-					MFId = o.A.Id,
-					Link = string.Join("", o.B.Bs?.Select(s => s.InvoiceLink).Distinct() ?? new List<string>()),
-					//SubCount = o.B.Bs?.Count
-				};
-			}).Concat(mfToJoined.OnlyInB.Select(o => {
-				return new
+					var diffs = withLb.Select(o => new
+					{
+						WithLB = o,
+						Diffs = withSlr.Select(p => new
+						{
+							WithSLR = p,
+							Diff = Math.Abs(Period.Between(
+									p.PaymentDate ?? p.InvoiceDate.Value.PlusDays(30), o.PaymentDate.Value, PeriodUnits.Days)
+								.Days)
+						}).OrderBy(p => p.Diff).ToList()
+					}).ToList();
+					var withMinDiff = diffs.OrderBy(o => o.Diffs.Select(p => p.Diff).Min()).First();
+					var other = withMinDiff.Diffs.First().WithSLR;
+					withMinDiff.WithLB.Merge(other);
+					other.MakeEmpty();
+
+					withLb.Remove(withMinDiff.WithLB);
+					withSlr.Remove(other);
+				}
+			}
+			result = result.Where(o => !o.IsEmpty()).ToList();
+
+			{
+				var withLB = result.Where(o => o.LB != null).ToList();
+				var keyToLB = withLB.GroupBy(o => new { CompanyId = o.LB.Transactions.First().CompanyId, Amount = o.LB.GetTransactionsMaxAmount() })
+					.ToDictionary(o => o.Key, o => o.ToList());
+				var groupedReceipts = receipts.GroupBy(o => new { Amount = o.Amount, Date = o.Date, SupplierId = o.SupplierId }).ToDictionary(o => o.Key, o => o.ToList());
+				foreach (var groupedItem in groupedReceipts)
 				{
-					SortDate = o.A.Date,
-					InvoiceDate = (LocalDate?)o.A.Date,
-					CompanyName = o.A.CompanyName,
-					Amount = o.A.GetTransactionsMaxAmount(),
-					SlrId = o.A.Id,
-					MFId = 0L,
-					Link = string.Join("", o.Bs?.Select(s => s.InvoiceLink).Distinct() ?? new List<string>()),
-					//SubCount = (int?)o.Bs.Count
-				};
-			}));
+					// seems LB CompanyId starts with some variation of BRF id 0629702 (CompanyIdRecord)
+					var rxBad1 = new Regex(@"[\/!]");
+					var rxBad2 = new Regex(@"\d");
+					var sorted = groupedItem.Value.OrderBy(o => (rxBad1.IsMatch(o.Supplier) ? 2 : 0) + (rxBad2.IsMatch(o.Supplier) ? 1 : 0)).ToList();
+					var item = sorted.First();
+					var found = keyToLB.Where(o => o.Key.Amount == item.Amount
+						&& o.Key.CompanyId.EndsWith(item.SupplierId)).SelectMany(o => o.Value).ToList();
+					if (found.Count() > 1)
+					{
+						found = found.Select(o => new { Item = o, DateDiff = Math.Abs(Period.Between(o.LB.Date, item.Date.ToLocalDate()).Days) })
+							.OrderBy(o => o.DateDiff).Select(o => o.Item).Take(1).ToList();
+					}
+					if (found.Any())
+					{
+						var first = found.First();
+						first.Receipt = item;
+						var potential = result.Where(r => r.Amount == item.Amount && r.SLR != null && r.LB == null && (r.SBC == null || !r.SBC.Any())).ToList();
+						if (potential.Count == 1)
+						{
+							potential.Single().Merge(first);
+							first.MakeEmpty();
+						}
+					}
+				}
+			}
+			//var receiptToResult = CreateSet(receipts, result.Where(o => o.LB != null),
+			//	rc => new { CompanyId = rc.SupplierId, Amount = rc.Amount },
+			//	rs => new { CompanyId = rs.LB.Transactions.First().CompanyId, Amount = rs.LB.GetTransactionsMaxAmount() });
+			//receiptToResult.OneA_To_OneB.ForEach(o =>
+			//{
+			//	o.B.Receipt = o.A;
+			//	//var pot1 = result.Where(r => r.Amount == o.A.Amount).ToList();
+			//	var potential = result.Where(r => r.Amount == o.A.Amount && r.SLR != null && r.LB == null && (r.SBC == null || !r.SBC.Any())).ToList();
+			//	if (potential.Count == 1)
+			//	{
+			//		potential.Single().Merge(o.B);
+			//		o.B.MakeEmpty();
+			//	}
+			//});
+			result = result.Where(o => !o.IsEmpty()).ToList();
 
-			var result = tmp.OrderByDescending(o => o.SortDate)
-				.ThenBy(o => o.CompanyName)
-				.ThenBy(o => o.Amount).ToList();
 
-			var csv = string.Join("\n", result.Select(row => string.Join("\t", new[] {
-				DateToString(row.SortDate),
-				row.Amount.ToString("#"),
-				//row.SourceType,
-				row.CompanyName,
-				DateToString(row.InvoiceDate),
-				row.SlrId?.ToString(),
-				row.MFId.ToString(),
-				row.Link.ToString()
-				//DateToString(row.DueDate),
-				//DateToString(row.PayDate),
-				//row.Id
-			})));
+			{
+				// Split items with multiple SLR transactions into separate rows
+				//Func<Joined, bool> predSLRMulti = o => o.SLR != null && o.SLR.TransactionsNonAdmin.Count() > 1;
+				//Func<Joined, bool> predSBCMulti = o => o.SBC != null && o.SBC.Count() > 1;
+				//var withMultiSLRTransactions = result.Where(o => predSLRMulti(o) || predSBCMulti(o)).ToList();
+				//var notBoth = withMultiSLRTransactions.Where(o => !predSLRMulti(o) || !predSBCMulti(o)).ToList();
+				var withMultiSLRTransactions = result.Where(o => o.SLR != null && o.SLR.TransactionsNonAdminOrCorrections.Count() > 1).ToList();
+				foreach (var item in withMultiSLRTransactions)
+				{
+					var trans = item.SLR.TransactionsNonAdminOrCorrections.ToList();
+					for (int i = 0; i < trans.Count; i++)
+					{
+						//var foundSBC = item.SBC?.Where(o => o.Amount == row.Amount).ToList();
+						result.Add(new Joined
+						{
+							LB = item.LB,
+							MF = item.MF,
+							Receipt = item.Receipt,
+							SLR = item.SLR,
+							SBC = item.SBC,
+							SLRTransactionRow = trans[i]
+						});
+					}
+					result.Remove(item);
+				}
+			}
+
+			var csv = ToCsv(result);
+
+			string ToCsv(IEnumerable<Joined> rows, bool sort = true)
+			{
+				if (sort)
+				{
+					rows = rows.OrderByDescending(o => o.SortDate)
+						.ThenBy(o => o.CompanyName)
+						.ThenBy(o => o.Amount);
+				}
+				return string.Join("\n", rows.Select(row => string.Join("\t", new[] {
+					DateToString(row.SortDate),
+					row.Amount.ToString("#"),
+					row.CompanyName?.Replace("\"", "'"),
+					row.AccountId.ToString(),
+					DateToString(row.InvoiceDate),
+					DateToString(row.PaymentDate),
+					row.Comment,
+					row.Link.ToString(),
+					row.SLR?.Id.ToString(),
+					row.MF?.Id.ToString(),
+					row.LB?.Id,
+					row.Missing,
+				})));
+			}
 
 			return null;
 		}
+
+		class Joined
+		{
+			public InvoiceSummary MF { get; set; }
+			public VoucherRecord SLR { get; set; }
+			public VoucherRecord LB { get; set; }
+			public List<SBC.Invoice> SBC { get; set; }
+			public SBC.Receipt Receipt { get; set; }
+
+			public TransactionRecord SLRTransactionRow { get; set; }
+
+			public void Merge(Joined other)
+			{
+				if (MF == null) MF = other.MF;
+				if (SLR == null) SLR = other.SLR;
+				if (LB == null) LB = other.LB;
+				if (SBC == null || !SBC.Any()) SBC = other.SBC;
+				if (Receipt == null) Receipt = other.Receipt;
+			}
+			public void MakeEmpty()
+			{
+				MF = null;
+				SLR = null;
+				LB = null;
+				SBC = null;
+				Receipt = null;
+			}
+			public bool IsEmpty() => MF == null && SLR == null && LB == null && (SBC == null || !SBC.Any());
+
+			public string Missing => GetMissing(MF, SLR, LB, SBC);
+			public LocalDate SortDate => InvoiceDate ?? LB.Date.PlusDays(-30);
+			public LocalDate? InvoiceDate => MF?.InvoiceDate.Value.ToLocalDate() ?? SLR?.Date ?? SBC?.FirstOrDefault()?.RegisteredDate.ToLocalDate();
+			public LocalDate? PaymentDate => LB?.Date ?? SBC?.FirstOrDefault()?.PaymentDate.ToLocalDate()
+				?? new[] { MF?.FinalPostingingDate.ToLocalDate(), MF?.DueDate.ToLocalDate() }.Where(o => o != null).Max();
+
+			public string CompanyName => Receipt?.Supplier ?? MF?.Supplier ?? SLR?.CompanyName ?? SBC?.FirstOrDefault()?.Supplier ?? LB?.CompanyName ?? "";
+			public decimal Amount => SLRTransactionRow?.Amount ?? MF?.GrossAmount ?? SLR?.GetTransactionsMaxAmount() ?? LB?.GetTransactionsMaxAmount()
+				?? (SBC != null && SBC.Any() ? (decimal?)SBC.Sum(o => o.Amount) : null) ?? Receipt?.Amount ?? 0;
+
+			public int? AccountId => SLRTransactionRow?.AccountId ?? (MF != null ? (int?)MF.AccountId : null) ?? SLR?.TransactionsNonAdminOrCorrections.FirstOrDefault()?.AccountId;
+
+			public string Link => string.Join("", SBC?.Select(s => s.InvoiceLink).Distinct() ?? new List<string>());
+
+			public string Comment => $"{((Receipt != null && SLR != null) ? SLR.CompanyName : "")}{InvoiceSummary.ShortenComments(MF?.Comments)}";
+
+			public override string ToString() =>
+				$"{DateToString(SortDate)} {Amount} {CompanyName} {Missing}";
+
+			public static string GetMissing(InvoiceSummary MF, VoucherRecord SLR, VoucherRecord LB, List<SBC.Invoice> SBC) =>
+	string.Join(",",
+		new string[] { MF == null ? "M" : "", SLR == null ? "SLR" : "", LB == null ? "LB" : "", SBC == null || !SBC.Any() ? "SBC" : "" }
+		.Where(o => o.Any())
+	);
+		}
+
 		private class InvoiceKey
 		{
 			public LocalDate Date { get; set; }
 			public decimal Amount { get; set; }
 			public string Company { get; set; }
-			public static InvoiceKey From(InvoiceSummary inv) => new InvoiceKey { Date = inv.InvoiceDate.ToLocalDate().Value, Amount = inv.GrossAmount, Company = inv.Supplier };
+
+			//public static InvoiceKey From(InvoiceSummary inv) => new InvoiceKey { Date = inv.InvoiceDate.ToLocalDate().Value, Amount = inv.GrossAmount, Company = inv.Supplier };
 
 			public override bool Equals(object obj)
 			{
@@ -162,91 +346,14 @@ namespace sbc_scrape.Joining
 			{
 				return HashCode.Combine(Date, Amount, Company);
 			}
+			public override string ToString() => $"{Date} {Amount} {Company}";
 		}
 
-		public class Set<TA, TB, TCompare>
-		{
-			public List<(TA A, TB B)> OneA_To_OneB => joined.Values
-				.Where(o => o.Count() == 1 && o.Single().Outer?.Count == 1)
-				.Select(o => (o.Single().Inner, o.Single().Outer.Single() ))
-				.ToList();
-
-			public List<(TA A, List<TB> Bs)> OneA_To_NoneOrAnyBs => joined.Values
-				.Where(o => o.Count() == 1)
-				.Select(o => (o.Single().Inner, outerByKey.GetValueOrDefault(o.Single().Key, new List<TB>())))
-				.ToList();
-
-			public List<(TA A, List<TB> Bs)> OneA_To_AnyBs => joined.Values
-				.Where(o => o.Count() == 1)
-				.Select(o => (o.Single().Inner, outerByKey.GetValueOrDefault(o.Single().Key, new List<TB>())))
-				.Where(o => o.Item2.Any())
-				.ToList();
-
-			public List<(TA A, List<TB> Bs)> OneA_To_ManyBs => joined.Values
-				.Where(o => o.Count() == 1)
-				.Select(o => (o.Single().Inner, outerByKey.GetValueOrDefault(o.Single().Key, new List<TB>())))
-				.Where(o => o.Item2.Count > 1)
-				.ToList();
-
-			public List<(List<TA> As, List<TB> Bs)> ManyA_To_ManyBs => joined.Values
-				.Where(o => o.Count() > 1 || o.Any(p => p.Outer?.Count > 1))
-				.Select(o => (o.Select(p => p.Inner).ToList(), outerByKey.GetValueOrDefault(o.First().Key, new List<TB>()).ToList()))
-				.Where(o => o.Item1.Count > 1 && o.Item2.Count > 1)
-				.ToList();
-
-			public List<TA> OnlyInA => joined.Values
-				.Where(o => o.Count() == 1 && o.Single().Outer?.Any() != true)
-				.Select(o => o.Single().Inner)
-				.ToList();
-
-			public List<TB> OnlyInB => outerByKey
-				.Where(o => !joined.ContainsKey(o.Key))
-				.SelectMany(o => o.Value).ToList();
-
-			private Dictionary<TCompare, List<Join>> joined;
-			private Dictionary<TCompare, List<TB>> outerByKey;
-
-			private class Join
-			{
-				public TCompare Key { get; set; }
-				public TA Inner { get; set; }
-				public List<TB> Outer { get; set; }
-			}
-
-			public static Set<TA, TB, TCompare> Create(IEnumerable<TA> a, IEnumerable<TB> b,
-				Func<TA, TCompare> keyA, Func<TB, TCompare> keyB)
-			{
-				var outerByKey = b.GroupBy(o => keyB(o)).ToDictionary(o => o.Key, o => o.ToList());
-				var joined = a.Select(o => {
-					var key = keyA(o);
-					var found = outerByKey.GetValueOrDefault(key, null);
-					return new Join { Key = key, Inner = o, Outer = found };
-				})
-					.GroupBy(o => o.Key).ToDictionary(o => o.Key, o => o.ToList());
-				var tmp = new Set<TA, TB, TCompare>();
-				tmp.joined = joined;
-				tmp.outerByKey = outerByKey;
-				return tmp;
-			}
-		}
 		public static Set<TA, TB, TCompare> CreateSet<TA, TB, TCompare>(IEnumerable<TA> a, IEnumerable<TB> b,
 				Func<TA, TCompare> keyA, Func<TB, TCompare> keyB)
 		{
 			return Set<TA, TB, TCompare>.Create(a, b, keyA, keyB);
 		}
-
-		//public static (List<(TInner, TOuter)>, List<TInner>, List<TOuter>) GroupJoinOuters<TInner, TOuter, TCompare>(IEnumerable<TInner> inner, IEnumerable<TOuter> outer,
-		//	Func<TInner, TCompare> keyInner, Func<TOuter, TCompare> keyOuter)
-		//{
-		//	var groupedByInner = inner.GroupJoin(outer, keyInner, keyOuter, (inner, outer) => new { Inner = inner, Outer = outer.ToList() }).ToList();
-		//	var matched1to1 = groupedByInner.Where(o => o.Outer.Count == 1).Select(o => new { Inner = o.Inner, Outer = o.Outer.First() }).ToList();
-		//	var multiMatch = groupedByInner.Where(o => o.Outer.Count > 1);
-		//	var noMatchWithOuter = groupedByInner.Where(o => !o.Outer.Any()).Select(o => o.Inner).ToList();
-		//	var matchedOuterKeys = groupedByInner.SelectMany(o => o.Outer).Select(keyOuter).ToList();
-		//	var noMatchWithInner = outer.Where(o => matchedOuterKeys.Contains(keyOuter(o))).ToList();
-
-		//	return (matched1to1.Select(o => (o.Inner, o.Outer)).ToList(), noMatchWithOuter, noMatchWithInner);
-		//}
 
 		public static List<MultiSourceRow> Union(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie, List<SBC.Invoice> sbcInvoices)
 		{
@@ -440,24 +547,12 @@ namespace sbc_scrape.Joining
 			//	"TransactionText",
 			//	"TransactionRef"
 			//};
-			string ShortenComments(string comments)
-			{
-				if (string.IsNullOrWhiteSpace(comments?.Trim()))
-					return comments;
-
-				var namePattern = @"(?<firstname>[\w]+)(?<middlenames>\s[\w]+){0,}(?<lastname>\s[\w]+)";
-				var idPattern = @"(?<pid>\s?\(\d+\)\s*)(?!\(\d{2}-\d{2})";
-				return new Regex(namePattern + idPattern).Replace(comments, "${firstname}${lastname}");
-				// First Middle Middle Last (1234567) (12-18 10:51):Projektadministration / konsultation,First Last (1234568) (12-23 13:57):Möte med anbudsgivare - OK!
-				//var rx = new Regex(@"(?<pid>\s?\(\d+\)\s*)(?!\(\d{2}-\d{2})");
-				//return rx.Replace(comments, "");
-			}
 			var rows = //string.Join("\n", new[] { header }.Concat(
 				fullResult.OrderByDescending(o => o.RegisteredDate)
 				.Select(o =>
 				{
 					var supplier = o.SLR.Transactions.First().CompanyName;
-					var comments = o.Invoice != null ? ShortenComments(o.Invoice?.Comments ?? "")
+					var comments = o.Invoice != null ? InvoiceSummary.ShortenComments(o.Invoice?.Comments ?? "")
 							: (o.LB?.CompanyName != o.SLR.Transactions.First().CompanyName ? o.LB?.CompanyName : "");
 					if (o.Invoice == null && !string.IsNullOrEmpty(comments))
 					{

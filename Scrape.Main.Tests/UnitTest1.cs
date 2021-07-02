@@ -138,7 +138,7 @@ namespace Scrape.Main.Tests
 			// Note: Invoices correspondeing to SLRs are created only when payed, so no need to check the other way around
 		}
 
-		private async Task<(int[], List<InvoiceFull>, List<RootRecord>, List<Invoice>)> Prepare(int[] years)
+		private async Task<(int[], List<InvoiceFull>, List<RootRecord>, List<Invoice>, List<Receipt>)> Prepare(int[] years)
 		{
 			var store = new FileSystemKVStore(Tools.GetOutputFolder());
 
@@ -153,14 +153,15 @@ namespace Scrape.Main.Tests
 
 			var dir = Tools.GetOutputFolder("sbc_html");
 			var sbcInvoices = new InvoiceSource().ReadAll(dir).Where(o => years.Contains(o.RegisteredDate.Year)).ToList();
+			var sbcReceipts = new ReceiptsSource().ReadAll(dir).Where(o => years.Contains(o.Date.Year)).ToList();
 
-			return (years, invoices, sie.ToList(), sbcInvoices);
+			return (years, invoices, sie.ToList(), sbcInvoices, sbcReceipts);
 		}
 
 		[TestMethod]
 		public async Task MatchMediusFlowWithSIE__X()
 		{
-			var (years, invoices, sie, sbcInvoices) = await Prepare(new[] { 2017, 2018, 2019, 2020, 2021 });
+			var (years, invoices, sie, sbcInvoices, sbcReceipts) = await Prepare(new[] { 2017, 2018, 2019, 2020, 2021 });
 
 			var joined = JoinSbcSieMediusFlow.MatchMediusFlowWithSIE(years, invoices, sie, sbcInvoices);
 		}
@@ -168,9 +169,16 @@ namespace Scrape.Main.Tests
 		[TestMethod]
 		public async Task AllSourcesToCSV()
 		{
-			var (years, invoices, sie, sbcInvoices) = await Prepare(new[] { 2021 });
-			JoinSbcSieMediusFlow.Testing(years, invoices, sie, sbcInvoices);
-			var rows = JoinSbcSieMediusFlow.Union(years, invoices, sie, sbcInvoices);
+			var (years, invoices, sie, sbcInvoices, sbcReceipts) = await Prepare(new[] { 2020 });
+			try
+			{
+				JoinSbcSieMediusFlow.Testing(years, invoices, sie, sbcInvoices, sbcReceipts);
+				var rows = JoinSbcSieMediusFlow.Union(years, invoices, sie, sbcInvoices);
+			}
+			catch (Exception ex)
+			{
+
+			}
 		}
 
 		[TestMethod]
