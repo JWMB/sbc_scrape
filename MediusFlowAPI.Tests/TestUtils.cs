@@ -40,7 +40,7 @@ namespace MediusFlowAPI.Tests
 				"$..Supplier.Name", "$..AuthorizerName", "$..OnBehalfOfUserName", "$..Company.Name",
 				"$..OrganizationNumber", "$..author", "$..CompanyId", "$..CompanyName" };
 			valuesToReplace.ToList().ForEach(selector => {
-				var found = jToken.SelectTokens(selector).Where(o => o is JValue).Cast<JValue>().ToList();
+				var found = jToken.SelectTokens(selector).OfType<JValue>().ToList();
 				found.ForEach(o => {
 					//Replace with anonymous value
 					o.Value = o.Type == JTokenType.String
