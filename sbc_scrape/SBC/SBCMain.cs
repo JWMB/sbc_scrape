@@ -159,6 +159,9 @@ namespace SBCScan.SBC
 
 		public Task<string> FetchHtmlSource(string urlPath, int year, int monthFrom = 1, int monthTo = 12)
 		{
+			if (urlPath == new sbc_scrape.SBC.ReceiptsSource().UrlPath && year >= 2021)
+				throw new NotSupportedException("ReceiptsSource >= 2021"); // TODO: custom exception
+
 			var url = "https://varbrf.sbc.se/" + urlPath;
 			driver.NavigateAndWaitReadyIfNotThere(url);
 			if (!driver.Url.ToLower().StartsWith(url.ToLower()))

@@ -148,9 +148,16 @@ namespace SBCScan.REPL
 			{
 				//TODO: check latest locally stored record for each src - may need to fetch last year as well
 				//TODO: some requests to SBC time out, need to split year into two parts
-				var html = await main.SBC.FetchHtmlSource(src.UrlPath, year);
-				File.WriteAllText(Path.Combine(
-					GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(src.FilenamePattern, year)), html);
+				try
+				{
+					var html = await main.SBC.FetchHtmlSource(src.UrlPath, year);
+					File.WriteAllText(Path.Combine(
+						GlobalSettings.AppSettings.StorageFolderSbcHtml, string.Format(src.FilenamePattern, year)), html);
+				}
+				catch (NotSupportedException ex)
+				{
+					// Ignore - combo not supported by SBC (e.g. Receipts after 2020)
+				}
 			}
 
 			{
