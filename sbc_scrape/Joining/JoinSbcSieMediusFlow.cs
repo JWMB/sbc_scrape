@@ -1,4 +1,5 @@
-﻿using MediusFlowAPI;
+﻿using CommonTools;
+using MediusFlowAPI;
 using NodaTime;
 using Scrape.IO.Storage;
 using SIE;
@@ -59,7 +60,8 @@ namespace sbc_scrape.Joining
 			public string Normalize(string name) => lookUp.GetValueOrDefault(name, name);
 		}
 
-		public static List<MultiSourceRow> Testing(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie, List<SBC.Invoice> sbcInvoices, List<SBC.Receipt> receipts)
+		public static List<MultiSourceRow> Testing(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie,
+			List<SBC.Invoice> sbcInvoices, List<SBC.Receipt> receipts, List<SBC.BankTransaction> transactions)
 		{
 			var (invoiceSummaries, sieVouchers) = PrepareFiltered(years, invoices, sie);
 
@@ -103,9 +105,6 @@ namespace sbc_scrape.Joining
 
 			lbToResult.OneA_To_OneB.ForEach(o => o.B.LB = o.A);
 			lbToResult.OnlyInA.ForEach(o => result.Add(new Joined { LB = o }));
-
-			var soso = lbToResult.JoinedByKey.Where(o => o.Key.Amount == 148).ToList();
-			// TODO: we have Storuman Energi AB -Shb Finans 148 kr 2020_SLR6297_292 2020_SLR6297_294 - but unmatched? We DO have LBs!?
 
 			if (lbToResult.ManyA_To_ManyBs.Any())
 			{
@@ -220,13 +219,29 @@ namespace sbc_scrape.Joining
 			}
 			result = result.Where(o => !o.IsEmpty()).ToList();
 
+			{
+				// match BankTransactions
+				var byLbDate = result.Where(o => o.LB != null).GroupBy(o => o.LB.Date).ToDictionary(o => o.Key, o => o.ToList());
+				for (int i = transactions.Count - 1; i >= 0; i--)
+				{
+					var row = transactions[i];
+					if (byLbDate.TryGetValue(row.AccountingDate.ToLocalDate(), out var onDate))
+					{
+						var combo = FindCombo(onDate, -row.Amount, mainTransactionAccount);
+						if (combo != null)
+						{
+							combo.ForEach(o => o.BankTransactionReference = row);
+							combo.ForEach(o => onDate.Remove(o));
+							transactions.RemoveAt(i);
+						}
+					}
+				}
+				// TODO: we can probably match some more
+				var tmpXX = result.Where(o => o.LB == null).ToList();
+			}
 
 			{
 				// Split items with multiple SLR transactions into separate rows
-				//Func<Joined, bool> predSLRMulti = o => o.SLR != null && o.SLR.TransactionsNonAdmin.Count() > 1;
-				//Func<Joined, bool> predSBCMulti = o => o.SBC != null && o.SBC.Count() > 1;
-				//var withMultiSLRTransactions = result.Where(o => predSLRMulti(o) || predSBCMulti(o)).ToList();
-				//var notBoth = withMultiSLRTransactions.Where(o => !predSLRMulti(o) || !predSBCMulti(o)).ToList();
 				var withMultiSLRTransactions = result.Where(o => o.SLR != null && o.SLR.TransactionsNonAdminOrCorrections.Count() > 1).ToList();
 				foreach (var item in withMultiSLRTransactions)
 				{
@@ -234,15 +249,9 @@ namespace sbc_scrape.Joining
 					for (int i = 0; i < trans.Count; i++)
 					{
 						//var foundSBC = item.SBC?.Where(o => o.Amount == row.Amount).ToList();
-						result.Add(new Joined
-						{
-							LB = item.LB,
-							MF = item.MF,
-							Receipt = item.Receipt,
-							SLR = item.SLR,
-							SBC = item.SBC,
-							SLRTransactionRow = trans[i]
-						});
+						var copy = item.Copy();
+						copy.SLRTransactionRow = trans[i];
+						result.Add(copy);
 					}
 					result.Remove(item);
 				}
@@ -268,6 +277,7 @@ namespace sbc_scrape.Joining
 					DateToString(row.PaymentDate),
 					row.Comment,
 					row.Link.ToString(),
+					row.BankTransactionReference != null ? "B" : "-",
 					row.SLR?.Id.ToString(),
 					row.MF?.Id.ToString(),
 					row.LB?.Id,
@@ -276,6 +286,17 @@ namespace sbc_scrape.Joining
 			}
 		}
 
+		private static List<Joined> FindCombo(List<Joined> found, decimal targetAmount, int mainTransactionAccount)
+		{
+			for (int numItems = found.Count; numItems > 0; numItems--)
+			{
+				var match = Combinatorics.GenerateCombos(found, numItems).FirstOrDefault(list => list.Sum(o => o.LB.GetAmountTransactionAccount(mainTransactionAccount)) == targetAmount);
+				if (match != null)
+					return match;
+			}
+			return null;
+
+		}
 		class Joined
 		{
 			public InvoiceSummary MF { get; set; }
@@ -283,9 +304,23 @@ namespace sbc_scrape.Joining
 			public VoucherRecord LB { get; set; }
 			public List<SBC.Invoice> SBC { get; set; }
 			public SBC.Receipt Receipt { get; set; }
+			public SBC.BankTransaction BankTransactionReference { get; set; }
 
 			public TransactionRecord SLRTransactionRow { get; set; }
 
+			public Joined Copy()
+			{
+				return new Joined
+				{
+					LB = LB,
+					MF = MF,
+					Receipt = Receipt,
+					SLR = SLR,
+					SBC = SBC,
+					BankTransactionReference = BankTransactionReference,
+					SLRTransactionRow = SLRTransactionRow
+				};
+			}
 			public void Merge(Joined other)
 			{
 				if (MF == null) MF = other.MF;
