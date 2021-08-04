@@ -354,7 +354,7 @@ namespace sbc_scrape.Joining
 
 			public string Link => string.Join("", SBC?.Select(s => s.InvoiceLink).Distinct() ?? new List<string>());
 
-			public string Comment => $"{((Receipt != null && SLR != null) ? SLR.CompanyName : "")} {InvoiceSummary.ShortenComments(MF?.Comments)}{(SLR != null && SLR.Transactions.Count > 1 ? string.Join(",", SLR.Transactions.Skip(1).Select(o => o.CompanyName).Distinct()) : "")}";
+			public string Comment => $"{((Receipt != null && SLR != null && SLR.CompanyName != CompanyName) ? SLR.CompanyName : "")} {InvoiceSummary.ShortenComments(MF?.Comments)}{(SLR != null && SLR.Transactions.Count > 1 && SLR.Transactions.Select(o => o.CompanyName).Distinct().Count() > 1 ? string.Join(",", SLR.Transactions.Skip(1).Select(o => o.CompanyName).Distinct()) : "")}";
 
 			public override string ToString() =>
 				$"{DateToString(SortDate)} {Amount} {CompanyName} {Missing}";
