@@ -170,10 +170,11 @@ namespace Scrape.Main.Tests
 		[TestMethod]
 		public async Task AllSourcesToCSV()
 		{
-			var (years, invoices, sie, sbcInvoices, sbcReceipts, sbcTransactions) = await Prepare(new[] { 2020 });
+			var (years, invoices, sie, sbcInvoices, sbcReceipts, sbcTransactions) = await Prepare(new[] { 2021 });
 			try
 			{
-				JoinSbcSieMediusFlow.Testing(years, invoices, sie, sbcInvoices, sbcReceipts, sbcTransactions);
+				var rowsA = JoinSbcSieMediusFlow.Testing(years, invoices, sie, sbcInvoices, sbcReceipts, sbcTransactions);
+				var csv = JoinSbcSieMediusFlow.Joined.ToCsv(rowsA);
 				var rows = JoinSbcSieMediusFlow.Union(years, invoices, sie, sbcInvoices);
 			}
 			catch (Exception ex)

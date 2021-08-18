@@ -1,6 +1,8 @@
-﻿using REPL;
+﻿using MediusFlowAPI;
+using REPL;
 using sbc_scrape.SBC;
 using SBCScan;
+using SIE;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,9 +38,20 @@ namespace SBCScan.REPL
 			var sie = await SIE.SBCExtensions.ReadSIEFiles(sieFiles);
 
 			var sbcInvoices = new InvoiceSource().ReadAll(settings.StorageFolderSbcHtml).Where(o => years.Contains(o.RegisteredDate.Year)).ToList();
+			var sbcReceipts = new ReceiptsSource().ReadAll(settings.StorageFolderSbcHtml).Where(o => years.Contains(o.Date.Year)).ToList();
+			var sbcTransactions = new BankTransactionSource().ReadAll(settings.StorageFolderSbcHtml).Where(o => years.Contains(o.AccountingDate.Year)).ToList();
 
-			var joined = sbc_scrape.Joining.JoinSbcSieMediusFlow.MatchMediusFlowWithSIE(years, invoices, sie.ToList(), sbcInvoices);
-			return joined;
+			//return sbc_scrape.Joining.JoinSbcSieMediusFlow.MatchMediusFlowWithSIE(years, invoices, sie.ToList(), sbcInvoices);
+			var joined = sbc_scrape.Joining.JoinSbcSieMediusFlow.Testing(years, invoices, sie.ToList(), sbcInvoices, sbcReceipts, sbcTransactions);
+			//var accountNames = sie.First().Children.OfType<AccountRecord>().ToDictionary(o => o.AccountId, o => o.AccountName);
+
+			var accountNamesMF = invoices.Select(o => InvoiceSummary.Summarize(o)).GroupBy(o => o.AccountId).ToDictionary(o => o.Key, o => o.First().AccountName);
+			var accountNames = sbcInvoices.GroupBy(o => o.AccountId).ToDictionary(o => o.Key, o => o.First().AccountName);
+			foreach (var accountId in accountNames.Keys)
+				if (accountNamesMF.TryGetValue(accountId, out var val))
+					accountNames[accountId] = val;
+
+			return joined.Select(o => o.ToExportRow(accountNames)).ToList();
 		}
 
 		public async Task<List<JoinedRow>> EvaluateOld()

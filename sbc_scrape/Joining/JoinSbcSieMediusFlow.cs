@@ -60,7 +60,7 @@ namespace sbc_scrape.Joining
 			public string Normalize(string name) => lookUp.GetValueOrDefault(name, name);
 		}
 
-		public static List<MultiSourceRow> Testing(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie,
+		public static List<Joined> Testing(IEnumerable<int> years, List<InvoiceFull> invoices, List<RootRecord> sie,
 			List<SBC.Invoice> sbcInvoices, List<SBC.Receipt> receipts, List<SBC.BankTransaction> transactions)
 		{
 			var (invoiceSummaries, sieVouchers) = PrepareFiltered(years, invoices, sie);
@@ -77,7 +77,7 @@ namespace sbc_scrape.Joining
 			{
 				var missingMainAccount = slrs.Where(o => !o.Transactions.Any(p => p.AccountId == mainTransactionAccount));
 				if (missingMainAccount.Any())
-					throw new Exception($"Algorithm based on all SLR/LRs having {mainTransactionAccount}");
+					throw new Exception($"Algorithm requires all SLR/LRs having {mainTransactionAccount}");
 			}
 
 			var tmp = slrs.Select(o => new { Item = o, Names = o.Transactions.Select(p => $"{p.CompanyId}{p.CompanyName}").Distinct().ToList() })
@@ -257,33 +257,11 @@ namespace sbc_scrape.Joining
 				}
 			}
 
-			var csv = ToCsv(result);
-			return null;
+			result = result.OrderByDescending(o => o.SortDate)
+				.ThenBy(o => o.CompanyName)
+				.ThenBy(o => o.Amount).ToList();
 
-			string ToCsv(IEnumerable<Joined> rows, bool sort = true)
-			{
-				if (sort)
-				{
-					rows = rows.OrderByDescending(o => o.SortDate)
-						.ThenBy(o => o.CompanyName)
-						.ThenBy(o => o.Amount);
-				}
-				return string.Join("\n", rows.Select(row => string.Join("\t", new[] {
-					DateToString(row.SortDate),
-					row.Amount.ToString("#"),
-					row.CompanyName?.Replace("\"", "'"),
-					row.AccountId.ToString(),
-					DateToString(row.InvoiceDate),
-					DateToString(row.PaymentDate),
-					row.Comment,
-					row.Link.ToString(),
-					row.BankTransactionReference != null ? "B" : "-",
-					row.SLR?.Id.ToString(),
-					row.MF?.Id.ToString(),
-					row.LB?.Id,
-					row.Missing,
-				})));
-			}
+			return result;
 		}
 
 		private static List<Joined> FindCombo(List<Joined> found, decimal targetAmount, int mainTransactionAccount)
@@ -297,7 +275,7 @@ namespace sbc_scrape.Joining
 			return null;
 
 		}
-		class Joined
+		public class Joined
 		{
 			public InvoiceSummary MF { get; set; }
 			public VoucherRecord SLR { get; set; }
@@ -352,9 +330,11 @@ namespace sbc_scrape.Joining
 
 			public int? AccountId => SLRTransactionRow?.AccountId ?? (MF != null ? (int?)MF.AccountId : null) ?? SLR?.TransactionsNonAdminOrCorrections.FirstOrDefault()?.AccountId;
 
-			public string Link => string.Join("", SBC?.Select(s => s.InvoiceLink).Distinct() ?? new List<string>());
+			public string Link => string.Join("",
+				SBC?.Select(s => s.InvoiceLink).Distinct().Where(o => !string.IsNullOrEmpty(o)).Select(o => $"https://varbrf.sbc.se{o}") ?? new List<string>());
 
-			public string Comment => $"{((Receipt != null && SLR != null && SLR.CompanyName != CompanyName) ? SLR.CompanyName : "")} {InvoiceSummary.ShortenComments(MF?.Comments)}{(SLR != null && SLR.Transactions.Count > 1 && SLR.Transactions.Select(o => o.CompanyName).Distinct().Count() > 1 ? string.Join(",", SLR.Transactions.Skip(1).Select(o => o.CompanyName).Distinct()) : "")}";
+			public string Comment => $"{((Receipt != null && SLR != null && SLR.CompanyName != CompanyName) ? SLR.CompanyName : "")} {InvoiceSummary.ShortenComments(MF?.Comments)}{(SLR != null && SLR.Transactions.Count > 1 && SLR.Transactions.Select(o => o.CompanyName).Distinct().Count() > 1 ? string.Join(",", SLR.Transactions.Skip(1).Select(o => o.CompanyName).Distinct()) : "")}"
+				.Trim();
 
 			public override string ToString() =>
 				$"{DateToString(SortDate)} {Amount} {CompanyName} {Missing}";
@@ -364,6 +344,64 @@ namespace sbc_scrape.Joining
 		new string[] { MF == null ? "M" : "", SLR == null ? "SLR" : "", LB == null ? "LB" : "", SBC == null || !SBC.Any() ? "SBC" : "" }
 		.Where(o => o.Any())
 	);
+
+			public ExportRow ToExportRow(Dictionary<int, string> accountNames)
+			{
+				return new ExportRow {
+					Supplier = CompanyName,
+					Amount = Amount,
+					AccountId = AccountId ?? 0,
+					AccountName = accountNames?.GetValueOrDefault(AccountId ?? 0, "") ?? "",
+					Comments = Comment,
+					CurrencyDate = PaymentDate,
+					Date = SortDate,
+					InvoiceLink = Link,
+
+					InvoiceId = SLR?.Id,
+					ReceiptId = Receipt?.Information,
+					TransactionRef = "",
+					TransactionText = "",
+					Missing = Missing,
+					//AccountChange
+				};
+			}
+
+			public static string ToCsv(IEnumerable<Joined> rows)
+			{
+				return
+					string.Join("\t", new[] {
+						"Date",
+						nameof(Joined.Amount),
+						"Supplier",
+						nameof(Joined.AccountId),
+						nameof(Joined.InvoiceDate),
+						nameof(Joined.PaymentDate),
+						nameof(Joined.Comment),
+						nameof(Joined.Link),
+						nameof(Joined.BankTransactionReference),
+						"SLR_Id",
+						"MF_Id",
+						"LB_Id",
+						nameof(Joined.Missing),
+					})
+					+
+					string.Join("\n", rows.Select(row =>
+						string.Join("\t", new[] {
+						DateToString(row.SortDate),
+						row.Amount.ToString("#"),
+						row.CompanyName?.Replace("\"", "'"),
+						row.AccountId.ToString(),
+						DateToString(row.InvoiceDate),
+						DateToString(row.PaymentDate),
+						row.Comment,
+						row.Link.ToString(),
+						row.BankTransactionReference != null ? "B" : "-",
+						row.SLR?.Id.ToString(),
+						row.MF?.Id.ToString(),
+						row.LB?.Id,
+						row.Missing,
+				})));
+			}
 		}
 
 		private class InvoiceKey
@@ -698,6 +736,7 @@ namespace sbc_scrape.Joining
 		public int AccountId { get; set; }
 		public string AccountName { get; set; }
 		public string Comments { get; set; }
+		public string InvoiceLink { get; set; }
 		public string InvoiceId { get; set; }
 		public string ReceiptId { get; set; }
 		public LocalDate? CurrencyDate { get; set; }
